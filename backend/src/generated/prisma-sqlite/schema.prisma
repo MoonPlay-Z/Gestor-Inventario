@@ -1,0 +1,230 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma-sqlite"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "windows"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Cliente {
+  id           String       @id @default(uuid())
+  razonSocial  String
+  rifCedula    String
+  direccion    String?
+  telefono     String?
+  correo       String?
+  empresaId    String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  empresa      Usuario?     @relation("EmpresaClientes", fields: [empresaId], references: [id], onDelete: Cascade)
+  facturas     Factura[]
+  cotizaciones Cotizacion[]
+
+  @@unique([empresaId, rifCedula])
+  @@index([empresaId])
+  @@index([razonSocial])
+  @@index([rifCedula])
+  @@map("clientes")
+}
+
+model Producto {
+  id           String        @id @default(uuid())
+  sku          String
+  nombre       String
+  descripcion  String?
+  stockActual  Int           @default(0)
+  stockMinimo  Int           @default(5)
+  precioVenta  Float
+  costoCompra  Float         @default(0)
+  tasaImpuesto Float         @default(16)
+  categoria    String        @default("General")
+  activo       Boolean       @default(true)
+  empresaId    String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  empresa      Usuario       @relation("EmpresaProductos", fields: [empresaId], references: [id])
+  itemsFactura ItemFactura[]
+
+  @@unique([empresaId, sku])
+  @@index([empresaId])
+  @@index([nombre])
+  @@index([categoria])
+  @@map("productos")
+}
+
+model Factura {
+  id               String        @id @default(uuid())
+  numeroFactura    Int           @unique
+  clienteId        String
+  cliente          Cliente       @relation(fields: [clienteId], references: [id])
+  usuarioId        String?
+  usuario          Usuario?      @relation(fields: [usuarioId], references: [id])
+  fechaEmision     DateTime      @default(now())
+  fechaVencimiento DateTime
+  subtotal         Float
+  impuestoTotal    Float
+  total            Float
+  estado           String        @default("PENDING")
+  moneda           String        @default("USD")
+  tasaCambio       Float         @default(1)
+  cuotasTotales    Int           @default(1)
+  observaciones    String?
+  anuladoPor       String?
+  motivoAnulacion  String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  items            ItemFactura[]
+  pagos            Pago[]
+
+  @@index([fechaEmision])
+  @@index([usuarioId])
+  @@index([clienteId])
+  @@index([estado])
+  @@map("facturas")
+}
+
+model ItemFactura {
+  id                      String    @id @default(uuid())
+  facturaId               String
+  factura                 Factura   @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  productoId              String?
+  producto                Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
+  descripcionHistorica    String
+  cantidad                Int
+  precioUnitarioHistorico Float
+  tasaImpuestoAplicada    Float
+  subtotalLinea           Float
+  impuestoLinea           Float
+  totalLinea              Float
+  createdAt               DateTime  @default(now())
+
+  @@index([facturaId])
+  @@map("items_factura")
+}
+
+model Pago {
+  id                    String   @id @default(uuid())
+  facturaId             String
+  factura               Factura  @relation(fields: [facturaId], references: [id])
+  monto                 Float
+  metodoPago            String
+  referenciaTransaccion String?
+  fechaPago             DateTime @default(now())
+  notas                 String?
+  createdAt             DateTime @default(now())
+
+  @@index([facturaId])
+  @@index([fechaPago])
+  @@map("pagos")
+}
+
+model Correlativo {
+  id     Int    @id @default(autoincrement())
+  nombre String @unique
+  valor  Int    @default(0)
+
+  @@map("correlativos")
+}
+
+model CierreCaja {
+  id               String    @id @default(uuid())
+  usuarioId        String?
+  usuario          Usuario?  @relation(fields: [usuarioId], references: [id])
+  fechaApertura    DateTime  @default(now())
+  fechaCierre      DateTime?
+  montoInicial     Float
+  montoFinal       Float?
+  ingresosEfectivo Float     @default(0)
+  ingresosBanco    Float     @default(0)
+  estado           String    @default("OPEN")
+  observaciones    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([usuarioId])
+  @@index([estado])
+  @@index([fechaApertura])
+  @@map("cierres_caja")
+}
+
+model Cotizacion {
+  id            String           @id @default(uuid())
+  numero        Int              @unique
+  clienteId     String
+  cliente       Cliente          @relation(fields: [clienteId], references: [id])
+  usuarioId     String?
+  usuario       Usuario?         @relation(fields: [usuarioId], references: [id])
+  fechaEmision  DateTime         @default(now())
+  fechaValidez  DateTime
+  subtotal      Float
+  impuestoTotal Float
+  total         Float
+  moneda        String           @default("USD")
+  estado        String           @default("PENDING")
+  items         ItemCotizacion[]
+
+  @@index([clienteId])
+  @@index([usuarioId])
+  @@index([estado])
+  @@map("cotizaciones")
+}
+
+model ItemCotizacion {
+  id             String     @id @default(uuid())
+  cotizacionId   String
+  cotizacion     Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
+  productoId     String?
+  descripcion    String
+  cantidad       Int
+  precioUnitario Float
+  totalLinea     Float
+
+  @@index([cotizacionId])
+  @@map("items_cotizacion")
+}
+
+model Usuario {
+  id                    String                @id @default(uuid())
+  username              String                @unique
+  passwordHash          String
+  nombre                String                @default("")
+  rol                   String                @default("CAJA")
+  activo                Boolean               @default(true)
+  empresaId             String?
+  subscriptionStatus    String                @default("trialing")
+  planType              String?
+  trialStartsAt         DateTime?
+  trialEndsAt           DateTime?
+  currentPeriodEnd      DateTime?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  empresa               Usuario?              @relation("EmpresaSubusuarios", fields: [empresaId], references: [id])
+  subUsuarios           Usuario[]             @relation("EmpresaSubusuarios")
+  productos             Producto[]            @relation("EmpresaProductos")
+  clientes              Cliente[]             @relation("EmpresaClientes")
+  facturas              Factura[]
+  cierresCaja           CierreCaja[]
+  cotizaciones          Cotizacion[]
+  solicitudesActivacion SolicitudActivacion[]
+
+  @@map("usuarios")
+}
+
+model SolicitudActivacion {
+  id         String   @id @default(uuid())
+  usuarioId  String
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  plan       String
+  metodoPago String
+  referencia String
+  estado     String   @default("PENDIENTE")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([usuarioId])
+  @@index([estado])
+  @@map("solicitudes_activacion")
+}

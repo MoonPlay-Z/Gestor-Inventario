@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "facturas" ADD COLUMN     "moneda" TEXT NOT NULL DEFAULT 'USD',
+ADD COLUMN     "tasaCambio" DECIMAL(10,4) NOT NULL DEFAULT 1.0;

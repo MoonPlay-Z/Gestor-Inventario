@@ -1,0 +1,16 @@
+{
+  "empresa": {
+    "nombre": "Inventario",
+    "rif": "J-12345678-9",
+    "direccion": "Av. Principal, Local 1, Caracas, Venezuela",
+    "telefono": "+58 212-555-0100",
+    "email": "info@miempresa.com"
+  },
+  "moneda": {
+    "simbolo": "$",
+    "codigo": "USD",
+    "tasaDolar": 764.34
+  },
+  "ivaDefault": 0,
+  "tipoDocumento": "FACTURA"
+}

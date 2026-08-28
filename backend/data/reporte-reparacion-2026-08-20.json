@@ -1,0 +1,157 @@
+{
+  "generatedAt": "2026-08-20T15:07:09.253Z",
+  "mode": "check",
+  "database": "postgresql://postgres:***@localhost:5432/gestor_inventario?schema=public",
+  "checks": {
+    "tables": [
+      {
+        "table_name": "_prisma_migrations"
+      },
+      {
+        "table_name": "cierres_caja"
+      },
+      {
+        "table_name": "clientes"
+      },
+      {
+        "table_name": "correlativos"
+      },
+      {
+        "table_name": "cotizaciones"
+      },
+      {
+        "table_name": "facturas"
+      },
+      {
+        "table_name": "items_cotizacion"
+      },
+      {
+        "table_name": "items_factura"
+      },
+      {
+        "table_name": "pagos"
+      },
+      {
+        "table_name": "productos"
+      },
+      {
+        "table_name": "solicitudes_activacion"
+      },
+      {
+        "table_name": "usuarios"
+      }
+    ],
+    "foreignKeys": [
+      {
+        "conname": "cierres_caja_usuarioId_fkey",
+        "table_name": "cierres_caja"
+      },
+      {
+        "conname": "clientes_empresaId_fkey",
+        "table_name": "clientes"
+      },
+      {
+        "conname": "cotizaciones_clienteId_fkey",
+        "table_name": "cotizaciones"
+      },
+      {
+        "conname": "cotizaciones_usuarioId_fkey",
+        "table_name": "cotizaciones"
+      },
+      {
+        "conname": "facturas_clienteId_fkey",
+        "table_name": "facturas"
+      },
+      {
+        "conname": "facturas_usuarioId_fkey",
+        "table_name": "facturas"
+      },
+      {
+        "conname": "items_cotizacion_cotizacionId_fkey",
+        "table_name": "items_cotizacion"
+      },
+      {
+        "conname": "items_factura_facturaId_fkey",
+        "table_name": "items_factura"
+      },
+      {
+        "conname": "items_factura_productoId_fkey",
+        "table_name": "items_factura"
+      },
+      {
+        "conname": "pagos_facturaId_fkey",
+        "table_name": "pagos"
+      },
+      {
+        "conname": "productos_empresaId_fkey",
+        "table_name": "productos"
+      },
+      {
+        "conname": "solicitudes_activacion_usuarioId_fkey",
+        "table_name": "solicitudes_activacion"
+      },
+      {
+        "conname": "usuarios_empresaId_fkey",
+        "table_name": "usuarios"
+      }
+    ],
+    "counts": {
+      "usuarios": 5,
+      "clientes": 1,
+      "productos": 2,
+      "facturas": 12,
+      "items_factura": 13,
+      "pagos": 21,
+      "correlativos": 0,
+      "cierres_caja": 7,
+      "cotizaciones": 3,
+      "items_cotizacion": 3,
+      "solicitudes_activacion": 2
+    },
+    "orphans": {
+      "clientesEmpresa": 0,
+      "productosEmpresa": 0,
+      "facturasCliente": 0,
+      "facturasUsuario": 0,
+      "itemsFactura": 0,
+      "itemsProducto": 0,
+      "pagosFactura": 0,
+      "usuarioEmpresa": 0,
+      "cotizacionesCliente": 0,
+      "itemsCotizacion": 0,
+      "solicitudUsuario": 0
+    },
+    "duplicates": {
+      "usernames": 0,
+      "productTenantSku": 0,
+      "clientTenantRif": 0,
+      "invoiceNumbers": 0
+    },
+    "invalidValues": {
+      "negativeStock": 0,
+      "negativePrices": 0,
+      "invalidInvoiceAmounts": 0,
+      "invalidItemAmounts": 0,
+      "invalidPayments": 0
+    },
+    "invoiceTotals": {
+      "mismatchedItemSums": 1,
+      "paymentsOverTotal": 0
+    },
+    "invoiceTotalDetails": [
+      {
+        "id": "3fc14e02-ddd0-46da-9e27-23c9150ff669",
+        "numeroFactura": 8,
+        "stored_subtotal": "350",
+        "stored_tax": "56",
+        "stored_total": "406",
+        "items_subtotal": "406",
+        "items_tax": "0",
+        "items_total": "406"
+      }
+    ]
+  },
+  "repairs": [],
+  "errors": [],
+  "ok": false
+}
