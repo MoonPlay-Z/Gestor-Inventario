@@ -1,0 +1,32 @@
+ACUERDO DE LICENCIA DE USUARIO FINAL (EULA) Y TÉRMINOS DE SERVICIO
+
+Software: Gestor de Inventario POS
+Autor/Desarrollador: Juan Arcila (JADeveloper)
+Contacto: arcila.juan10@gmail.com
+
+Al instalar, copiar o utilizar de cualquier forma este software ("El Software"), usted acepta estar sujeto a los términos de este Acuerdo de Licencia de Usuario Final ("El Acuerdo"). Si no está de acuerdo con los términos de este Acuerdo, no instale ni utilice El Software.
+
+1. CONCESIÓN DE LICENCIA
+JADeveloper le otorga una licencia personal, no exclusiva e intransferible para utilizar El Software con fines comerciales o personales, sujeta a los términos y condiciones de este documento.
+
+2. LIMITACIÓN DE RESPONSABILIDAD
+EN LA MEDIDA MÁXIMA PERMITIDA POR LA LEY APLICABLE, EN NINGÚN CASO EL AUTOR (JUAN ARCILA / JADEVELOPER) SERÁ RESPONSABLE DE NINGÚN DAÑO DIRECTO, INDIRECTO, INCIDENTAL, ESPECIAL, EJEMPLAR O CONSECUENTE (INCLUYENDO, PERO NO LIMITADO A, LA ADQUISICIÓN DE BIENES O SERVICIOS SUSTITUTOS; PÉRDIDA DE USO, DATOS O BENEFICIOS; O INTERRUPCIÓN DEL NEGOCIO) CUALQUIERA QUE SEA LA CAUSA Y BAJO CUALQUIER TEORÍA DE RESPONSABILIDAD, YA SEA EN CONTRATO, RESPONSABILIDAD ESTRICTA O AGRAVIO (INCLUYENDO NEGLIGENCIA U OTRO) QUE SURJA DE CUALQUIER MANERA DEL USO DE ESTE SOFTWARE, INCLUSO SI SE ADVIERTE DE LA POSIBILIDAD DE TAL DAÑO. 
+
+EL SOFTWARE SE PROPORCIONA "TAL CUAL", SIN GARANTÍA DE NINGÚN TIPO, EXPRESA O IMPLÍCITA, INCLUYENDO PERO NO LIMITADO A LAS GARANTÍAS DE COMERCIABILIDAD, ADECUACIÓN PARA UN PROPÓSITO PARTICULAR Y NO INFRACCIÓN. USTED ASUME TODOS LOS RIESGOS ASOCIADOS CON EL USO DEL SOFTWARE.
+
+3. RECOPILACIÓN Y USO DE DATOS
+Usted acepta y consiente que El Software puede recopilar, procesar y transmitir ciertos datos de telemetría, información sobre el uso del sistema y reportes de errores de manera anónima. Estos datos son utilizados de forma exclusiva y confidencial por JADeveloper con el único propósito de mejorar la experiencia del usuario, optimizar el rendimiento del sistema y solucionar errores técnicos. Ninguna información sensible, privada, contraseñas o datos financieros personales que puedan identificarle directamente a usted o a sus clientes será compartida con terceros sin su consentimiento expreso.
+
+4. RESTRICCIONES
+Usted no podrá:
+a) Modificar, traducir, aplicar ingeniería inversa, descompilar, desensamblar o crear trabajos derivados basados en El Software.
+b) Alquilar, arrendar, prestar, vender, redistribuir o sublicenciar El Software sin la autorización expresa del autor.
+c) Eliminar cualquier aviso de derechos de autor, marcas comerciales u otros avisos de propiedad que aparezcan en El Software.
+
+5. PROPIEDAD INTELECTUAL
+El Software y todas las copias del mismo están protegidos por leyes de derechos de autor y propiedad intelectual. JADeveloper retiene todos los derechos, títulos e intereses en y para El Software.
+
+6. TERMINACIÓN
+Este Acuerdo es efectivo hasta que se rescinda. Sus derechos bajo esta licencia terminarán automáticamente sin previo aviso si usted no cumple con alguno de los términos de este documento. Tras la terminación, usted debe dejar de utilizar El Software y destruir todas las copias del mismo.
+
+Al continuar con la instalación y el uso de este software, usted reconoce que ha leído, comprendido y aceptado incondicionalmente estos términos.

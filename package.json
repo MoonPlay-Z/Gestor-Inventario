@@ -1,0 +1,25 @@
+{
+  "name": "gestor-inventario-root",
+  "version": "1.0.0",
+  "description": "Sistema POS y Gestión de Inventario — Plataforma Web",
+  "homepage": "https://github.com/JADeveloper",
+  "author": {
+    "name": "Juan Arcila",
+    "email": "arcila.juan10@gmail.com",
+    "url": "https://github.com/JADeveloper"
+  },
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --names \"BACKEND,FRONTEND\" --prefix-colors \"blue,green\" \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "prisma:generate": "cd backend && npx prisma generate",
+    "prisma:migrate": "cd backend && npx prisma migrate dev",
+    "prisma:studio": "cd backend && npx prisma studio",
+    "prisma:seed": "cd backend && node prisma/seed.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

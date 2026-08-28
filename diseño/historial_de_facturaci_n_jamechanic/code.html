@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Billing History | JaMechanic</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-surface": "#181c1e",
+                    "on-secondary-container": "#167249",
+                    "on-surface-variant": "#43474e",
+                    "on-error": "#ffffff",
+                    "surface-variant": "#e0e3e5",
+                    "on-primary": "#ffffff",
+                    "secondary-fixed-dim": "#83d8a6",
+                    "on-primary-container": "#86a0cd",
+                    "primary-container": "#1a365d",
+                    "inverse-primary": "#adc7f7",
+                    "secondary-fixed": "#9ff5c1",
+                    "tertiary-fixed": "#ffdad7",
+                    "on-error-container": "#93000a",
+                    "primary-fixed-dim": "#adc7f7",
+                    "surface-bright": "#f7fafc",
+                    "on-background": "#181c1e",
+                    "inverse-on-surface": "#eef1f3",
+                    "secondary": "#0a6c44",
+                    "error-container": "#ffdad6",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-fixed-variant": "#005231",
+                    "inverse-surface": "#2d3133",
+                    "on-primary-fixed-variant": "#2d476f",
+                    "surface-tint": "#455f88",
+                    "surface-container": "#ebeef0",
+                    "background": "#f7fafc",
+                    "outline": "#74777f",
+                    "tertiary-fixed-dim": "#ffb3ad",
+                    "primary": "#002045",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-fixed": "#002111",
+                    "error": "#ba1a1a",
+                    "on-tertiary-fixed": "#410004",
+                    "on-tertiary-fixed-variant": "#930013",
+                    "surface-dim": "#d7dadc",
+                    "tertiary": "#4b0005",
+                    "on-secondary": "#ffffff",
+                    "surface-container-low": "#f1f4f6",
+                    "surface": "#f7fafc",
+                    "on-tertiary-container": "#ff736c",
+                    "surface-container-highest": "#e0e3e5",
+                    "secondary-container": "#9ff5c1",
+                    "surface-container-high": "#e5e9eb",
+                    "primary-fixed": "#d6e3ff",
+                    "on-primary-fixed": "#001b3c",
+                    "tertiary-container": "#73000c",
+                    "outline-variant": "#c4c6cf"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "lg": "24px",
+                    "xl": "48px",
+                    "container-max": "1280px",
+                    "md": "16px",
+                    "base": "4px",
+                    "xs": "4px",
+                    "sm": "8px",
+                    "gutter": "24px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "label-caps": ["Inter"],
+                    "title-sm": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "data-mono": ["Inter"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "title-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["36px", {"lineHeight": "44px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "data-mono": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        body { font-family: 'Inter', sans-serif; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid #e2e8f0;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 24px;
+        }
+        .status-badge {
+            padding: 4px 12px;
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        /* Implementation of the reference style for Pagado */
+        .badge-pagado {
+            background-color: #c6f6d5;
+            color: #22543d;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface">
+<!-- Sidebar Navigation Shell -->
+<nav class="flex flex-col h-screen py-lg space-y-sm bg-primary dark:bg-primary-container docked fixed left-0 h-full w-[280px] shadow-xl z-50">
+<div class="px-md mb-xl flex items-center gap-sm">
+<div class="w-10 h-10 bg-on-primary rounded flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-headline-md">precision_manufacturing</span>
+</div>
+<div>
+<h1 class="text-headline-md font-display-lg text-on-primary">JaMechanic</h1>
+<p class="text-label-caps font-label-caps text-on-primary-container opacity-80">Precision Systems</p>
+</div>
+</div>
+<div class="flex-1 space-y-xs">
+<a class="text-primary-fixed-dim hover:text-on-primary p-md mx-sm flex items-center gap-md hover:bg-primary-fixed-variant transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-label-caps font-label-caps uppercase">Dashboard</span>
+</a>
+<a class="text-primary-fixed-dim hover:text-on-primary p-md mx-sm flex items-center gap-md hover:bg-primary-fixed-variant transition-all duration-200" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span class="text-label-caps font-label-caps uppercase">Inventory</span>
+</a>
+<a class="text-primary-fixed-dim hover:text-on-primary p-md mx-sm flex items-center gap-md hover:bg-primary-fixed-variant transition-all duration-200" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-label-caps font-label-caps uppercase">Billing</span>
+</a>
+<a class="bg-secondary-container text-on-secondary-container rounded-lg mx-sm font-bold p-md flex items-center gap-md scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="text-label-caps font-label-caps uppercase">History</span>
+</a>
+</div>
+<button class="mx-md mb-xl py-sm bg-secondary text-on-secondary rounded-lg font-bold shadow-lg hover:opacity-90 transition-opacity">
+            New Invoice
+        </button>
+<div class="pt-lg border-t border-primary-fixed-variant/20">
+<a class="text-primary-fixed-dim hover:text-on-primary p-md mx-sm flex items-center gap-md hover:bg-primary-fixed-variant transition-all duration-200" href="#">
+<span class="material-symbols-outlined">support</span>
+<span class="text-label-caps font-label-caps uppercase">Support</span>
+</a>
+<a class="text-primary-fixed-dim hover:text-on-primary p-md mx-sm flex items-center gap-md hover:bg-primary-fixed-variant transition-all duration-200" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-label-caps font-label-caps uppercase">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="ml-[280px] min-h-screen">
+<!-- Top Navigation Bar -->
+<header class="flex justify-between items-center w-full px-lg h-16 sticky top-0 z-40 bg-surface-container-lowest dark:bg-inverse-surface shadow-sm border-b border-outline-variant dark:border-outline">
+<div class="flex items-center gap-md">
+<span class="text-headline-md font-headline-md text-primary">Billing History</span>
+</div>
+<div class="flex items-center gap-lg">
+<div class="relative">
+<input class="pl-10 pr-4 py-2 rounded-lg border border-outline-variant focus:border-primary focus:ring-0 text-body-md w-64 bg-surface-container-low" placeholder="Search invoices..." type="text"/>
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant">search</span>
+</div>
+<div class="flex items-center gap-md border-l border-outline-variant pl-lg">
+<button class="p-base rounded-full hover:bg-surface-container-low transition-colors"><span class="material-symbols-outlined text-on-surface-variant">notifications</span></button>
+<button class="p-base rounded-full hover:bg-surface-container-low transition-colors"><span class="material-symbols-outlined text-on-surface-variant">help</span></button>
+<button class="p-base rounded-full hover:bg-surface-container-low transition-colors"><span class="material-symbols-outlined text-on-surface-variant">settings</span></button>
+<div class="w-8 h-8 rounded-full bg-primary-fixed overflow-hidden ml-sm">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a service manager for an automotive shop, set against a blurred workshop background with soft cinematic lighting, corporate-minimalist style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAxOJplornjwNpIsgjL5daOz79izmuffOzZcG_cAYz3PF8J6_Wxt4VekfvwKla7iC2VQfscVhthF86YEhF2jmFhFG_qq5XzDYq9Z0tPBUKjwATuu1whxe51_E-0M899sDHNF4UXOmhPeQ3ZbdFmI1OGE-EcZMxYNRZWqL4n8r3Q0w1IaWuL80x6SOimhhnNvpPpqjT0nfk8rIAEd07znoyWxcR82-2oeaJMW9O6oS-bmba2X2Rk5k19BdU2som5QesDhsBk2fJyBEU"/>
+</div>
+</div>
+</div>
+</header>
+<div class="p-xl space-y-lg max-w-[1400px] mx-auto">
+<!-- Quick Stats Bento Section -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-lg">
+<div class="glass-card p-lg rounded-xl shadow-sm">
+<div class="flex justify-between items-start mb-sm">
+<span class="text-label-caps font-label-caps uppercase text-on-surface-variant">Total Collections</span>
+<span class="material-symbols-outlined text-secondary">payments</span>
+</div>
+<div class="text-display-lg font-display-lg text-primary">$124,500.00</div>
+<div class="text-label-caps font-label-caps text-secondary mt-xs">+12.5% vs last month</div>
+</div>
+<div class="glass-card p-lg rounded-xl shadow-sm">
+<div class="flex justify-between items-start mb-sm">
+<span class="text-label-caps font-label-caps uppercase text-on-surface-variant">Outstanding</span>
+<span class="material-symbols-outlined text-error">pending_actions</span>
+</div>
+<div class="text-display-lg font-display-lg text-primary">$12,840.00</div>
+<div class="text-label-caps font-label-caps text-on-surface-variant mt-xs">14 invoices pending</div>
+</div>
+<div class="glass-card p-lg rounded-xl shadow-sm">
+<div class="flex justify-between items-start mb-sm">
+<span class="text-label-caps font-label-caps uppercase text-on-surface-variant">Overdue</span>
+<span class="material-symbols-outlined text-tertiary">warning</span>
+</div>
+<div class="text-display-lg font-display-lg text-tertiary-container">$4,200.00</div>
+<div class="text-label-caps font-label-caps text-on-tertiary-container mt-xs">Requires immediate action</div>
+</div>
+<div class="relative overflow-hidden glass-card rounded-xl shadow-sm group">
+<img class="absolute inset-0 w-full h-full object-cover opacity-10 group-hover:scale-110 transition-transform duration-700" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8EY_FmRCKiP27gxiyENVLQPYcpS9cHHcHzLBpfQimdxH9PjL2B_RfyZnjpUgkP3JO4-Fn2d9vGpMBgWpPrY8o6_HcHMzns1jLfn0OyNCba0ewauwtEswzasohaPjnOYz-5PbmMHo4PH858-Xp5mlgkXcjF2XD1y69yVTBB7BU5QUwOvp_icAhD36P0uA6NkzkM-HXmNk5OljdiKfIG9Qu2CvL2L01y9NE3ekYDfOYT6ZM75qcddS9g28xfzfmw0xJUPCjzHG2qfk"/>
+<div class="relative p-lg h-full flex flex-col justify-center">
+<span class="text-label-caps font-label-caps uppercase text-on-surface-variant">Performance</span>
+<div class="text-display-lg font-display-lg text-primary">98.4%</div>
+<div class="text-label-caps font-label-caps text-secondary mt-xs">Collection Rate</div>
+</div>
+</div>
+</div>
+<!-- Filters Section -->
+<div class="glass-card p-lg rounded-xl shadow-sm flex flex-wrap gap-lg items-end">
+<div class="flex flex-col gap-xs min-w-[200px]">
+<label class="text-label-caps font-label-caps text-on-surface-variant uppercase">Date Range</label>
+<div class="flex items-center gap-sm">
+<input class="px-md py-sm border border-outline-variant rounded-lg text-body-md focus:ring-primary focus:border-primary bg-surface-container-low" type="date"/>
+<span class="text-on-surface-variant">to</span>
+<input class="px-md py-sm border border-outline-variant rounded-lg text-body-md focus:ring-primary focus:border-primary bg-surface-container-low" type="date"/>
+</div>
+</div>
+<div class="flex flex-col gap-xs min-w-[180px]">
+<label class="text-label-caps font-label-caps text-on-surface-variant uppercase">Invoice Status</label>
+<select class="px-md py-sm border border-outline-variant rounded-lg text-body-md focus:ring-primary focus:border-primary bg-surface-container-low">
+<option>All Statuses</option>
+<option>Pagado</option>
+<option>Pendiente</option>
+<option>Vencido</option>
+</select>
+</div>
+<div class="flex flex-col gap-xs min-w-[180px]">
+<label class="text-label-caps font-label-caps text-on-surface-variant uppercase">Client Type</label>
+<select class="px-md py-sm border border-outline-variant rounded-lg text-body-md focus:ring-primary focus:border-primary bg-surface-container-low">
+<option>All Clients</option>
+<option>Commercial Fleet</option>
+<option>Private Individual</option>
+</select>
+</div>
+<div class="flex gap-sm ml-auto">
+<button class="px-lg py-sm text-primary font-bold border border-primary rounded-lg hover:bg-primary-fixed transition-colors">Reset</button>
+<button class="px-lg py-sm bg-primary text-on-primary font-bold rounded-lg hover:opacity-90 transition-opacity">Apply Filters</button>
+</div>
+</div>
+<!-- Invoices Table -->
+<div class="glass-card rounded-xl shadow-sm overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-primary text-on-primary font-label-caps text-label-caps uppercase">
+<th class="py-md px-lg">Invoice #</th>
+<th class="py-md px-lg">Date</th>
+<th class="py-md px-lg">Client</th>
+<th class="py-md px-lg">Total</th>
+<th class="py-md px-lg">Status</th>
+<th class="py-md px-lg text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-lg font-data-mono text-data-mono">INV-2024-001</td>
+<td class="py-md px-lg text-body-md text-on-surface">Oct 24, 2023</td>
+<td class="py-md px-lg text-body-md text-on-surface">Precision Logistics Corp.</td>
+<td class="py-md px-lg font-data-mono text-data-mono">$1,450.00</td>
+<td class="py-md px-lg">
+<span class="status-badge badge-pagado">TOTALMENTE PAGADO</span>
+</td>
+<td class="py-md px-lg text-right">
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">visibility</span></button>
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">download</span></button>
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-lg font-data-mono text-data-mono">INV-2024-002</td>
+<td class="py-md px-lg text-body-md text-on-surface">Oct 25, 2023</td>
+<td class="py-md px-lg text-body-md text-on-surface">Ramirez Trucking Ltd.</td>
+<td class="py-md px-lg font-data-mono text-data-mono">$840.50</td>
+<td class="py-md px-lg">
+<span class="status-badge bg-surface-container text-on-surface-variant rounded-full">PENDIENTE</span>
+</td>
+<td class="py-md px-lg text-right">
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">visibility</span></button>
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">download</span></button>
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-lg font-data-mono text-data-mono">INV-2024-003</td>
+<td class="py-md px-lg text-body-md text-on-surface">Oct 26, 2023</td>
+<td class="py-md px-lg text-body-md text-on-surface">Anderson Heavy Duty</td>
+<td class="py-md px-lg font-data-mono text-data-mono">$3,200.00</td>
+<td class="py-md px-lg">
+<span class="status-badge bg-error-container text-on-error-container rounded-full">VENCIDO</span>
+</td>
+<td class="py-md px-lg text-right">
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">visibility</span></button>
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">download</span></button>
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-lg font-data-mono text-data-mono">INV-2024-004</td>
+<td class="py-md px-lg text-body-md text-on-surface">Oct 27, 2023</td>
+<td class="py-md px-lg text-body-md text-on-surface">Swift Delivery Services</td>
+<td class="py-md px-lg font-data-mono text-data-mono">$210.00</td>
+<td class="py-md px-lg">
+<span class="status-badge badge-pagado">TOTALMENTE PAGADO</span>
+</td>
+<td class="py-md px-lg text-right">
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">visibility</span></button>
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">download</span></button>
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-lg font-data-mono text-data-mono">INV-2024-005</td>
+<td class="py-md px-lg text-body-md text-on-surface">Oct 28, 2023</td>
+<td class="py-md px-lg text-body-md text-on-surface">Global Transit Solutions</td>
+<td class="py-md px-lg font-data-mono text-data-mono">$12,400.00</td>
+<td class="py-md px-lg">
+<span class="status-badge badge-pagado">TOTALMENTE PAGADO</span>
+</td>
+<td class="py-md px-lg text-right">
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">visibility</span></button>
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">download</span></button>
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 6 -->
+<tr class="hover:bg-surface-container-low transition-colors group">
+<td class="py-md px-lg font-data-mono text-data-mono">INV-2024-006</td>
+<td class="py-md px-lg text-body-md text-on-surface">Oct 29, 2023</td>
+<td class="py-md px-lg text-body-md text-on-surface">Private Owner - Dodge Ram</td>
+<td class="py-md px-lg font-data-mono text-data-mono">$450.25</td>
+<td class="py-md px-lg">
+<span class="status-badge bg-surface-container text-on-surface-variant rounded-full">PENDIENTE</span>
+</td>
+<td class="py-md px-lg text-right">
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">visibility</span></button>
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">download</span></button>
+<button class="p-xs hover:text-primary transition-colors"><span class="material-symbols-outlined">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+<!-- Pagination -->
+<div class="px-lg py-md bg-surface-container-low flex justify-between items-center">
+<span class="text-body-md text-on-surface-variant">Showing 1-10 of 248 invoices</span>
+<div class="flex gap-sm">
+<button class="p-sm rounded border border-outline-variant hover:bg-surface-variant disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary text-on-primary font-bold">1</button>
+<button class="w-8 h-8 rounded border border-outline-variant hover:bg-surface-variant">2</button>
+<button class="w-8 h-8 rounded border border-outline-variant hover:bg-surface-variant">3</button>
+<button class="p-sm rounded border border-outline-variant hover:bg-surface-variant">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<script>
+        // Simple interactivity for demonstration
+        document.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('button')) return;
+                // Highlight logic or redirect simulation
+                console.log('Row clicked');
+            });
+        });
+
+        // Sticky header behavior
+        const header = document.querySelector('header');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 0) {
+                header.classList.add('shadow-md');
+            } else {
+                header.classList.remove('shadow-md');
+            }
+        });
+    </script>
+</body></html>

@@ -1,0 +1,194 @@
+MANUAL DE EJECUCION DE HERRAMIENTAS
+Gestor de Inventario POS
+=================================
+
+1. REQUISITOS
+-------------
+Windows:
+- Abrir CMD o PowerShell como administrador cuando se reparen servicios.
+- Tener PostgreSQL instalado o portable y sus carpetas bin en PATH.
+- Tener Node.js y npm disponibles para reparar la estructura Prisma.
+
+Linux:
+- Tener PostgreSQL instalado y los comandos psql, pg_dump y pg_restore en PATH.
+- Tener Node.js, npm y permisos para conectarse a la base.
+- Dar permiso de ejecucion a los scripts .sh.
+
+Base por defecto:
+- Nombre: gestor_inventario
+- Usuario: postgres
+- Host: 127.0.0.1
+- Puerto: 5432
+
+Si usa otros valores, defina las variables antes de ejecutar:
+
+Linux:
+  export DB_NAME=gestor_inventario
+  export DB_USER=postgres
+  export DB_HOST=127.0.0.1
+  export DB_PORT=5432
+
+Windows CMD:
+  set DB_NAME=gestor_inventario
+  set DB_USER=postgres
+  set DB_HOST=127.0.0.1
+  set DB_PORT=5432
+
+2. REPARAR EL PUERTO 5432 EN WINDOWS
+-------------------------------------
+Abrir PowerShell como administrador:
+
+  cd "C:\ruta\gestor de inventario\herramientas"
+  Set-ExecutionPolicy -Scope Process Bypass
+  .\fix-postgresql-port.ps1 -Force
+
+Alternativa con Python:
+
+  py .\fix_postgresql_port.py --force --auto
+
+El script solo termina automaticamente un proceso postgres.exe. Si otro programa
+usa el puerto 5432, se detiene y muestra el PID para evitar cerrar un proceso
+incorrecto.
+
+3. REPARAR LA ESTRUCTURA DE LA BASE
+------------------------------------
+Windows:
+
+  cd "C:\ruta\gestor de inventario\herramientas"
+  reparar-bd-windows.bat
+
+Linux:
+
+  cd "/ruta/gestor de inventario/herramientas"
+  chmod +x reparar-bd-linux.sh
+  ./reparar-bd-linux.sh
+
+El script:
+1. Solicita confirmacion.
+2. Crea un respaldo .dump.
+3. Consulta el estado de migraciones Prisma.
+4. Ejecuta prisma db push.
+5. Ejecuta la auditoria de integridad.
+
+No ejecutar migrate reset si se desean conservar los datos.
+
+4. GESTION DE CONTRASENA, RESPALDOS Y BORRADO
+----------------------------------------------
+Windows:
+
+  cd "C:\ruta\gestor de inventario\herramientas"
+  gestionar-bd-windows.bat
+
+Linux:
+
+  cd "/ruta/gestor de inventario/herramientas"
+  chmod +x gestionar-bd-linux.sh
+  ./gestionar-bd-linux.sh
+
+Opciones disponibles:
+1. Cambiar la contrasena del usuario PostgreSQL.
+2. Crear respaldo binario .dump, recomendado para restaurar.
+3. Exportar la base como archivo .sql legible.
+4. Respaldar y borrar la base completa.
+5. Salir.
+
+Los respaldos se guardan en el Escritorio de Windows o en HOME de Linux.
+La opcion 4 exige confirmacion y no borra la base si pg_dump falla.
+
+5. RESTAURAR UN RESPALDO
+------------------------
+Restaurar un respaldo binario:
+
+  pg_restore -h 127.0.0.1 -p 5432 -U postgres -d gestor_inventario --clean --if-exists archivo.dump
+
+Restaurar un archivo SQL:
+
+  psql -h 127.0.0.1 -p 5432 -U postgres -d gestor_inventario -f archivo.sql
+
+Realice siempre un respaldo de la base actual antes de restaurar.
+
+6. ERROR P3005 DE PRISMA
+------------------------
+Causa:
+La base de datos no esta vacia, pero Prisma intenta aplicar migraciones como si
+fuera nueva.
+
+Procedimiento seguro:
+1. Crear un respaldo .dump.
+2. Ejecutar la reparacion de estructura.
+3. Ejecutar la auditoria.
+4. Solo usar migrate resolve --applied si se comprobo que la estructura existente
+   coincide con la migracion.
+
+No ejecutar:
+  npx prisma migrate reset
+
+Ese comando elimina la base y todos sus datos.
+
+7. ERRORES FRECUENTES Y SOLUCIONES
+----------------------------------
+ERROR: port 5432 already in use
+- Windows: ejecutar fix-postgresql-port.ps1 -Force como administrador.
+- Linux: ejecutar ss -ltnp | grep 5432 y revisar el PID antes de detenerlo.
+- Tambien se puede cambiar DB_PORT al puerto real de PostgreSQL.
+
+ERROR: PostgreSQL no escucha en 5432
+- Comprobar que el servicio esta iniciado.
+- Windows: services.msc y buscar PostgreSQL.
+- Linux: sudo systemctl status postgresql.
+- Revisar postgresql.conf y postgres.log.
+
+ERROR: psql no se reconoce como comando
+- Agregar la carpeta PostgreSQL\\bin al PATH de Windows.
+- En Linux instalar postgresql-client.
+- Cerrar y abrir nuevamente la terminal despues de cambiar PATH.
+
+ERROR: pg_dump fallo por autenticacion
+- Confirmar usuario, contrasena, host y puerto.
+- Probar manualmente:
+  psql -h 127.0.0.1 -p 5432 -U postgres -d postgres
+- No dejar contrasenas escritas en scripts compartidos.
+
+ERROR: contrasena olvidada
+- PostgreSQL no permite recuperar la contrasena original.
+- Detener temporalmente el servicio.
+- Editar pg_hba.conf y cambiar temporalmente el metodo local a trust.
+- Reiniciar PostgreSQL, ejecutar ALTER ROLE con una nueva contrasena y volver a
+  restaurar el metodo original.
+- Hacerlo solo como administrador y volver a proteger pg_hba.conf inmediatamente.
+
+ERROR: permission denied
+- Windows: abrir CMD/PowerShell como administrador.
+- Linux: usar el usuario postgres o sudo cuando corresponda.
+- Verificar permisos de la carpeta de datos y del archivo de respaldo.
+
+ERROR: base de datos does not exist
+- Crear la base antes de restaurar:
+  createdb -h 127.0.0.1 -p 5432 -U postgres gestor_inventario
+- Confirmar que DB_NAME coincide con la base real.
+
+ERROR: Prisma schema no coincide
+- Ejecutar desde la carpeta backend.
+- Confirmar que DATABASE_URL apunta al host, puerto y base correctos.
+- Ejecutar npx prisma generate y luego reparar-bd-windows.bat o reparar-bd-linux.sh.
+
+8. REGLA DE SEGURIDAD
+---------------------
+Antes de reparar o borrar:
+- Confirmar la base y el puerto.
+- Crear y verificar un respaldo.
+- Cerrar el POS y el backend.
+- No compartir database-url.txt, postgres-password ni contrasenas.
+- No usar --clean, DROP DATABASE o migrate reset sin un respaldo probado.
+
+9. ARCHIVOS DE HERRAMIENTAS
+----------------------------
+fix-postgresql-port.ps1       Repara procesos y servicio PostgreSQL en Windows.
+fix_postgresql_port.py        Alternativa Python para Windows.
+reparar-bd-windows.bat        Respalda y repara estructura en Windows.
+reparar-bd-linux.sh           Respalda y repara estructura en Linux.
+gestionar-bd-windows.bat      Menu de contrasena, respaldo, exportacion y borrado.
+gestionar-bd-linux.sh         Menu equivalente para Linux.
+PLAN-REPARACION-P3005.md      Plan de decision para el error P3005.
+
+FIN DEL MANUAL

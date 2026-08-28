@@ -1,0 +1,32 @@
+# ============================================================
+# netlify.toml — Configuración de despliegue para Netlify
+# Frontend: Gestor de Inventario POS
+# ============================================================
+
+[build]
+  # Carpeta base del frontend
+  base = "frontend"
+  # Directorio generado por Vite al construir
+  publish = "dist"
+  # Comando para construir la SPA
+  command = "npm run build"
+
+# -----------------------------------------------------------
+# PROXY API — Redirección para evitar problemas de CORS
+# -----------------------------------------------------------
+# Cuando el frontend consulte `/api/productos`, Netlify redirigirá
+# la petición a la URL real del backend (por ejemplo, alojado en Railway, Render, VPS o Supabase).
+# Reemplaza 'http://localhost:3001' con la URL real de producción de tu backend.
+[[redirects]]
+  from = "/api/*"
+  to = "http://localhost:3001/api/:splat"
+  status = 200
+  force = true
+
+# -----------------------------------------------------------
+# SPA REDIRECT — React Router (client-side routing)
+# -----------------------------------------------------------
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Visor de Logs — Gestor de Inventario POS</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Consolas', 'Fira Code', 'Courier New', monospace;
+      background: #0d1117;
+      color: #c9d1d9;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ─── Header ───────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      flex-shrink: 0;
+    }
+
+    .header h1 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #58a6ff;
+      letter-spacing: 0.5px;
+    }
+
+    .header .controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .tab-bar {
+      display: flex;
+      gap: 2px;
+      padding: 0 16px;
+      background: #161b22;
+      border-bottom: 1px solid #30363d;
+      flex-shrink: 0;
+    }
+
+    .tab {
+      padding: 8px 16px;
+      font-size: 12px;
+      font-family: inherit;
+      background: transparent;
+      color: #8b949e;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab:hover { color: #c9d1d9; }
+    .tab.active {
+      color: #58a6ff;
+      border-bottom-color: #58a6ff;
+      background: rgba(88, 166, 255, 0.05);
+    }
+
+    /* ─── Buttons ──────────────────────────────── */
+    button.action {
+      padding: 5px 12px;
+      font-size: 11px;
+      font-family: inherit;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      background: #21262d;
+      color: #c9d1d9;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    button.action:hover {
+      background: #30363d;
+      border-color: #8b949e;
+    }
+    button.action.danger {
+      border-color: #f85149;
+      color: #f85149;
+    }
+    button.action.danger:hover {
+      background: rgba(248, 81, 73, 0.15);
+    }
+
+    /* ─── Filter Bar ──────────────────────────── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: #0d1117;
+      border-bottom: 1px solid #21262d;
+      flex-shrink: 0;
+    }
+
+    .filter-bar input {
+      flex: 1;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      color: #c9d1d9;
+      outline: none;
+    }
+    .filter-bar input:focus {
+      border-color: #58a6ff;
+      box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.15);
+    }
+
+    .filter-bar label {
+      font-size: 11px;
+      color: #8b949e;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .filter-bar input[type="checkbox"] {
+      flex: 0;
+      width: auto;
+    }
+
+    /* ─── Log Area ─────────────────────────────── */
+    .log-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .log-line {
+      padding: 1px 0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .log-line .timestamp {
+      color: #484f58;
+    }
+
+    .log-line .level-INFO  { color: #58a6ff; }
+    .log-line .level-WARN  { color: #d29922; }
+    .log-line .level-ERROR { color: #f85149; font-weight: bold; }
+    .log-line .level-DEBUG { color: #8b949e; }
+    .log-line .level-CRITICAL { color: #ff7b72; font-weight: bold; background: rgba(248, 81, 73, 0.1); }
+
+    .log-line .category {
+      color: #7ee787;
+    }
+
+    .log-line.highlight {
+      background: rgba(210, 153, 34, 0.12);
+    }
+
+    /* ─── Status Bar ──────────────────────────── */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 16px;
+      background: #161b22;
+      border-top: 1px solid #30363d;
+      font-size: 11px;
+      color: #484f58;
+      flex-shrink: 0;
+    }
+
+    .status-bar .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #3fb950;
+      margin-right: 6px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ─── Scrollbar ────────────────────────────── */
+    .log-container::-webkit-scrollbar { width: 8px; }
+    .log-container::-webkit-scrollbar-track { background: #0d1117; }
+    .log-container::-webkit-scrollbar-thumb {
+      background: #30363d;
+      border-radius: 4px;
+    }
+    .log-container::-webkit-scrollbar-thumb:hover {
+      background: #484f58;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #484f58;
+    }
+    .empty-state h2 { font-size: 16px; margin-bottom: 8px; color: #8b949e; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>📋 Visor de Logs del Sistema</h1>
+    <div class="controls">
+      <button class="action" onclick="refreshLogs()">⟳ Actualizar</button>
+      <button class="action" onclick="openLogFolder()">📂 Abrir Carpeta</button>
+      <button class="action danger" onclick="clearCurrentLog()">🗑 Limpiar</button>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab active" data-category="main" onclick="switchTab(this)">🖥 Principal</button>
+    <button class="tab" data-category="backend" onclick="switchTab(this)">⚙ Backend</button>
+    <button class="tab" data-category="errors" onclick="switchTab(this)">🔴 Errores</button>
+  </div>
+
+  <div class="filter-bar">
+    <input type="text" id="filterInput" placeholder="Filtrar logs... (ej: error, database, API)" oninput="applyFilter()">
+    <label><input type="checkbox" id="autoScroll" checked> Auto-scroll</label>
+    <label><input type="checkbox" id="autoRefresh" checked onchange="toggleAutoRefresh()"> Auto-refresh (3s)</label>
+  </div>
+
+  <div class="log-container" id="logContainer">
+    <div class="empty-state">
+      <h2>Cargando logs...</h2>
+      <p>Esperando datos del sistema</p>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <span><span class="dot"></span>Capturando logs en tiempo real</span>
+    <span id="lineCount">0 líneas</span>
+  </div>
+
+  <script>
+    let currentCategory = 'main';
+    let allLines = [];
+    let refreshTimer = null;
+
+    async function fetchLogs(category) {
+      try {
+        return await window.electronAPI.getLogs(category);
+      } catch (err) {
+        return `[Error cargando logs: ${err.message}]`;
+      }
+    }
+
+    async function refreshLogs() {
+      const raw = await fetchLogs(currentCategory);
+      allLines = raw.split('\n').filter(Boolean);
+      applyFilter();
+    }
+
+    function renderLines(lines) {
+      const container = document.getElementById('logContainer');
+      
+      if (lines.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <h2>Sin registros</h2>
+            <p>No hay logs en la categoría "${currentCategory}" para hoy</p>
+          </div>`;
+        document.getElementById('lineCount').textContent = '0 líneas';
+        return;
+      }
+
+      container.innerHTML = lines.map(line => {
+        const levelMatch = line.match(/\[(INFO|WARN|ERROR|DEBUG|CRITICAL)\]/);
+        const level = levelMatch ? levelMatch[1] : 'INFO';
+
+        // Colorear partes de la línea
+        let html = line
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/(\[\d{4}-\d{2}-\d{2}T[\d:.]+Z\])/g, '<span class="timestamp">$1</span>')
+          .replace(/\[(INFO|WARN|ERROR|DEBUG|CRITICAL)\]/g, '<span class="level-$1">[$1]</span>')
+          .replace(/\[(MAIN|BACKEND|CRITICAL)\]/g, '<span class="category">[$1]</span>');
+
+        return `<div class="log-line">${html}</div>`;
+      }).join('');
+
+      document.getElementById('lineCount').textContent = `${lines.length} líneas`;
+
+      if (document.getElementById('autoScroll').checked) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }
+
+    function applyFilter() {
+      const filter = document.getElementById('filterInput').value.toLowerCase().trim();
+      const filtered = filter
+        ? allLines.filter(l => l.toLowerCase().includes(filter))
+        : allLines;
+      renderLines(filtered);
+    }
+
+    function switchTab(btn) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      currentCategory = btn.dataset.category;
+      refreshLogs();
+    }
+
+    function openLogFolder() {
+      window.electronAPI.openLogFolder();
+    }
+
+    function clearCurrentLog() {
+      if (confirm(`¿Borrar los logs de "${currentCategory}" de hoy?`)) {
+        window.electronAPI.clearLog(currentCategory);
+        setTimeout(refreshLogs, 300);
+      }
+    }
+
+    function toggleAutoRefresh() {
+      if (document.getElementById('autoRefresh').checked) {
+        startAutoRefresh();
+      } else {
+        stopAutoRefresh();
+      }
+    }
+
+    function startAutoRefresh() {
+      stopAutoRefresh();
+      refreshTimer = setInterval(refreshLogs, 3000);
+    }
+
+    function stopAutoRefresh() {
+      if (refreshTimer) {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+      }
+    }
+
+    // Init
+    refreshLogs();
+    startAutoRefresh();
+  </script>
+</body>
+</html>
