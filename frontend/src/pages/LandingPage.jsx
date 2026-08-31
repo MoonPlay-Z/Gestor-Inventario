@@ -192,7 +192,7 @@ export function LandingPage() {
             <a href="https://github.com" target="_blank" rel="noreferrer" style={{ color: '#94a3b8', backgroundColor: 'rgba(255,255,255,0.08)', padding: '8px', borderRadius: '50%', display: 'flex' }}>
               <Icon icon={githubIcon} className="h-4 w-4" />
             </a>
-            <a href="https://linkedin.com" target="_blank" rel="noreferrer" style={{ color: '#94a3b8', backgroundColor: 'rgba(255,255,255,0.08)', padding: '8px', borderRadius: '50%', display: 'flex' }}>
+            <a href="https:https://www.linkedin.com/in/jadeveloper/" target="_blank" rel="noreferrer" style={{ color: '#94a3b8', backgroundColor: 'rgba(255,255,255,0.08)', padding: '8px', borderRadius: '50%', display: 'flex' }}>
               <Icon icon={linkedinIcon} className="h-4 w-4" />
             </a>
             <a href="mailto:arcila.juan10@gmail.com" style={{ color: '#94a3b8', backgroundColor: 'rgba(255,255,255,0.08)', padding: '8px', borderRadius: '50%', display: 'flex' }}>
