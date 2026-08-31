@@ -75,7 +75,7 @@ router.get('/:id', async (req, res, next) => {
 // POST /api/productos
 router.post('/', async (req, res, next) => {
   try {
-    const { sku, nombre, descripcion, stockActual, stockMinimo, precioVenta, costoCompra, tasaImpuesto, categoria } = req.body;
+    const { sku, nombre, descripcion, imagenUrl, stockActual, stockMinimo, precioVenta, costoCompra, tasaImpuesto, categoria } = req.body;
 
     // Validaciones
     if (!nombre?.trim())  throw createValidationError('El nombre es obligatorio', { nombre: 'Campo requerido' });
@@ -109,6 +109,7 @@ router.post('/', async (req, res, next) => {
         sku: finalSku.toUpperCase(),
         nombre: nombre.trim(),
         descripcion: descripcion?.trim() || null,
+        imagenUrl: imagenUrl?.trim() || null,
         stockActual: stock,
         stockMinimo: smin,
         precioVenta: precio.toFixed(2),
@@ -125,7 +126,7 @@ router.post('/', async (req, res, next) => {
 // PUT /api/productos/:id
 router.put('/:id', async (req, res, next) => {
   try {
-    const { sku, nombre, descripcion, stockActual, stockMinimo, precioVenta, costoCompra, tasaImpuesto, activo, categoria } = req.body;
+    const { sku, nombre, descripcion, imagenUrl, stockActual, stockMinimo, precioVenta, costoCompra, tasaImpuesto, activo, categoria } = req.body;
 
     if (!sku?.trim())    throw createValidationError('El SKU es obligatorio');
     if (!nombre?.trim()) throw createValidationError('El nombre es obligatorio');
@@ -148,6 +149,7 @@ router.put('/:id', async (req, res, next) => {
         sku: sku.trim().toUpperCase(),
         nombre: nombre.trim(),
         descripcion: descripcion?.trim() || null,
+        imagenUrl: imagenUrl?.trim() || null,
         stockActual: stock,
         stockMinimo: smin,
         precioVenta: precio.toFixed(2),

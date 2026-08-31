@@ -11,60 +11,44 @@
 
   --surface: #ffffff;
   --surface2: #f8fafc;
-  --surface3: #eef2ff;
+  --surface3: #eff6ff;
   --bg-page: #f8fafc;
   --bg-card: #ffffff;
   --bg-primary: #ffffff;
-  --bg-secondary: #e2e8f0;
+  --bg-secondary: #f1f5f9;
   --bg-hover: #e2e8f0;
-  --border: #d1d5db;
+  --border: #e2e8f0;
   --text-primary: #0f172a;
-  --text-secondary: #475569;
+  --text-secondary: #334155;
   --text-muted: #64748b;
-  --accent: #6366f1;
-  --success: #16a34a;
-  --danger: #dc2626;
-  --warning: #d97706;
-  --info: #0ea5e9;
+
+  /* Royal Blue Accent Palette from Reference Design */
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-gradient: linear-gradient(135deg, #1e40af 0%, #1d4ed8 50%, #2563eb 100%);
+  --blue-card-gradient: linear-gradient(180deg, #1d4ed8 0%, #1e1b4b 100%);
+
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+
   --success-dim: rgba(16, 185, 129, 0.12);
   --warning-dim: rgba(245, 158, 11, 0.12);
   --danger-dim: rgba(239, 68, 68, 0.12);
-  --info-dim: rgba(14, 165, 233, 0.12);
-  --accent-dim: rgba(99, 102, 241, 0.12);
-  --radius-sm: 0.75rem;
-  --radius-md: 1rem;
-  --radius-xl: 1.5rem;
-  --transition: 0.2s ease;
+  --info-dim: rgba(59, 130, 246, 0.12);
+  --accent-dim: rgba(37, 99, 235, 0.12);
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-xl: 1rem;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme='dark'] {
-  color-scheme: dark;
-  background-color: var(--bg-page);
-  color: var(--text-primary);
 
-  --surface: #1e2130;
-  --surface2: #1a1d27;
-  --surface3: #252840;
-  --bg-page: #0f1117;
-  --bg-card: #1e2130;
-  --bg-primary: #131829;
-  --bg-secondary: #161a2a;
-  --bg-hover: #111827;
-  --border: #2d3150;
-  --text-primary: #e8eaf6;
-  --text-secondary: #94a3b8;
-  --text-muted: #a1a8c3;
-  --accent: #6366f1;
-  --success: #22c55e;
-  --danger: #fb7185;
-  --warning: #f59e0b;
-  --info: #38bdf8;
-  --success-dim: rgba(16, 185, 129, 0.15);
-  --warning-dim: rgba(245, 158, 11, 0.12);
-  --danger-dim: rgba(248, 113, 113, 0.12);
-  --info-dim: rgba(56, 189, 248, 0.12);
-  --accent-dim: rgba(99, 102, 241, 0.15);
-}
 
 html {
   scroll-behavior: smooth;
@@ -186,7 +170,7 @@ select.form-control option { background: var(--bg-card); }
 .metric-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
-  border-color: rgba(99, 102, 241, 0.25);
+  border-color: rgba(37, 99, 235, 0.25);
 }
 .metric-icon {
   width: 3rem;
@@ -199,15 +183,16 @@ select.form-control option { background: var(--bg-card); }
   background: var(--accent);
 }
 .metric-value {
-  font-size: 1.6rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 800;
   color: var(--text-primary);
-  line-height: 1;
+  line-height: 1.1;
 }
 .metric-label {
   margin-top: 0.25rem;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-secondary);
+  font-weight: 500;
 }
 .metric-card.accent .metric-icon { background: var(--accent); }
 .metric-card.success .metric-icon { background: var(--success); }
@@ -220,6 +205,8 @@ select.form-control option { background: var(--bg-card); }
 }
 @media (max-width: 640px) {
   .metric-grid { grid-template-columns: 1fr; }
+  .metric-card { padding: 0.88rem 1rem; }
+  .metric-value { font-size: 1.3rem; }
 }
 
 /* ─── Tables ─── */

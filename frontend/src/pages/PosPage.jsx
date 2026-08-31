@@ -242,7 +242,7 @@ export function PosPage() {
         </div>
       ) : (
       <div className="page-body">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '24px', alignItems: 'start' }}>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
           {/* Panel Izquierdo: Selección de Cliente y Buscador de Productos */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div className="card">
@@ -282,17 +282,26 @@ export function PosPage() {
               </div>
 
               {filteredProducts.length > 0 && (
-                <div style={{ marginTop: '12px', maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)' }}>
+                <div style={{ marginTop: '12px', maxHeight: '240px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)' }}>
                   {filteredProducts.map(p => (
                     <div
                       key={p.id}
                       onClick={() => addToCart(p)}
-                      style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-                      className="nav-item"
+                      style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
+                      className="nav-item hover:bg-[var(--surface3)]"
                     >
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{p.nombre}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Stock: {p.stockActual} | SKU: {p.sku || 'N/A'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {p.imagenUrl ? (
+                          <img src={p.imagenUrl} alt={p.nombre} style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #cbd5e1' }} onError={e => { e.target.style.display = 'none'; }} />
+                        ) : (
+                          <div style={{ width: '42px', height: '42px', borderRadius: '8px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                            <Icon icon="mdi:package-variant" className="h-5 w-5" />
+                          </div>
+                        )}
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Stock: {p.stockActual} | SKU: {p.sku || 'N/A'}</div>
+                        </div>
                       </div>
                       <div style={{ fontWeight: 700, color: 'var(--accent)' }}>
                         {Utils.formatMoney(p.precioVenta, currencySymbol)}

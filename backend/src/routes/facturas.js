@@ -130,7 +130,7 @@ router.post('/', async (req, res, next) => {
     const cuotasTotales = [2, 3, 4].includes(parseInt(cuotas)) ? parseInt(cuotas) : 1;
     const esFinanciada = cuotasTotales > 1;
 
-    if (metodoPago && !['CASH', 'BANK_TRANSFER', 'CREDIT_CARD', 'MOBILE_PAYMENT'].includes(metodoPago)) {
+    if (metodoPago && !['CASH', 'BANK_TRANSFER', 'CREDIT_CARD', 'MOBILE_PAYMENT', 'PAGO_MOVIL'].includes(metodoPago)) {
       throw createValidationError('Método de pago inválido');
     }
     if (metodoPago && metodoPago !== 'CASH' && !referenciaTransaccion) {
@@ -215,7 +215,8 @@ router.post('/', async (req, res, next) => {
         data: {
           numeroFactura,
           clienteId,
-          usuarioId:     req.user?.id || null, // Caja/Operador que emite la venta
+          usuarioId:    req.user?.id || null,
+          empresaId:    req.user?.empresaId || null,
           fechaVencimiento: fVencimiento.toISOString(),
           subtotal:      subtotalTotal.toFixed(2),
           impuestoTotal: impuestoTotalSum.toFixed(2),

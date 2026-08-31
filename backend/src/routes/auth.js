@@ -35,6 +35,58 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
+    // ─── VERIFICACIÓN DE FECHA DE PAGO Y MENSUALIDAD (EXCEPTO SUPER_ADMIN) ───
+    if (usuario.rol !== 'SUPER_ADMIN') {
+      const { METODOS_PAGO_SAAS } = require('../config/metodosPago');
+
+      // Buscar datos de suscripción (desde la tabla Empresa o el Usuario principal)
+      let subSource = usuario;
+      let empresaNombre = usuario.nombre;
+      let targetEmpresaId = usuario.empresaRefId || usuario.empresaId || usuario.id;
+
+      if (usuario.empresaRefId || usuario.empresaId) {
+        const empId = usuario.empresaRefId || usuario.empresaId;
+        const emp = await prisma.empresa.findUnique({ where: { id: empId } });
+        if (emp) {
+          subSource = emp;
+          empresaNombre = emp.nombre;
+        }
+      }
+
+      const now = new Date();
+      const status = subSource.subscriptionStatus;
+      let expired = false;
+
+      if (['expired_trial', 'canceled', 'unpaid', 'past_due'].includes(status)) {
+        expired = true;
+      } else if (status === 'trialing' && subSource.trialEndsAt && now > new Date(subSource.trialEndsAt)) {
+        expired = true;
+        // Marcar como trial expirado en BD
+        await prisma.usuario.update({ where: { id: usuario.id }, data: { subscriptionStatus: 'expired_trial' } }).catch(() => null);
+        if (usuario.empresaRefId) {
+          await prisma.empresa.update({ where: { id: usuario.empresaRefId }, data: { subscriptionStatus: 'expired_trial' } }).catch(() => null);
+        }
+      } else if (status === 'active' && subSource.currentPeriodEnd && now > new Date(subSource.currentPeriodEnd)) {
+        expired = true;
+        await prisma.usuario.update({ where: { id: usuario.id }, data: { subscriptionStatus: 'canceled' } }).catch(() => null);
+        if (usuario.empresaRefId) {
+          await prisma.empresa.update({ where: { id: usuario.empresaRefId }, data: { subscriptionStatus: 'canceled' } }).catch(() => null);
+        }
+      }
+
+      if (expired && status !== 'lifetime') {
+        return res.status(403).json({
+          code: 'PAYMENT_REQUIRED',
+          error: 'Debe cancelar la mensualidad para continuar utilizando el sistema.',
+          redirect: '/pagos-saas',
+          usuarioId: usuario.id,
+          empresaId: targetEmpresaId,
+          empresaNombre,
+          metodosPago: METODOS_PAGO_SAAS
+        });
+      }
+    }
+
     // Token incluye: id, username, nombre del operador, rol, subscriptionStatus
     const token = jwt.sign(
       {
@@ -43,11 +95,21 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         nombre: usuario.nombre,
         rol: usuario.rol,
         empresaId: usuario.empresaId,
-        subscriptionStatus: usuario.subscriptionStatus
+        subscriptionStatus: usuario.subscriptionStatus,
+        sessionVersion: usuario.sessionVersion
       },
       JWT_SECRET,
       { expiresIn: '12h' }
     );
+
+    // Actualizar metadatos de último login
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        lastLoginAt: new Date().toISOString(),
+        lastLoginIp: req.ip || req.headers['x-forwarded-for'] || null
+      }
+    });
 
     res.json({
       token,
@@ -142,7 +204,18 @@ router.post('/register-client', registerLimiter, async (req, res, next) => {
     const nowIso     = now.toISOString();
     const trialEndIso = trialEnd.toISOString();
 
-    // Se crea ACTIVO con trial de 7 días
+    // Se crea primero la Empresa en la tabla 'empresas'
+    const nuevaEmpresa = await prisma.empresa.create({
+      data: {
+        nombre: nombre.trim(),
+        rif: `PENDIENTE-${Date.now()}`, // El cliente actualiza su RIF desde el perfil
+        subscriptionStatus: 'trialing',
+        trialStartsAt: nowIso,
+        trialEndsAt:   trialEndIso,
+      }
+    });
+
+    // Se crea el usuario EMPRESA vinculado a la nueva empresa
     const newUser = await prisma.usuario.create({
       data: {
         username: cleanUsername,
@@ -150,6 +223,7 @@ router.post('/register-client', registerLimiter, async (req, res, next) => {
         nombre: nombre.trim(),
         rol: 'EMPRESA',
         activo: true,
+        empresaRefId: nuevaEmpresa.id,
         subscriptionStatus: 'trialing',
         trialStartsAt: nowIso,
         trialEndsAt:   trialEndIso,
@@ -164,7 +238,8 @@ router.post('/register-client', registerLimiter, async (req, res, next) => {
         nombre: newUser.nombre,
         rol: newUser.rol,
         empresaId: newUser.empresaId,
-        subscriptionStatus: newUser.subscriptionStatus
+        subscriptionStatus: newUser.subscriptionStatus,
+        sessionVersion: newUser.sessionVersion
       },
       JWT_SECRET,
       { expiresIn: '12h' }
@@ -206,6 +281,59 @@ router.get('/me', authMiddleware, async (req, res, next) => {
     if (!usuario) return res.status(404).json({ error: 'Usuario no encontrado' });
 
     res.json(usuario);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── 4. Información de Métodos de Pago ────────────────────────────────────────
+router.get('/metodos-pago', (_req, res) => {
+  const { METODOS_PAGO_SAAS } = require('../config/metodosPago');
+  res.json(METODOS_PAGO_SAAS);
+});
+
+// ─── 5. Reportar Pago de Mensualidad ──────────────────────────────────────────
+router.post('/reportar-pago', async (req, res, next) => {
+  try {
+    const { usuarioId, metodoPago, referencia, plan = 'monthly' } = req.body;
+    if (!usuarioId) throw createValidationError('El usuarioId o empresaId es obligatorio');
+    if (!referencia?.trim()) throw createValidationError('El número de referencia es obligatorio');
+    if (!metodoPago?.trim()) throw createValidationError('El método de pago es obligatorio');
+
+    const targetUser = await prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      include: { empresaRef: true }
+    });
+    if (!targetUser) throw createValidationError('Usuario no encontrado');
+
+    const { METODOS_PAGO_SAAS, enviarNotificacionPago } = require('../config/metodosPago');
+
+    // Registrar solicitud de activación en estado PENDIENTE
+    const solicitud = await prisma.solicitudActivacion.create({
+      data: {
+        usuarioId: targetUser.id,
+        plan,
+        metodoPago: metodoPago.trim(),
+        referencia: referencia.trim(),
+        estado: 'PENDIENTE'
+      }
+    });
+
+    // Enviar notificación al correo de administración (arcila.juan10@gmail.com)
+    await enviarNotificacionPago({
+      usuarioId: targetUser.id,
+      username: targetUser.username,
+      nombreEmpresa: targetUser.empresaRef?.nombre || targetUser.nombre,
+      metodoPago: metodoPago.trim(),
+      referencia: referencia.trim(),
+      plan
+    });
+
+    res.json({
+      message: 'Pago reportado exitosamente. Tu solicitud está en proceso de verificación.',
+      solicitudId: solicitud.id,
+      notificacion: `Comprobante enviado a ${METODOS_PAGO_SAAS.correoNotificacion}`
+    });
   } catch (err) {
     next(err);
   }

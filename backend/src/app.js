@@ -67,12 +67,61 @@ app.use((req, _res, next) => {
 });
 
 // ─── Rutas Públicas ────────────────────────────────────────────────────────────
+const rolesRouter      = require('./routes/roles');
+
+// ─── Rutas Públicas ────────────────────────────────────────────────────────────
 app.get('/api/health', async (_req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   } catch (err) {
     res.status(503).json({ status: 'error', error: 'Base de datos no disponible' });
+  }
+});
+
+// GET /api/public/noticias — Noticias y anuncios de la Landing Page (Público)
+app.get('/api/public/noticias', async (_req, res, next) => {
+  try {
+    const noticias = await prisma.noticia.findMany({
+      where: { publicado: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(noticias);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/public/promociones/validar — Validar un código promocional (Público/Registro)
+app.post('/api/public/promociones/validar', async (req, res, next) => {
+  try {
+    const { codigo } = req.body;
+    if (!codigo) return res.status(400).json({ error: 'Código requerido' });
+
+    const promo = await prisma.promocion.findUnique({
+      where: { codigo: codigo.trim().toUpperCase() }
+    });
+
+    if (!promo || !promo.activo) {
+      return res.status(404).json({ error: 'Código promocional inválido o inactivo' });
+    }
+    if (promo.fechaFin && new Date() > new Date(promo.fechaFin)) {
+      return res.status(400).json({ error: 'Código promocional expirado' });
+    }
+    if (promo.usosActuales >= promo.usosMaximos) {
+      return res.status(400).json({ error: 'Límite de usos del código alcanzado' });
+    }
+
+    res.json({
+      valido: true,
+      codigo: promo.codigo,
+      titulo: promo.titulo,
+      descuentoPorc: promo.descuentoPorc,
+      diasExtraTrial: promo.diasExtraTrial,
+      planDestino: promo.planDestino
+    });
+  } catch (err) {
+    next(err);
   }
 });
 
@@ -83,17 +132,18 @@ app.use('/api/v1/b2b', b2bRouter);  // Protegida por API Key (no JWT)
 app.use('/api', authMiddleware);      // Verifica JWT
 app.use('/api', subscriptionGuard);  // Verifica suscripción activa/trial
 
-app.use('/api/clientes',  clientesRouter);
-app.use('/api/productos', productosRouter);
-app.use('/api/facturas',  facturasRouter);
-app.use('/api/pagos',     pagosRouter);
-app.use('/api/config',    configRouter);
-app.use('/api/backup',    backupRouter);
-app.use('/api/caja',      cajaRouter);
+app.use('/api/clientes',     clientesRouter);
+app.use('/api/productos',    productosRouter);
+app.use('/api/facturas',     facturasRouter);
+app.use('/api/pagos',        pagosRouter);
+app.use('/api/config',       configRouter);
+app.use('/api/backup',       backupRouter);
+app.use('/api/caja',         cajaRouter);
 app.use('/api/cotizaciones', cotizacionesRouter);
-app.use('/api/usuarios',  usuariosRouter);
+app.use('/api/usuarios',     usuariosRouter);
 app.use('/api/activaciones', activacionesRouter);
-app.use('/api/fiscal',      fiscalRouter);
+app.use('/api/roles',        rolesRouter);
+app.use('/api/fiscal',       fiscalRouter);
 
 // ─── Dashboard stats ──────────────────────────────────────────────────────────
 app.get('/api/dashboard', requireRole('EMPRESA'), async (req, res, next) => {
