@@ -189,7 +189,7 @@ export function LandingPage() {
           {/* Social Quick Links Row */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>
             <span>CONTACTO & SOPORTE:</span>
-            <a href="https://github.com" target="_blank" rel="noreferrer" style={{ color: '#94a3b8', backgroundColor: 'rgba(255,255,255,0.08)', padding: '8px', borderRadius: '50%', display: 'flex' }}>
+            <a href="https://github.com/MoonPlay-Z/Gestor-Inventario" target="_blank" rel="noreferrer" style={{ color: '#94a3b8', backgroundColor: 'rgba(255,255,255,0.08)', padding: '8px', borderRadius: '50%', display: 'flex' }}>
               <Icon icon={githubIcon} className="h-4 w-4" />
             </a>
             <a href="https:https://www.linkedin.com/in/jadeveloper/" target="_blank" rel="noreferrer" style={{ color: '#94a3b8', backgroundColor: 'rgba(255,255,255,0.08)', padding: '8px', borderRadius: '50%', display: 'flex' }}>
