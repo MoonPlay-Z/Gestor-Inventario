@@ -9,6 +9,7 @@ import { LandingPage }             from './pages/LandingPage';
 import { LoginPage }               from './pages/LoginPage';
 import { RegisterPage }            from './pages/RegisterPage';
 import { SuscripcionExpiradaPage } from './pages/SuscripcionExpiradaPage';
+import { PagosSaaSPage }           from './pages/PagosSaaSPage';
 
 // --- Protected Pages ---
 import { DashboardPage }    from './pages/DashboardPage';
@@ -30,6 +31,7 @@ export default function AppRoutes() {
       <Route path="/"          element={<LandingPage />} />
       <Route path="/login"     element={<LoginPage />} />
       <Route path="/registro"  element={<RegisterPage />} />
+      <Route path="/pagos-saas" element={<PagosSaaSPage />} />
       <Route path="/suscripcion-expirada" element={
         <ProtectedRoute>
           <SuscripcionExpiradaPage />

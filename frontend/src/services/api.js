@@ -1,11 +1,12 @@
 const API_URL = '/api';
 
 export class ApiError extends Error {
-  constructor(message, status, fields, code) {
+  constructor(message, status, fields, code, data) {
     super(message);
     this.status = status;
     this.fields = fields;
     this.code = code;
+    this.data = data;
   }
 }
 
@@ -44,7 +45,7 @@ export async function request(endpoint, options = {}) {
     user.subscriptionStatus = 'expired_trial';
     localStorage.setItem('user', JSON.stringify(user));
     window.dispatchEvent(new Event('subscription:expired'));
-    throw new ApiError(data.error || 'Suscripción expirada', 403, null, 'SUBSCRIPTION_EXPIRED');
+    throw new ApiError(data.error || 'Suscripción expirada', 403, null, 'SUBSCRIPTION_EXPIRED', data);
   }
 
   if (!response.ok) {
@@ -52,7 +53,8 @@ export async function request(endpoint, options = {}) {
       data.error || data.message || 'Ha ocurrido un error inesperado',
       response.status,
       data.fields,
-      data.code
+      data.code,
+      data
     );
   }
 
@@ -172,6 +174,10 @@ export const API = {
   imprimirFiscal: (facturaId) => request(`/fiscal/imprimir/${facturaId}`, { method: 'POST' }),
   reporteXFiscal: () => request('/fiscal/reporte-x', { method: 'POST' }),
   reporteZFiscal: () => request('/fiscal/reporte-z', { method: 'POST' }),
+
+  // Suscripciones y Pagos SaaS
+  reportarPagoSaaS: (data) => request('/auth/reportar-pago', { method: 'POST', body: data }),
+  getMetodosPagoSaaS: () => request('/auth/metodos-pago'),
 };
 
 export const Utils = {

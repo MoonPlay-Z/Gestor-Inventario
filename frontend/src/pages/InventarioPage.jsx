@@ -7,7 +7,7 @@ import { useToast } from '../context/ToastContext';
 import { Button } from '../components/ui';
 
 const EMPTY_FORM = {
-  sku: '', nombre: '', descripcion: '', categoria: 'General',
+  sku: '', nombre: '', descripcion: '', imagenUrl: '', categoria: 'General',
   precioVenta: '', costoCompra: '0', tasaImpuesto: '16',
   stockActual: '0', stockMinimo: '5', activo: true,
 };
@@ -73,6 +73,7 @@ export function InventarioPage() {
     setFieldErrors({});
     setForm({
       sku: p.sku, nombre: p.nombre, descripcion: p.descripcion || '',
+      imagenUrl: p.imagenUrl || '',
       categoria: p.categoria || 'General', precioVenta: p.precioVenta,
       costoCompra: p.costoCompra, tasaImpuesto: p.tasaImpuesto,
       stockActual: p.stockActual, stockMinimo: p.stockMinimo, activo: p.activo,
@@ -126,7 +127,7 @@ export function InventarioPage() {
   return (
     <>
       <Header
-        title="Inventario"
+        title="Inventario de Productos"
         subtitle={`${total} producto${total !== 1 ? 's' : ''} registrado${total !== 1 ? 's' : ''}`}
         toggleSidebar={toggleSidebar}
         actions={
@@ -155,24 +156,38 @@ export function InventarioPage() {
             <table>
               <thead>
                 <tr>
-                  <th>SKU</th><th>Nombre / Categoría</th><th>Precio USD</th>
+                  <th>Imagen</th><th>SKU</th><th>Nombre / Categoría</th><th>Precio USD</th>
                   <th>Costo</th><th>IVA %</th><th>Stock</th><th>Mín.</th>
                   <th>Estado</th><th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={9} className="empty-state">Cargando productos...</td></tr>
+                  <tr><td colSpan={10} className="empty-state">Cargando productos...</td></tr>
                 ) : productos.length === 0 ? (
-                  <tr><td colSpan={9} className="empty-state">No se encontraron productos</td></tr>
+                  <tr><td colSpan={10} className="empty-state">No se encontraron productos</td></tr>
                 ) : productos.map(p => (
                   <tr key={p.id}>
+                    <td>
+                      {p.imagenUrl ? (
+                        <img
+                          src={p.imagenUrl}
+                          alt={p.nombre}
+                          style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}>
+                          <Icon icon="mdi:package-variant" className="h-5 w-5" />
+                        </div>
+                      )}
+                    </td>
                     <td><code style={{ fontSize: '0.78rem', background: 'var(--surface3)', padding: '2px 6px', borderRadius: '4px' }}>{p.sku}</code></td>
                     <td>
                       <div style={{ fontWeight: 600 }}>{p.nombre}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{p.categoria}</div>
                     </td>
-                    <td style={{ fontWeight: 700 }}>{Utils.formatMoney(p.precioVenta)}</td>
+                    <td style={{ fontWeight: 700, color: 'var(--accent)' }}>{Utils.formatMoney(p.precioVenta)}</td>
                     <td style={{ color: 'var(--text-secondary)' }}>{Utils.formatMoney(p.costoCompra)}</td>
                     <td>{p.tasaImpuesto}%</td>
                     <td>
@@ -238,11 +253,28 @@ export function InventarioPage() {
                       onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))} placeholder="General" />
                   </div>
                   <div className="form-group" style={{ gridColumn: '1/-1' }}>
-                    <label className="form-label">Nombre <span style={{ color: 'var(--danger)' }}>*</span></label>
+                    <label className="form-label">Nombre del Producto <span style={{ color: 'var(--danger)' }}>*</span></label>
                     <input className={`form-control${fieldErrors.nombre ? ' is-invalid' : ''}`} value={form.nombre}
-                      onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} required />
+                      onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Ej: Coca Cola 1.5L" required />
                     {fieldErrors.nombre && <div className="form-error">{fieldErrors.nombre}</div>}
                   </div>
+
+                  {/* NUEVO CAMPO: URL de Imagen de Producto */}
+                  <div className="form-group" style={{ gridColumn: '1/-1' }}>
+                    <label className="form-label">URL de Imagen del Producto</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input className="form-control" value={form.imagenUrl}
+                        onChange={e => setForm(f => ({ ...f, imagenUrl: e.target.value }))}
+                        placeholder="https://ejemplo.com/imagen.jpg" />
+                      {form.imagenUrl && (
+                        <img src={form.imagenUrl} alt="Vista previa" style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #cbd5e1' }} onError={e => { e.target.style.display = 'none'; }} />
+                      )}
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      Enlace directo a la imagen del producto para mostrar en el POS y catálogo.
+                    </span>
+                  </div>
+
                   <div className="form-group" style={{ gridColumn: '1/-1' }}>
                     <label className="form-label">Descripción</label>
                     <textarea className="form-control" rows={2} value={form.descripcion}

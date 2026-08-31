@@ -50,6 +50,7 @@ router.post('/open', async (req, res, next) => {
     const nuevaCaja = await prisma.cierreCaja.create({
       data: {
         usuarioId: userId,
+        empresaId: req.user?.empresaId || null,
         montoInicial: montoInicial || 0,
         observaciones: observaciones?.trim() || null
       },
@@ -232,6 +233,7 @@ router.get('/', async (req, res, next) => {
       } else {
         where.OR = [
           { usuarioId: empresaId },
+          { empresaId: empresaId },
           { usuario: { empresaId: empresaId } }
         ];
       }

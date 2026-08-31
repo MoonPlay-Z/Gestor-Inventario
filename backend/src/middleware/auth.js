@@ -26,11 +26,15 @@ const authMiddleware = async (req, res, next) => {
     // Verificar que el usuario exista y siga activo en BD
     const usuario = await prisma.usuario.findUnique({
       where: { id: decoded.id },
-      select: { id: true, username: true, nombre: true, rol: true, empresaId: true, activo: true }
+      select: { id: true, username: true, nombre: true, rol: true, empresaId: true, activo: true, deletedAt: true, sessionVersion: true }
     });
 
-    if (!usuario || !usuario.activo) {
+    if (!usuario || !usuario.activo || usuario.deletedAt) {
       return res.status(401).json({ error: 'Sesión revocada o usuario inactivo.' });
+    }
+    // Invalida tokens emitidos antes de un cambio de sessionVersion
+    if (decoded.sessionVersion !== undefined && decoded.sessionVersion !== usuario.sessionVersion) {
+      return res.status(401).json({ error: 'Sesión invalidada. Por favor, inicia sesión nuevamente.' });
     }
 
     req.user = usuario;
