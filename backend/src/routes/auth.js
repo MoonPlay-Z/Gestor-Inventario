@@ -149,7 +149,7 @@ router.post('/register-remote', async (req, res, next) => {
       throw createValidationError('La contraseña debe tener al menos 8 caracteres');
     }
 
-    const validRoles = ['SUPER_ADMIN', 'EMPRESA', 'CAJA', 'INVENTARIO'];
+    const validRoles = ['SUPER_ADMIN', 'EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'];
     const finalRol = validRoles.includes(rol) ? rol : 'CAJA';
 
     const existingUser = await prisma.usuario.findUnique({ where: { username } });
@@ -295,16 +295,37 @@ router.get('/metodos-pago', (_req, res) => {
 // ─── 5. Reportar Pago de Mensualidad ──────────────────────────────────────────
 router.post('/reportar-pago', async (req, res, next) => {
   try {
-    const { usuarioId, metodoPago, referencia, plan = 'monthly' } = req.body;
-    if (!usuarioId) throw createValidationError('El usuarioId o empresaId es obligatorio');
+    const { usuarioId, empresaId, metodoPago, referencia, plan = 'monthly' } = req.body;
+    const targetQuery = usuarioId || empresaId;
+    if (!targetQuery || typeof targetQuery !== 'string' || !targetQuery.trim()) {
+      throw createValidationError('El ID de usuario, empresa o username es obligatorio');
+    }
     if (!referencia?.trim()) throw createValidationError('El número de referencia es obligatorio');
     if (!metodoPago?.trim()) throw createValidationError('El método de pago es obligatorio');
 
-    const targetUser = await prisma.usuario.findUnique({
-      where: { id: usuarioId },
+    const cleanQuery = targetQuery.trim();
+
+    // Intentar buscar por ID primero, luego por username o email
+    let targetUser = await prisma.usuario.findUnique({
+      where: { id: cleanQuery },
       include: { empresaRef: true }
-    });
-    if (!targetUser) throw createValidationError('Usuario no encontrado');
+    }).catch(() => null);
+
+    if (!targetUser) {
+      targetUser = await prisma.usuario.findFirst({
+        where: {
+          OR: [
+            { username: cleanQuery },
+            { email: cleanQuery }
+          ]
+        },
+        include: { empresaRef: true }
+      });
+    }
+
+    if (!targetUser) {
+      throw createValidationError('No se encontró ninguna cuenta asociada a este usuario o ID.');
+    }
 
     const { METODOS_PAGO_SAAS, enviarNotificacionPago } = require('../config/metodosPago');
 
@@ -320,14 +341,18 @@ router.post('/reportar-pago', async (req, res, next) => {
     });
 
     // Enviar notificación al correo de administración (arcila.juan10@gmail.com)
-    await enviarNotificacionPago({
-      usuarioId: targetUser.id,
-      username: targetUser.username,
-      nombreEmpresa: targetUser.empresaRef?.nombre || targetUser.nombre,
-      metodoPago: metodoPago.trim(),
-      referencia: referencia.trim(),
-      plan
-    });
+    try {
+      await enviarNotificacionPago({
+        usuarioId: targetUser.id,
+        username: targetUser.username,
+        nombreEmpresa: targetUser.empresaRef?.nombre || targetUser.nombre,
+        metodoPago: metodoPago.trim(),
+        referencia: referencia.trim(),
+        plan
+      });
+    } catch (notifErr) {
+      console.warn('[WARN] No se pudo enviar notificación por correo:', notifErr.message);
+    }
 
     res.json({
       message: 'Pago reportado exitosamente. Tu solicitud está en proceso de verificación.',

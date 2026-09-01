@@ -26,7 +26,7 @@ const authMiddleware = async (req, res, next) => {
     // Verificar que el usuario exista y siga activo en BD
     const usuario = await prisma.usuario.findUnique({
       where: { id: decoded.id },
-      select: { id: true, username: true, nombre: true, rol: true, empresaId: true, activo: true, deletedAt: true, sessionVersion: true }
+      select: { id: true, username: true, nombre: true, rol: true, empresaId: true, empresaRefId: true, activo: true, deletedAt: true, sessionVersion: true }
     });
 
     if (!usuario || !usuario.activo || usuario.deletedAt) {

@@ -56,8 +56,8 @@ router.post('/', async (req, res, next) => {
     if (!username?.trim()) throw createValidationError('El nombre de usuario es obligatorio');
     if (!password || password.length < 4) throw createValidationError('La contraseña debe tener al menos 4 caracteres');
     if (!nombre?.trim()) throw createValidationError('El nombre de la persona u operador es obligatorio');
-    if (!['CAJA', 'INVENTARIO'].includes(rol)) {
-      throw createValidationError('El rol debe ser CAJA o INVENTARIO');
+    if (!['CAJA', 'INVENTARIO', 'VISOR'].includes(rol)) {
+      throw createValidationError('El rol debe ser CAJA, INVENTARIO o VISOR');
     }
 
     const cleanUsername = username.trim().toLowerCase();
@@ -117,7 +117,7 @@ router.put('/:id', async (req, res, next) => {
       updateData.nombre = nombre.trim();
     }
 
-    if (rol !== undefined && ['CAJA', 'INVENTARIO'].includes(rol)) {
+    if (rol !== undefined && ['CAJA', 'INVENTARIO', 'VISOR'].includes(rol)) {
       updateData.rol = rol;
     }
 

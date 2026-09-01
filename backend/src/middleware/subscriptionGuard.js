@@ -11,7 +11,7 @@ const prisma = require('../db/prisma');
 const subscriptionGuard = async (req, res, next) => {
   try {
     // Sub-usuarios no gestionan suscripción propia
-    if (req.user && (req.user.rol === 'CAJA' || req.user.rol === 'INVENTARIO')) {
+    if (req.user && (req.user.rol === 'CAJA' || req.user.rol === 'INVENTARIO' || req.user.rol === 'VISOR')) {
       return next();
     }
 

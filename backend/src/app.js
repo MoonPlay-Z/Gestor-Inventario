@@ -29,29 +29,48 @@ const configuredOrigins = process.env.ALLOWED_ORIGINS
   ?.split(',')
   .map((origin) => origin.trim())
   .filter(Boolean) || [];
+
 const allowedOrigins = new Set([
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   `http://localhost:${PORT}`,
   `http://127.0.0.1:${PORT}`,
+  'https://gestor-inventario-pos.netlify.app',
   ...configuredOrigins,
 ]);
+
 function isAllowedOrigin(origin) {
-  if (!origin || allowedOrigins.has(origin)) return true;
+  if (!origin || allowedOrigins.has(origin) || allowedOrigins.has('*')) return true;
+  
+  // En entorno de desarrollo (o red local), permitir cualquier origen de la red o IP privada
+  if (process.env.NODE_ENV !== 'production') return true;
+
   try {
     const parsed = new URL(origin);
-    return (parsed.protocol === 'http:' &&
-      (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') &&
-      parsed.port !== '');
+    const host = parsed.hostname;
+    // Permitir dominios de Netlify o IPs de red local (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+    if (
+      host.endsWith('.netlify.app') ||
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      /^192\.168\.\d+\.\d+$/.test(host) ||
+      /^10\.\d+\.\d+\.\d+$/.test(host) ||
+      /^172\.(1[6-9]|2\d|3[01])\.\d+\.\d+$/.test(host)
+    ) {
+      return true;
+    }
   } catch {
     return false;
   }
+  return false;
 }
+
 app.use(cors({
   origin: (origin, callback) => {
     if (isAllowedOrigin(origin)) {
       callback(null, true);
     } else {
+      console.warn(`[CORS Blocked] Origén no permitido: ${origin}`);
       callback(new Error('CORS: origen no permitido'));
     }
   },
@@ -80,15 +99,16 @@ app.get('/api/health', async (_req, res) => {
 });
 
 // GET /api/public/noticias — Noticias y anuncios de la Landing Page (Público)
-app.get('/api/public/noticias', async (_req, res, next) => {
+app.get('/api/public/noticias', async (_req, res) => {
   try {
     const noticias = await prisma.noticia.findMany({
       where: { publicado: true },
       orderBy: { createdAt: 'desc' }
     });
-    res.json(noticias);
+    res.json(noticias || []);
   } catch (err) {
-    next(err);
+    console.warn('[WARN] No se pudieron cargar las noticias:', err.message);
+    res.json([]);
   }
 });
 

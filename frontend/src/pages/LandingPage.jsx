@@ -21,8 +21,7 @@ export function LandingPage() {
 
   useEffect(() => {
     // Cargar noticias publicadas si existen
-    fetch('/api/public/noticias')
-      .then(res => res.json())
+    API.getPublicNoticias()
       .then(data => {
         if (Array.isArray(data)) setNoticias(data);
       })

@@ -5,29 +5,44 @@
 
 :root {
   color-scheme: light;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
   background-color: var(--bg-page);
   color: var(--text-primary);
 
-  --surface: #ffffff;
-  --surface2: #f8fafc;
-  --surface3: #eff6ff;
+  /* Fondo y Superficies */
   --bg-page: #f8fafc;
   --bg-card: #ffffff;
+  --bg-input: #ffffff;
   --bg-primary: #ffffff;
   --bg-secondary: #f1f5f9;
   --bg-hover: #e2e8f0;
+  --surface: #ffffff;
+  --surface2: #f8fafc;
+  --surface3: #eff6ff;
   --border: #e2e8f0;
+  --border-focus: #2563eb;
+
+  /* Textos */
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
 
-  /* Royal Blue Accent Palette from Reference Design */
+  /* Sidebar Azul Rey (GestorPOS / PureSoft Style) */
+  --sidebar-bg: linear-gradient(180deg, #0b4f9c 0%, #022a5e 100%);
+  --sidebar-text: #e2e8f0;
+  --sidebar-active: #2563eb;
+  --sidebar-active-text: #ffffff;
+  --sidebar-section-header: #93c5fd;
+
+  /* Accent & Buttons */
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
-  --accent-gradient: linear-gradient(135deg, #1e40af 0%, #1d4ed8 50%, #2563eb 100%);
-  --blue-card-gradient: linear-gradient(180deg, #1d4ed8 0%, #1e1b4b 100%);
+  --btn-primary: #2563eb;
+  --btn-primary-hover: #1d4ed8;
+  --accent-gradient: linear-gradient(135deg, #0b4f9c 0%, #1d4ed8 50%, #2563eb 100%);
+  --blue-card-gradient: linear-gradient(180deg, #0b4f9c 0%, #022a5e 100%);
 
+  /* Estados de Alerta */
   --success: #10b981;
   --danger: #ef4444;
   --warning: #f59e0b;
@@ -39,12 +54,15 @@
   --info-dim: rgba(59, 130, 246, 0.12);
   --accent-dim: rgba(37, 99, 235, 0.12);
 
+  /* Geometría */
+  --radius-card: 16px;
+  --radius-btn: 10px;
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
   --radius-xl: 1rem;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.08);
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

@@ -1,4 +1,5 @@
-const API_URL = '/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
 
 export class ApiError extends Error {
   constructor(message, status, fields, code, data) {
@@ -90,6 +91,7 @@ export const API = {
     return request(`/productos${qs ? `?${qs}` : ''}`);
   },
   getProducto: (id) => request(`/productos/${id}`),
+  lookupProducto: (codigo) => request(`/productos/lookup/${encodeURIComponent(codigo)}`),
   getNextSku: () => request('/productos/next-sku'),
   crearProducto: (data) => request('/productos', { method: 'POST', body: data }),
   actualizarProducto: (id, data) => request(`/productos/${id}`, { method: 'PUT', body: data }),
@@ -178,6 +180,7 @@ export const API = {
   // Suscripciones y Pagos SaaS
   reportarPagoSaaS: (data) => request('/auth/reportar-pago', { method: 'POST', body: data }),
   getMetodosPagoSaaS: () => request('/auth/metodos-pago'),
+  getPublicNoticias: () => request('/public/noticias'),
 };
 
 export const Utils = {
