@@ -26,6 +26,7 @@ const ROL_LABEL = {
   EMPRESA: 'Empresa',
   CAJA: 'Cajero',
   INVENTARIO: 'Inventario',
+  VISOR: 'Visor de Precios',
 };
 
 export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSidebar, brandName }) {
@@ -97,9 +98,11 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
             roles={ROLE_GROUPS.ALL} onClick={closeMobile} isCollapsed={isCollapsed} />
         </NavSection>
 
-        <NavSection label="Operaciones" roles={ROLE_GROUPS.VENTAS} isCollapsed={isCollapsed}>
+        <NavSection label="Operaciones" roles={ROLE_GROUPS.VISOR_ONLY} isCollapsed={isCollapsed}>
           <NavItem to="/pos" icon={cartIcon} label="Nueva Factura"
             roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
+          <NavItem to="/visor" icon={packageIcon} label="Visor de Precios"
+            roles={ROLE_GROUPS.VISOR_ONLY} onClick={closeMobile} isCollapsed={isCollapsed} />
           <NavItem to="/cotizaciones" icon={fileDocIcon} label="Cotizaciones"
             roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
           <NavItem to="/ventas" icon={clipboardIcon} label="Historial Ventas"

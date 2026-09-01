@@ -94,4 +94,5 @@ router.post('/', (req, res) => {
   }
 });
 
+router.getSystemConfig = getSystemConfig;
 module.exports = router;

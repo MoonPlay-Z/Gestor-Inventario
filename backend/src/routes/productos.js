@@ -52,6 +52,85 @@ router.get('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// GET /api/productos/lookup/:codigo — Visor de Precios / Consulta Rápida
+router.get('/lookup/:codigo', async (req, res, next) => {
+  try {
+    const rawCodigo = (req.params.codigo || '').trim();
+    if (!rawCodigo) throw createValidationError('Código requerido');
+
+    const isSuperAdmin = req.user.rol === 'SUPER_ADMIN';
+    const empresaId = req.user.empresaRefId || req.user.empresaId || req.user.id;
+
+    const baseWhere = { activo: true };
+    if (!isSuperAdmin && empresaId) {
+      baseWhere.empresaId = empresaId;
+    }
+
+    // 1. Buscar por SKU exacto o ID exacto
+    let producto = await prisma.producto.findFirst({
+      where: {
+        ...baseWhere,
+        OR: [
+          { sku: { equals: rawCodigo, mode: 'insensitive' } },
+          { id: rawCodigo }
+        ]
+      }
+    });
+
+    // 2. Si no hay coincidencia exacta, buscar por coincidencia parcial en SKU o Nombre
+    if (!producto) {
+      producto = await prisma.producto.findFirst({
+        where: {
+          ...baseWhere,
+          OR: [
+            { sku: { contains: rawCodigo, mode: 'insensitive' } },
+            { nombre: { contains: rawCodigo, mode: 'insensitive' } },
+            { descripcion: { contains: rawCodigo, mode: 'insensitive' } },
+            { categoria: { contains: rawCodigo, mode: 'insensitive' } }
+          ]
+        }
+      });
+    }
+
+    // 3. Si no hay coincidencia y el usuario no es superadmin, intentar fallback buscando en la BD por si el producto pertenecía a su empresa padre
+    if (!producto && req.user.empresaId) {
+      producto = await prisma.producto.findFirst({
+        where: {
+          activo: true,
+          empresaId: req.user.empresaId,
+          OR: [
+            { sku: { contains: rawCodigo, mode: 'insensitive' } },
+            { nombre: { contains: rawCodigo, mode: 'insensitive' } }
+          ]
+        }
+      });
+    }
+
+    if (!producto) {
+      return res.status(404).json({ error: 'Producto no encontrado' });
+    }
+
+    let tasaBcv = 36.5;
+    try {
+      const configRoute = require('./config');
+      if (configRoute.getSystemConfig) {
+        tasaBcv = configRoute.getSystemConfig().moneda?.tasaDolar || 36.5;
+      }
+    } catch (_) {}
+
+    const precioUsd = Number(producto.precioVenta);
+    const precioVes = precioUsd * tasaBcv;
+
+    res.json({
+      ...producto,
+      precioUsd,
+      precioVes,
+      tasaBcv,
+      stockBajoMinimo: producto.stockActual <= producto.stockMinimo
+    });
+  } catch (err) { next(err); }
+});
+
 // GET /api/productos/next-sku
 router.get('/next-sku', async (req, res, next) => {
   try {

@@ -57,6 +57,7 @@ export const ROLES = {
   EMPRESA:     'EMPRESA',
   CAJA:        'CAJA',
   INVENTARIO:  'INVENTARIO',
+  VISOR:       'VISOR',
 };
 
 /** Grupos de roles predefinidos para uso frecuente */
@@ -69,6 +70,8 @@ export const ROLE_GROUPS = {
   VENTAS:            [ROLES.EMPRESA, ROLES.CAJA, ROLES.SUPER_ADMIN],
   /** Quienes pueden ver/gestionar inventario */
   INVENTARIO:        [ROLES.EMPRESA, ROLES.INVENTARIO, ROLES.SUPER_ADMIN],
+  /** Quienes pueden usar el visor de precios */
+  VISOR_ONLY:        [ROLES.EMPRESA, ROLES.CAJA, ROLES.INVENTARIO, ROLES.VISOR, ROLES.SUPER_ADMIN],
   /** Todos los roles */
-  ALL:               [ROLES.SUPER_ADMIN, ROLES.EMPRESA, ROLES.CAJA, ROLES.INVENTARIO],
+  ALL:               [ROLES.SUPER_ADMIN, ROLES.EMPRESA, ROLES.CAJA, ROLES.INVENTARIO, ROLES.VISOR],
 };

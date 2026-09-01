@@ -10,6 +10,7 @@ import { Button } from '../components/ui';
 const ROLES = [
   { value: 'CAJA', label: 'Caja (POS + Ventas)' },
   { value: 'INVENTARIO', label: 'Inventario (solo consulta)' },
+  { value: 'VISOR', label: 'Visor de Precios (Terminal Kiosco)' },
 ];
 
 const EMPTY_CREATE = { username: '', password: '', nombre: '', rol: 'CAJA' };
@@ -101,6 +102,7 @@ export function UsuariosPage() {
   const rolBadge = (rol) => {
     if (rol === 'EMPRESA') return <span className="badge badge-warning">EMPRESA</span>;
     if (rol === 'CAJA') return <span className="badge badge-info">CAJA</span>;
+    if (rol === 'VISOR') return <span className="badge badge-primary" style={{ background: '#3b82f6', color: '#fff' }}>VISOR</span>;
     return <span className="badge">INVENTARIO</span>;
   };
 

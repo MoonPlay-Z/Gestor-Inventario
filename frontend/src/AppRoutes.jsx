@@ -10,6 +10,7 @@ import { LoginPage }               from './pages/LoginPage';
 import { RegisterPage }            from './pages/RegisterPage';
 import { SuscripcionExpiradaPage } from './pages/SuscripcionExpiradaPage';
 import { PagosSaaSPage }           from './pages/PagosSaaSPage';
+import { VisorPreciosPage }        from './pages/VisorPreciosPage';
 
 // --- Protected Pages ---
 import { DashboardPage }    from './pages/DashboardPage';
@@ -35,6 +36,12 @@ export default function AppRoutes() {
       <Route path="/suscripcion-expirada" element={
         <ProtectedRoute>
           <SuscripcionExpiradaPage />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/visor" element={
+        <ProtectedRoute allowedRoles={ROLE_GROUPS.VISOR_ONLY}>
+          <VisorPreciosPage />
         </ProtectedRoute>
       } />
 
