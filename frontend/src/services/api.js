@@ -1,5 +1,7 @@
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
+// Tiempo máximo de espera para una petición antes de abortarla (ms).
+const REQUEST_TIMEOUT_MS = 20000;
 
 export class ApiError extends Error {
   constructor(message, status, fields, code, data) {
@@ -14,22 +16,55 @@ export class ApiError extends Error {
 export async function request(endpoint, options = {}) {
   const url = `${API_URL}${endpoint}`;
   const token = localStorage.getItem('token');
-  
+
   const headers = {
     'Content-Type': 'application/json',
     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 
-  const defaultOptions = {
-    headers: { ...headers, ...(options.headers || {}) },
-  };
-  
-  if (options.body && typeof options.body === 'object') {
-    options.body = JSON.stringify(options.body);
+  const mergedHeaders = { ...headers, ...(options.headers || {}) };
+
+  const body = (options.body && typeof options.body === 'object')
+    ? JSON.stringify(options.body)
+    : options.body;
+
+  // Controlador para poder abortar la petición si tarda demasiado
+  // (evita que el usuario quede esperando indefinidamente si el
+  // backend no responde).
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: mergedHeaders,
+      body,
+      signal: controller.signal
+    });
+  } catch (err) {
+    // fetch() lanza un error nativo (no HTTP) cuando: el servidor está
+    // caído, hay un problema de CORS, no hay conexión a internet, o la
+    // petición fue abortada por timeout. Antes esto se propagaba sin
+    // envolver, dando un "TypeError: Failed to fetch" crudo en la UI.
+    if (err.name === 'AbortError') {
+      throw new ApiError(
+        'El servidor tardó demasiado en responder. Verifica tu conexión e inténtalo de nuevo.',
+        0,
+        null,
+        'TIMEOUT'
+      );
+    }
+    throw new ApiError(
+      'No se pudo conectar con el servidor. Verifica tu conexión a internet e inténtalo de nuevo.',
+      0,
+      null,
+      'NETWORK_ERROR'
+    );
+  } finally {
+    clearTimeout(timeoutId);
   }
 
-  const response = await fetch(url, { ...options, ...defaultOptions });
-  
   if (response.status === 204) return null;
 
   if (response.status === 401) {
@@ -39,23 +74,30 @@ export async function request(endpoint, options = {}) {
     throw new ApiError('Sesión expirada', 401);
   }
 
-  const data = await response.json().catch(() => ({}));
+  // El backend puede responder con contenido no-JSON en ciertos fallos
+  // (por ejemplo una página de error HTML de un proxy). Si eso pasa,
+  // igual queremos que quede claro cuál fue el status HTTP en el mensaje.
+  const data = await response.json().catch(() => null);
+  const safeData = data || {};
 
-  if (response.status === 403 && data.code === 'SUBSCRIPTION_EXPIRED') {
+  // El backend usa el código 'PAYMENT_REQUIRED' (no 'SUBSCRIPTION_EXPIRED')
+  // para indicar que la mensualidad venció. Antes esta comparación nunca
+  // coincidía y el evento 'subscription:expired' nunca se disparaba.
+  if (response.status === 403 && safeData.code === 'PAYMENT_REQUIRED') {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     user.subscriptionStatus = 'expired_trial';
     localStorage.setItem('user', JSON.stringify(user));
     window.dispatchEvent(new Event('subscription:expired'));
-    throw new ApiError(data.error || 'Suscripción expirada', 403, null, 'SUBSCRIPTION_EXPIRED', data);
+    throw new ApiError(safeData.error || 'Suscripción expirada', 403, null, 'PAYMENT_REQUIRED', safeData);
   }
 
   if (!response.ok) {
     throw new ApiError(
-      data.error || data.message || 'Ha ocurrido un error inesperado',
+      safeData.error || safeData.message || `Ha ocurrido un error inesperado (HTTP ${response.status})`,
       response.status,
-      data.fields,
-      data.code,
-      data
+      safeData.fields,
+      safeData.code,
+      safeData
     );
   }
 
@@ -71,10 +113,10 @@ export const API = {
   // Config
   getConfig: () => request('/config'),
   saveConfig: (data) => request('/config', { method: 'POST', body: data }),
-  
+
   // Dashboard
   getDashboardStats: () => request('/dashboard'),
-  
+
   // Clientes
   getClientes: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
@@ -84,7 +126,7 @@ export const API = {
   crearCliente: (data) => request('/clientes', { method: 'POST', body: data }),
   actualizarCliente: (id, data) => request(`/clientes/${id}`, { method: 'PUT', body: data }),
   eliminarCliente: (id) => request(`/clientes/${id}`, { method: 'DELETE' }),
-  
+
   // Productos
   getProductos: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
@@ -97,7 +139,7 @@ export const API = {
   actualizarProducto: (id, data) => request(`/productos/${id}`, { method: 'PUT', body: data }),
   eliminarProducto: (id) => request(`/productos/${id}`, { method: 'DELETE' }),
   ajustarStock: (id, cantidad, operacion) => request(`/productos/${id}/stock`, { method: 'PATCH', body: { cantidad, operacion } }),
-  
+
   // Facturas
   getFacturas: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
@@ -106,7 +148,7 @@ export const API = {
   getFactura: (id) => request(`/facturas/${id}`),
   emitirFactura: (data) => request('/facturas', { method: 'POST', body: data }),
   anularFactura: (id) => request(`/facturas/${id}/anular`, { method: 'PATCH' }),
-  
+
   // Cotizaciones
   getCotizaciones: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
@@ -154,9 +196,14 @@ export const API = {
   exportarRespaldo: async () => {
     const url = `${API_URL}/backup/export`;
     const token = localStorage.getItem('token');
-    const response = await fetch(url, {
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    });
+    let response;
+    try {
+      response = await fetch(url, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+    } catch (err) {
+      throw new ApiError('No se pudo conectar con el servidor para exportar el respaldo.', 0, null, 'NETWORK_ERROR');
+    }
     if (!response.ok) throw new Error('Error al exportar el respaldo');
     const blob = await response.blob();
     const urlBlob = window.URL.createObjectURL(blob);
@@ -197,11 +244,11 @@ export const Utils = {
   formatMoney: (amount, symbol = '$') => {
     return `${symbol} ${Number(amount || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   },
-  
+
   formatDate: (dateString) => {
     if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString('es-VE', { 
-      year: 'numeric', month: '2-digit', day: '2-digit' 
+    return new Date(dateString).toLocaleDateString('es-VE', {
+      year: 'numeric', month: '2-digit', day: '2-digit'
     });
   }
 };

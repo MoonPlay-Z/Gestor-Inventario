@@ -1,14 +1,25 @@
 const express = require('express');
+const crypto = require('crypto');
 const prisma = require('../db/prisma');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require('../middleware/auth');
+const { JWT_SECRET, authMiddleware } = require('../middleware/auth');
 const { createValidationError } = require('../middleware/errorHandler');
 const { loginLimiter, registerLimiter } = require('../middleware/rateLimiter');
+const { METODOS_PAGO_SAAS, enviarNotificacionPago } = require('../config/metodosPago');
 
 const router = express.Router();
 
 const DEV_SECRET = process.env.DEV_SECRET;
+
+// Comparación de tiempo constante para secretos (evita timing attacks)
+function safeCompare(a, b) {
+  if (!a || !b) return false;
+  const bufA = Buffer.from(String(a));
+  const bufB = Buffer.from(String(b));
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 // ─── 1. Iniciar sesión ───────────────────────────────────────────────────────
 router.post('/login', loginLimiter, async (req, res, next) => {
@@ -35,18 +46,26 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
+    // Identificador de empresa consistente: se usa en todo el flujo (token,
+    // verificación de suscripción y respuesta) para evitar desincronización.
+    const resolvedEmpresaId = usuario.empresaRefId || usuario.empresaId || null;
+
+    // Estado de suscripción "vigente" que se usará en la respuesta final.
+    // Por defecto es el del propio usuario; si hay Empresa vinculada y la
+    // verificación de abajo la consulta, se actualiza a ese valor.
+    let effectiveSubscription = {
+      status: usuario.subscriptionStatus,
+      trialEndsAt: usuario.trialEndsAt,
+      currentPeriodEnd: usuario.currentPeriodEnd
+    };
+
     // ─── VERIFICACIÓN DE FECHA DE PAGO Y MENSUALIDAD (EXCEPTO SUPER_ADMIN) ───
     if (usuario.rol !== 'SUPER_ADMIN') {
-      const { METODOS_PAGO_SAAS } = require('../config/metodosPago');
-
-      // Buscar datos de suscripción (desde la tabla Empresa o el Usuario principal)
       let subSource = usuario;
       let empresaNombre = usuario.nombre;
-      let targetEmpresaId = usuario.empresaRefId || usuario.empresaId || usuario.id;
 
-      if (usuario.empresaRefId || usuario.empresaId) {
-        const empId = usuario.empresaRefId || usuario.empresaId;
-        const emp = await prisma.empresa.findUnique({ where: { id: empId } });
+      if (resolvedEmpresaId) {
+        const emp = await prisma.empresa.findUnique({ where: { id: resolvedEmpresaId } });
         if (emp) {
           subSource = emp;
           empresaNombre = emp.nombre;
@@ -61,6 +80,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         expired = true;
       } else if (status === 'trialing' && subSource.trialEndsAt && now > new Date(subSource.trialEndsAt)) {
         expired = true;
+        effectiveSubscription.status = 'expired_trial';
         // Marcar como trial expirado en BD
         await prisma.usuario.update({ where: { id: usuario.id }, data: { subscriptionStatus: 'expired_trial' } }).catch(() => null);
         if (usuario.empresaRefId) {
@@ -68,10 +88,18 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         }
       } else if (status === 'active' && subSource.currentPeriodEnd && now > new Date(subSource.currentPeriodEnd)) {
         expired = true;
+        effectiveSubscription.status = 'canceled';
         await prisma.usuario.update({ where: { id: usuario.id }, data: { subscriptionStatus: 'canceled' } }).catch(() => null);
         if (usuario.empresaRefId) {
           await prisma.empresa.update({ where: { id: usuario.empresaRefId }, data: { subscriptionStatus: 'canceled' } }).catch(() => null);
         }
+      } else {
+        // Sin cambios: reflejar el estado realmente evaluado (puede venir de Empresa)
+        effectiveSubscription = {
+          status: subSource.subscriptionStatus,
+          trialEndsAt: subSource.trialEndsAt,
+          currentPeriodEnd: subSource.currentPeriodEnd
+        };
       }
 
       if (expired && status !== 'lifetime') {
@@ -80,7 +108,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
           error: 'Debe cancelar la mensualidad para continuar utilizando el sistema.',
           redirect: '/pagos-saas',
           usuarioId: usuario.id,
-          empresaId: targetEmpresaId,
+          empresaId: resolvedEmpresaId,
           empresaNombre,
           metodosPago: METODOS_PAGO_SAAS
         });
@@ -94,8 +122,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         username: usuario.username,
         nombre: usuario.nombre,
         rol: usuario.rol,
-        empresaId: usuario.empresaId,
-        subscriptionStatus: usuario.subscriptionStatus,
+        empresaId: resolvedEmpresaId,
+        subscriptionStatus: effectiveSubscription.status,
         sessionVersion: usuario.sessionVersion
       },
       JWT_SECRET,
@@ -107,7 +135,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       where: { id: usuario.id },
       data: {
         lastLoginAt: new Date().toISOString(),
-        lastLoginIp: req.ip || req.headers['x-forwarded-for'] || null
+        lastLoginIp: req.ip || null
       }
     });
 
@@ -118,10 +146,10 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         username: usuario.username,
         nombre: usuario.nombre,
         rol: usuario.rol,
-        empresaId: usuario.empresaId,
-        subscriptionStatus: usuario.subscriptionStatus,
-        trialEndsAt: usuario.trialEndsAt,
-        currentPeriodEnd: usuario.currentPeriodEnd
+        empresaId: resolvedEmpresaId,
+        subscriptionStatus: effectiveSubscription.status,
+        trialEndsAt: effectiveSubscription.trialEndsAt,
+        currentPeriodEnd: effectiveSubscription.currentPeriodEnd
       }
     });
   } catch (err) {
@@ -137,12 +165,15 @@ router.post('/register-remote', async (req, res, next) => {
     }
 
     const devToken = req.headers['x-dev-secret'];
-    if (!DEV_SECRET || devToken !== DEV_SECRET) {
+    if (!DEV_SECRET || !safeCompare(devToken, DEV_SECRET)) {
       return res.status(403).json({ error: 'Prohibido: Se requiere clave de desarrollador válida' });
     }
 
     const { username, password, nombre, rol } = req.body;
-    if (!username || !password) {
+    const cleanUsername = (username || '').trim();
+    const cleanNombre = (nombre || '').trim();
+
+    if (!cleanUsername || !password) {
       throw createValidationError('Usuario y contraseña son requeridos');
     }
     if (password.length < 8) {
@@ -152,7 +183,7 @@ router.post('/register-remote', async (req, res, next) => {
     const validRoles = ['SUPER_ADMIN', 'EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'];
     const finalRol = validRoles.includes(rol) ? rol : 'CAJA';
 
-    const existingUser = await prisma.usuario.findUnique({ where: { username } });
+    const existingUser = await prisma.usuario.findUnique({ where: { username: cleanUsername } });
     if (existingUser) {
       throw createValidationError('El nombre de usuario ya existe');
     }
@@ -162,9 +193,9 @@ router.post('/register-remote', async (req, res, next) => {
 
     const newUser = await prisma.usuario.create({
       data: {
-        username,
+        username: cleanUsername,
         passwordHash,
-        nombre: nombre || username,
+        nombre: cleanNombre || cleanUsername,
         rol: finalRol
       }
     });
@@ -177,18 +208,20 @@ router.post('/register-remote', async (req, res, next) => {
     next(err);
   }
 });
+
 // ─── 2.5. Registro Público de Clientes SaaS (Trial 7 días) ───────────────────
 router.post('/register-client', registerLimiter, async (req, res, next) => {
   try {
     const { username, password, nombre } = req.body;
-    if (!username || !password || !nombre) {
+    const cleanUsername = (username || '').trim().toLowerCase();
+    const cleanNombre = (nombre || '').trim();
+
+    if (!cleanUsername || !password || !cleanNombre) {
       throw createValidationError('Usuario, contraseña y nombre de la empresa son requeridos');
     }
     if (password.length < 8) {
       throw createValidationError('La contraseña debe tener al menos 8 caracteres');
     }
-
-    const cleanUsername = username.trim().toLowerCase();
 
     const existingUser = await prisma.usuario.findUnique({ where: { username: cleanUsername } });
     if (existingUser) {
@@ -201,14 +234,14 @@ router.post('/register-client', registerLimiter, async (req, res, next) => {
     const now = new Date();
     const trialEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 días
 
-    const nowIso     = now.toISOString();
+    const nowIso      = now.toISOString();
     const trialEndIso = trialEnd.toISOString();
 
     // Se crea primero la Empresa en la tabla 'empresas'
     const nuevaEmpresa = await prisma.empresa.create({
       data: {
-        nombre: nombre.trim(),
-        rif: `PENDIENTE-${Date.now()}`, // El cliente actualiza su RIF desde el perfil
+        nombre: cleanNombre,
+        rif: `PENDIENTE-${crypto.randomUUID()}`, // El cliente actualiza su RIF desde el perfil
         subscriptionStatus: 'trialing',
         trialStartsAt: nowIso,
         trialEndsAt:   trialEndIso,
@@ -220,7 +253,7 @@ router.post('/register-client', registerLimiter, async (req, res, next) => {
       data: {
         username: cleanUsername,
         passwordHash,
-        nombre: nombre.trim(),
+        nombre: cleanNombre,
         rol: 'EMPRESA',
         activo: true,
         empresaRefId: nuevaEmpresa.id,
@@ -237,7 +270,7 @@ router.post('/register-client', registerLimiter, async (req, res, next) => {
         username: newUser.username,
         nombre: newUser.nombre,
         rol: newUser.rol,
-        empresaId: newUser.empresaId,
+        empresaId: nuevaEmpresa.id,
         subscriptionStatus: newUser.subscriptionStatus,
         sessionVersion: newUser.sessionVersion
       },
@@ -253,6 +286,7 @@ router.post('/register-client', registerLimiter, async (req, res, next) => {
         username: newUser.username,
         nombre: newUser.nombre,
         rol: newUser.rol,
+        empresaId: nuevaEmpresa.id,
         subscriptionStatus: newUser.subscriptionStatus,
         trialEndsAt: newUser.trialEndsAt,
       }
@@ -263,7 +297,6 @@ router.post('/register-client', registerLimiter, async (req, res, next) => {
 });
 
 // ─── 3. Info del usuario autenticado ─────────────────────────────────────────
-const { authMiddleware } = require('../middleware/auth');
 router.get('/me', authMiddleware, async (req, res, next) => {
   try {
     if (!req.user || !req.user.id) {
@@ -288,46 +321,32 @@ router.get('/me', authMiddleware, async (req, res, next) => {
 
 // ─── 4. Información de Métodos de Pago ────────────────────────────────────────
 router.get('/metodos-pago', (_req, res) => {
-  const { METODOS_PAGO_SAAS } = require('../config/metodosPago');
   res.json(METODOS_PAGO_SAAS);
 });
 
 // ─── 5. Reportar Pago de Mensualidad ──────────────────────────────────────────
-router.post('/reportar-pago', async (req, res, next) => {
+// Requiere sesión activa: se usa la identidad del token, nunca un ID enviado
+// libremente por el cliente, para evitar que un usuario reporte pagos a
+// nombre de otra cuenta. También lleva rate limiting para evitar spam de
+// notificaciones al correo de administración.
+router.post('/reportar-pago', registerLimiter, authMiddleware, async (req, res, next) => {
   try {
-    const { usuarioId, empresaId, metodoPago, referencia, plan = 'monthly' } = req.body;
-    const targetQuery = usuarioId || empresaId;
-    if (!targetQuery || typeof targetQuery !== 'string' || !targetQuery.trim()) {
-      throw createValidationError('El ID de usuario, empresa o username es obligatorio');
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'No autorizado' });
     }
+
+    const { metodoPago, referencia, plan = 'monthly' } = req.body;
     if (!referencia?.trim()) throw createValidationError('El número de referencia es obligatorio');
     if (!metodoPago?.trim()) throw createValidationError('El método de pago es obligatorio');
 
-    const cleanQuery = targetQuery.trim();
-
-    // Intentar buscar por ID primero, luego por username o email
-    let targetUser = await prisma.usuario.findUnique({
-      where: { id: cleanQuery },
+    const targetUser = await prisma.usuario.findUnique({
+      where: { id: req.user.id },
       include: { empresaRef: true }
-    }).catch(() => null);
+    });
 
     if (!targetUser) {
-      targetUser = await prisma.usuario.findFirst({
-        where: {
-          OR: [
-            { username: cleanQuery },
-            { email: cleanQuery }
-          ]
-        },
-        include: { empresaRef: true }
-      });
+      throw createValidationError('No se encontró ninguna cuenta asociada a esta sesión.');
     }
-
-    if (!targetUser) {
-      throw createValidationError('No se encontró ninguna cuenta asociada a este usuario o ID.');
-    }
-
-    const { METODOS_PAGO_SAAS, enviarNotificacionPago } = require('../config/metodosPago');
 
     // Registrar solicitud de activación en estado PENDIENTE
     const solicitud = await prisma.solicitudActivacion.create({
@@ -340,7 +359,7 @@ router.post('/reportar-pago', async (req, res, next) => {
       }
     });
 
-    // Enviar notificación al correo de administración (arcila.juan10@gmail.com)
+    // Enviar notificación al correo de administración
     try {
       await enviarNotificacionPago({
         usuarioId: targetUser.id,
