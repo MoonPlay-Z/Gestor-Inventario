@@ -1,28 +1,9 @@
-# ============================================================
-# netlify.toml — Configuración de despliegue para Netlify
-# Frontend: Gestor de Inventario POS
-# ============================================================
-
 [build]
-  # Carpeta base del frontend
-  base = "frontend"
-  # Directorio generado por Vite al construir
-  publish = "dist"
-  # Se agrega 'npm install' previo para garantizar que Vite se instale en el servidor
-  command = "npm install && npm run build"
+  command = "cd frontend && npm install && npm run build"
+  publish = "frontend/dist"
 
 # -----------------------------------------------------------
-# PROXY API — Redirección para evitar problemas de CORS
-# -----------------------------------------------------------
-[[redirects]]
-  from = "/api/*"
-  # IMPORTANTE: Reemplaza esta URL por la URL real de tu backend desplegado (ej. Render, Railway)
-  to = "https://tu-backend-real.onrender.com/api/:splat"
-  status = 200
-  force = true
-
-# -----------------------------------------------------------
-# SPA REDIRECT — React Router (client-side routing)
+# SPA REDIRECT (React Router)
 # -----------------------------------------------------------
 [[redirects]]
   from = "/*"
