@@ -28,6 +28,7 @@
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0",
     "serialport": "^13.0.0",
+    "serverless-http": "^4.0.0",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
