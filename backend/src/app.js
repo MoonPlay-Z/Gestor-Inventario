@@ -31,11 +31,11 @@ const configuredOrigins = process.env.ALLOWED_ORIGINS
   .filter(Boolean) || [];
 
 const allowedOrigins = new Set([
+  'https://gestor-inventario-pos.netlify.app/',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   `http://localhost:${PORT}`,
   `http://127.0.0.1:${PORT}`,
-  'https://gestor-inventario-pos.netlify.app',
   ...configuredOrigins,
 ]);
 
