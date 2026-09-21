@@ -4,6 +4,17 @@ const prisma = require('../db/prisma');
 const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const getEmpresaId = (req) => req.user?.empresaId || req.user?.id;
+const resolveEmpresaRefId = async (req) => {
+  if (req.user?.empresaRefId) return req.user.empresaRefId;
+  if (!req.user?.empresaId) return null;
+
+  const usuarioPadre = await prisma.usuario.findUnique({
+    where: { id: req.user.empresaId },
+    select: { empresaRefId: true }
+  });
+
+  return usuarioPadre?.empresaRefId || null;
+};
 const facturaTenantFilter = (empresaId) => ({
   OR: [
     { usuarioId: empresaId },
@@ -114,6 +125,7 @@ router.post('/', async (req, res, next) => {
   try {
     const { clienteId, items, fechaVencimiento, observaciones, metodoPago, referenciaTransaccion, cuotas, moneda = 'USD', tasaCambio = 1 } = req.body;
     const empresaId = req.user?.empresaId || req.user?.id;
+    const empresaRefId = await resolveEmpresaRefId(req);
 
     const tasaFacturacion = new Decimal(tasaCambio);
 
@@ -216,7 +228,7 @@ router.post('/', async (req, res, next) => {
           numeroFactura,
           clienteId,
           usuarioId:    req.user?.id || null,
-          empresaId:    req.user?.empresaId || null,
+          empresaId:    empresaRefId,
           fechaVencimiento: fVencimiento.toISOString(),
           subtotal:      subtotalTotal.toFixed(2),
           impuestoTotal: impuestoTotalSum.toFixed(2),
