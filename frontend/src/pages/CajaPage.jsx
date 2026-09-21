@@ -70,7 +70,8 @@ export function CajaPage() {
       setObservaciones('');
       loadData();
     } catch (err) {
-      showToast('Error abriendo caja: ' + err.message, 'error');
+      const mensaje = err?.message || 'No se pudo abrir la caja.';
+      showToast(mensaje, 'error');
     } finally {
       setSubmitting(false);
     }

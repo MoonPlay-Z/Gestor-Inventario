@@ -92,8 +92,9 @@ export async function request(endpoint, options = {}) {
   }
 
   if (!response.ok) {
+    const errorMessage = safeData.message || safeData.error || `Ha ocurrido un error inesperado (HTTP ${response.status})`;
     throw new ApiError(
-      safeData.error || safeData.message || `Ha ocurrido un error inesperado (HTTP ${response.status})`,
+      errorMessage,
       response.status,
       safeData.fields,
       safeData.code,
