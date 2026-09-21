@@ -31,6 +31,7 @@ function errorHandler(err, req, res, next) {
   if (err.type === 'VALIDATION_ERROR') {
     return res.status(422).json({
       error: 'Error de validación',
+      code: err.code || 'VALIDATION_ERROR',
       message: err.message,
       fields: err.fields,
     });
@@ -39,7 +40,9 @@ function errorHandler(err, req, res, next) {
   if (err.type === 'BUSINESS_ERROR') {
     return res.status(400).json({
       error: 'Error de negocio',
+      code: err.code || 'BUSINESS_ERROR',
       message: err.message,
+      details: err.details || null,
     });
   }
 
@@ -51,16 +54,19 @@ function errorHandler(err, req, res, next) {
   });
 }
 
-function createValidationError(message, fields = {}) {
+function createValidationError(message, fields = {}, code = 'VALIDATION_ERROR') {
   const err = new Error(message);
   err.type = 'VALIDATION_ERROR';
   err.fields = fields;
+  err.code = code;
   return err;
 }
 
-function createBusinessError(message) {
+function createBusinessError(message, details = {}) {
   const err = new Error(message);
   err.type = 'BUSINESS_ERROR';
+  err.code = details.code || 'BUSINESS_ERROR';
+  err.details = details;
   return err;
 }
 

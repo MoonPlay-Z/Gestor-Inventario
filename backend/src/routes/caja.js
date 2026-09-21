@@ -35,6 +35,16 @@ router.post('/open', async (req, res, next) => {
 
     if (!userId) throw createValidationError('Usuario no autenticado');
 
+    let empresaId = req.user?.empresaRefId || null;
+
+    if (!empresaId && req.user?.empresaId) {
+      const usuarioPadre = await prisma.usuario.findUnique({
+        where: { id: req.user.empresaId },
+        select: { empresaRefId: true }
+      });
+      empresaId = usuarioPadre?.empresaRefId || null;
+    }
+
     // Verificar si el usuario ya tiene una caja abierta
     const cajaAbierta = await prisma.cierreCaja.findFirst({
       where: {
@@ -44,13 +54,21 @@ router.post('/open', async (req, res, next) => {
     });
 
     if (cajaAbierta) {
-      throw createBusinessError('Ya tienes una caja abierta. Debes cerrarla antes de abrir una nueva.');
+      throw createBusinessError(
+        `Ya tienes una caja abierta desde el ${new Date(cajaAbierta.fechaApertura).toLocaleString('es-VE')}. Debes cerrarla antes de abrir una nueva.`,
+        {
+          code: 'CAJA_YA_ABIERTA',
+          cajaId: cajaAbierta.id,
+          fechaApertura: cajaAbierta.fechaApertura,
+          usuarioId: userId,
+        }
+      );
     }
 
     const nuevaCaja = await prisma.cierreCaja.create({
       data: {
         usuarioId: userId,
-        empresaId: req.user?.empresaId || null,
+        empresaId,
         montoInicial: montoInicial || 0,
         observaciones: observaciones?.trim() || null
       },
@@ -222,20 +240,27 @@ router.post('/close', async (req, res, next) => {
 router.get('/', async (req, res, next) => {
   try {
     const { usuarioId } = req.query;
-    const empresaId = req.user?.empresaId || req.user?.id;
+    const empresaScope = req.user?.empresaRefId || req.user?.empresaId || null;
     const where = {};
 
     if (req.user.rol === 'SUPER_ADMIN') {
       if (usuarioId) where.usuarioId = usuarioId;
     } else if (req.user.rol === 'EMPRESA') {
+      const empresaFilter = {
+        OR: [
+          { empresaId: empresaScope },
+          { usuario: { empresaRefId: empresaScope } },
+          { usuario: { empresaId: empresaScope } }
+        ]
+      };
+
       if (usuarioId) {
-        where.usuarioId = usuarioId;
-      } else {
-        where.OR = [
-          { usuarioId: empresaId },
-          { empresaId: empresaId },
-          { usuario: { empresaId: empresaId } }
+        where.AND = [
+          { usuarioId },
+          empresaFilter
         ];
+      } else {
+        Object.assign(where, empresaFilter);
       }
     } else {
       where.usuarioId = req.user.id;
@@ -244,7 +269,7 @@ router.get('/', async (req, res, next) => {
     const cierres = await prisma.cierreCaja.findMany({
       where,
       include: {
-        usuario: { select: { id: true, username: true, nombre: true, rol: true } }
+        usuario: { select: { id: true, username: true, nombre: true, rol: true, empresaId: true, empresaRefId: true } }
       },
       orderBy: { fechaApertura: 'desc' },
       take: 50
