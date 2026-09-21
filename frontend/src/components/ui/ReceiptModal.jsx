@@ -8,7 +8,41 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
   const isCotizacion = type === 'cotizacion';
   const numero = isCotizacion ? factura.numero : factura.numeroFactura;
 
+  const sanitizeFilenamePart = (value) => {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9._\- ]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 40) || 'cliente';
+  };
+
+  const buildPrintableTitle = () => {
+    const cliente = sanitizeFilenamePart(factura.cliente?.razonSocial || 'cliente');
+    const fecha = (factura.fechaEmision ? new Date(factura.fechaEmision) : new Date())
+      .toISOString()
+      .slice(0, 10);
+    const referencia = sanitizeFilenamePart(
+      factura.pagos?.find(pago => pago.referenciaTransaccion)?.referenciaTransaccion ||
+      factura.referenciaTransaccion ||
+      'sin-referencia'
+    );
+
+    return `Factura_${cliente}_${fecha}_${referencia}`;
+  };
+
   const handlePrint = () => {
+    const previousTitle = document.title;
+    const printableTitle = buildPrintableTitle();
+
+    document.title = printableTitle;
+    const restoreTitle = () => {
+      document.title = previousTitle;
+      window.removeEventListener('afterprint', restoreTitle);
+    };
+
+    window.addEventListener('afterprint', restoreTitle, { once: true });
     window.print();
   };
 

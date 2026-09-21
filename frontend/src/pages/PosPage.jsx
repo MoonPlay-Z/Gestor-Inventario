@@ -27,6 +27,8 @@ export function PosPage() {
 
   const [selectedClienteId, setSelectedClienteId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [cart, setCart] = useState([]);
   const [metodoPago, setMetodoPago] = useState('EFECTIVO');
   const [referencia, setReferencia] = useState('');
@@ -68,19 +70,41 @@ export function PosPage() {
     loadInitialData();
   }, []);
 
-  const tasaDolar = config?.moneda?.tasaDolar || 1;
+  useEffect(() => {
+    const term = searchTerm.trim();
+    if (!term) {
+      setSearchResults([]);
+      return;
+    }
+
+    let cancelled = false;
+    setSearchLoading(true);
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const res = await API.getProductos({ q: term, limit: 20 });
+        if (!cancelled) setSearchResults(res.data || []);
+      } catch (err) {
+        if (!cancelled) setSearchResults([]);
+      } finally {
+        if (!cancelled) setSearchLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [searchTerm]);
+
+  const tasaDolar = Number((config?.moneda?.tasaDolar || 1).toFixed(2));
   const currencySymbol = config?.moneda?.simbolo || '$';
 
-  // Buscador de productos filtrado
+  // Buscador de productos por texto usando el backend
   const filteredProducts = useMemo(() => {
     if (!searchTerm.trim()) return [];
-    const term = searchTerm.toLowerCase();
-    return productos.filter(p => {
-      const matchNombre = p.nombre ? p.nombre.toLowerCase().includes(term) : false;
-      const matchSku = p.sku ? p.sku.toLowerCase().includes(term) : false;
-      return matchNombre || matchSku;
-    });
-  }, [searchTerm, productos]);
+    return searchResults;
+  }, [searchTerm, searchResults]);
 
   const addToCart = (product) => {
     if (product.stockActual <= 0) {
@@ -279,6 +303,9 @@ export function PosPage() {
                   onChange={e => setSearchTerm(e.target.value)}
                   autoFocus
                 />
+                {searchLoading && searchTerm.trim() && (
+                  <div className="small text-muted mt-2">Buscando productos...</div>
+                )}
               </div>
 
               {filteredProducts.length > 0 && (
@@ -300,11 +327,18 @@ export function PosPage() {
                         )}
                         <div>
                           <div style={{ fontWeight: 600 }}>{p.nombre}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Stock: {p.stockActual} | SKU: {p.sku || 'N/A'}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            Inventario: {p.stockActual} | SKU: {p.sku || 'N/A'}
+                          </div>
                         </div>
                       </div>
-                      <div style={{ fontWeight: 700, color: 'var(--accent)' }}>
-                        {Utils.formatMoney(p.precioVenta, currencySymbol)}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', minWidth: '150px' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--accent)' }}>
+                          {Utils.formatMoney(p.precioVenta, '$')}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                          {Utils.formatMoney(Number((Number(p.precioVenta || 0) * tasaDolar).toFixed(2)), 'Bs.')}
+                        </div>
                       </div>
                     </div>
                   ))}
