@@ -5,6 +5,17 @@ const { createValidationError, createBusinessError } = require('../middleware/er
 
 const router = express.Router();
 const getEmpresaId = (req) => req.user?.empresaId || req.user?.id;
+const resolveEmpresaRefId = async (req) => {
+  if (req.user?.empresaRefId) return req.user.empresaRefId;
+  if (!req.user?.empresaId) return null;
+
+  const usuarioPadre = await prisma.usuario.findUnique({
+    where: { id: req.user.empresaId },
+    select: { empresaRefId: true }
+  });
+
+  return usuarioPadre?.empresaRefId || null;
+};
 
 // 1. Obtener todas las cotizaciones
 router.get('/', async (req, res, next) => {
@@ -68,6 +79,7 @@ router.post('/', async (req, res, next) => {
   try {
     const { clienteId, items, validezDias = 15, moneda = 'USD' } = req.body;
     const empresaId = req.user.empresaId || req.user.id;
+    const empresaRefId = await resolveEmpresaRefId(req);
 
     if (!clienteId) throw createValidationError('El cliente es obligatorio');
     if (!items || items.length === 0) throw createValidationError('Debe agregar al menos un producto');
@@ -123,7 +135,7 @@ router.post('/', async (req, res, next) => {
         numero,
         clienteId,
         usuarioId: req.user?.id || null,
-        empresaId: req.user?.empresaId || null,
+        empresaId: empresaRefId,
         fechaEmision: fechaEmision.toISOString(),
         fechaValidez: fechaValidez.toISOString(),
         moneda,
@@ -150,6 +162,7 @@ router.post('/:id/convert', async (req, res, next) => {
     const { metodoPago, referenciaTransaccion } = req.body;
 
     const empresaId = getEmpresaId(req);
+    const empresaRefId = await resolveEmpresaRefId(req);
     const cotizacion = await prisma.cotizacion.findFirst({
       where: { id, usuario: { empresaId } },
       include: { items: true, cliente: true }
@@ -184,7 +197,7 @@ router.post('/:id/convert', async (req, res, next) => {
           numeroFactura: (ultimaFactura?.numeroFactura || 0) + 1,
           clienteId: cotizacion.clienteId,
           usuarioId: req.user?.id || null,
-          empresaId: req.user?.empresaId || null,
+          empresaId: empresaRefId,
           fechaVencimiento: fechaVencimiento.toISOString(),
           subtotal: cotizacion.subtotal,
           impuestoTotal: cotizacion.impuestoTotal,

@@ -6,8 +6,9 @@ const { createValidationError, createBusinessError } = require('../middleware/er
 
 const router = express.Router();
 
-// Todas las rutas de usuarios requieren rol EMPRESA
-router.use(requireRole('EMPRESA'));
+// Las rutas de gestión de usuarios están disponibles para EMPRESA y para
+// el usuario SUPER_ADMIN que actualiza su propio perfil desde configuración.
+router.use(requireRole('EMPRESA', 'SUPER_ADMIN'));
 
 // GET /api/usuarios — Listar sub-usuarios
 router.get('/', async (req, res, next) => {

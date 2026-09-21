@@ -166,7 +166,7 @@ app.use('/api/roles',        rolesRouter);
 app.use('/api/fiscal',       fiscalRouter);
 
 // ─── Dashboard stats ──────────────────────────────────────────────────────────
-app.get('/api/dashboard', requireRole('EMPRESA'), async (req, res, next) => {
+app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'), async (req, res, next) => {
   try {
     const hoy   = new Date();
     const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
