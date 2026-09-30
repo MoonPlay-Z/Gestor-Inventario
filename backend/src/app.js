@@ -17,6 +17,7 @@ const authRouter       = require('./routes/auth');
 const activacionesRouter = require('./routes/activaciones');
 const b2bRouter        = require('./routes/b2b');
 const fiscalRouter     = require('./routes/fiscal');
+const reportesRouter   = require('./routes/reportes');
 const { authMiddleware, requireRole } = require('./middleware/auth');
 const { subscriptionGuard } = require('./middleware/subscriptionGuard');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -164,6 +165,7 @@ app.use('/api/usuarios',     usuariosRouter);
 app.use('/api/activaciones', activacionesRouter);
 app.use('/api/roles',        rolesRouter);
 app.use('/api/fiscal',       fiscalRouter);
+app.use('/api/reportes',     reportesRouter);
 
 // ─── Dashboard stats ──────────────────────────────────────────────────────────
 app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'), async (req, res, next) => {
@@ -178,109 +180,114 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
       ]
     };
 
-    // Ingresos del mes (suma de pagos en el mes actual) - Normalizados a USD
-    const pagosDelMes = await prisma.pago.findMany({
-      where: {
-        fechaPago: { gte: inicioMes.toISOString() },
-        factura: facturaTenantFilter,
-      },
-      include: { factura: { select: { tasaCambio: true, moneda: true } } }
-    });
-    
-    let ingresosDelMes = new (require('decimal.js').Decimal)(0);
-    pagosDelMes.forEach(p => {
-      const monto = new (require('decimal.js').Decimal)(p.monto.toString());
-      const tasa = new (require('decimal.js').Decimal)(p.factura.tasaCambio.toString());
-      if (p.factura.moneda === 'VES' && !tasa.isZero()) {
-        ingresosDelMes = ingresosDelMes.add(monto.div(tasa));
-      } else {
-        ingresosDelMes = ingresosDelMes.add(monto);
-      }
-    });
+    // Ejecutar todas las consultas independientes en paralelo
+    const [
+      pagosDelMes,
+      facturasVencidas,
+      productosStockBajo,
+      facturasRecientes,
+      totalesPorEstadoRaw,
+      ingresosHistoricoRaw,
+    ] = await Promise.all([
+      // 1. Ingresos del mes - agregación en BD
+      prisma.$queryRaw`
+        SELECT
+          SUM(CASE
+            WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+            THEN p."monto" / f."tasaCambio"
+            ELSE p."monto"
+          END) AS total_usd
+        FROM pagos p
+        INNER JOIN facturas f ON f."id" = p."facturaId"
+        WHERE p."fechaPago" >= ${inicioMes.toISOString()}::timestamp
+          AND (f."usuarioId" = ${empresaId} OR f."usuarioId" IN (
+            SELECT id FROM usuarios WHERE "empresaId" = ${empresaId}
+          ))
+      `,
 
-    // Facturas vencidas (PENDING o PARTIALLY_PAID con fechaVencimiento < hoy)
-    const facturasVencidas = await prisma.factura.count({
-      where: {
-        estado: { in: ['PENDING', 'PARTIALLY_PAID'] },
-        fechaVencimiento: { lt: hoy.toISOString() },
-        ...facturaTenantFilter,
-      },
-    });
+      // 2. Facturas vencidas
+      prisma.factura.count({
+        where: {
+          estado: { in: ['PENDING', 'PARTIALLY_PAID'] },
+          fechaVencimiento: { lt: hoy.toISOString() },
+          ...facturaTenantFilter,
+        },
+      }),
 
-    const productos = await prisma.producto.findMany({ where: { activo: true, empresaId } });
-    const stockBajoCount = productos.filter(p => p.stockActual <= p.stockMinimo).length;
+      // 3. Productos con stock bajo (stockActual <= stockMinimo)
+      prisma.$queryRaw`
+        SELECT COUNT(*) AS count
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND "activo" = true
+          AND "stockActual" <= "stockMinimo"
+      `,
 
-    // Facturas recientes
-    const facturasRecientes = await prisma.factura.findMany({
-      where: facturaTenantFilter,
-      take: 5,
-      orderBy: { fechaEmision: 'desc' },
-      include: { cliente: true, _count: { select: { items: true } } },
-    });
+      // 4. Facturas recientes
+      prisma.factura.findMany({
+        where: facturaTenantFilter,
+        take: 5,
+        orderBy: { fechaEmision: 'desc' },
+        include: { cliente: true, _count: { select: { items: true } } },
+      }),
 
-    // Totales por estado - Normalizados a USD
-    const facturasAll = await prisma.factura.findMany({
-      where: facturaTenantFilter,
-      select: { estado: true, total: true, moneda: true, tasaCambio: true }
-    });
-    
-    const totalesPorEstadoObj = {};
-    facturasAll.forEach(f => {
-      if (!totalesPorEstadoObj[f.estado]) {
-        totalesPorEstadoObj[f.estado] = { _count: { id: 0 }, _sum: { total: new (require('decimal.js').Decimal)(0) } };
-      }
-      totalesPorEstadoObj[f.estado]._count.id++;
-      
-      const totalF = new (require('decimal.js').Decimal)(f.total.toString());
-      const tasaF = new (require('decimal.js').Decimal)(f.tasaCambio.toString());
-      
-      if (f.moneda === 'VES' && !tasaF.isZero()) {
-        totalesPorEstadoObj[f.estado]._sum.total = totalesPorEstadoObj[f.estado]._sum.total.add(totalF.div(tasaF));
-      } else {
-        totalesPorEstadoObj[f.estado]._sum.total = totalesPorEstadoObj[f.estado]._sum.total.add(totalF);
-      }
-    });
-    
-    const totalesPorEstado = Object.keys(totalesPorEstadoObj).map(estado => ({
-      estado,
-      _sum: { total: totalesPorEstadoObj[estado]._sum.total.toFixed(2) },
-      _count: { id: totalesPorEstadoObj[estado]._count.id }
+      // 5. Totales por estado - agregación en BD
+      prisma.$queryRaw`
+        SELECT
+          f."estado",
+          COUNT(*) AS count,
+          SUM(CASE
+            WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+            THEN f."total" / f."tasaCambio"
+            ELSE f."total"
+          END) AS total_usd
+        FROM facturas f
+        WHERE (f."usuarioId" = ${empresaId} OR f."usuarioId" IN (
+          SELECT id FROM usuarios WHERE "empresaId" = ${empresaId}
+        ))
+        GROUP BY f."estado"
+      `,
+
+      // 6. Ingresos últimos 6 meses - agregación en BD
+      prisma.$queryRaw`
+        SELECT
+          DATE_TRUNC('month', p."fechaPago") AS mes,
+          SUM(CASE
+            WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+            THEN p."monto" / f."tasaCambio"
+            ELSE p."monto"
+          END) AS total_usd
+        FROM pagos p
+        INNER JOIN facturas f ON f."id" = p."facturaId"
+        WHERE p."fechaPago" >= ${new Date(hoy.getFullYear(), hoy.getMonth() - 5, 1).toISOString()}::timestamp
+          AND (f."usuarioId" = ${empresaId} OR f."usuarioId" IN (
+            SELECT id FROM usuarios WHERE "empresaId" = ${empresaId}
+          ))
+        GROUP BY DATE_TRUNC('month', p."fechaPago")
+        ORDER BY mes ASC
+      `,
+    ]);
+
+    // Procesar resultados
+    const ingresosDelMes = new (require('decimal.js').Decimal)(pagosDelMes[0]?.total_usd || 0);
+
+    const productosStockBajoCount = Number(productosStockBajo[0]?.count || 0);
+
+    const totalesPorEstado = totalesPorEstadoRaw.map(row => ({
+      estado: row.estado,
+      _sum: { total: new (require('decimal.js').Decimal)(row.total_usd || 0).toFixed(2) },
+      _count: { id: Number(row.count) },
     }));
 
-    // Ingresos últimos 6 meses (para gráfico) - Normalizados
-    const ingresosHistorico = [];
-    for (let i = 5; i >= 0; i--) {
-      const fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
-      const fechaFin    = new Date(hoy.getFullYear(), hoy.getMonth() - i + 1, 0, 23, 59, 59);
-      const pagosHist   = await prisma.pago.findMany({
-        where: {
-          fechaPago: { gte: fechaInicio.toISOString(), lte: fechaFin.toISOString() },
-          factura: facturaTenantFilter,
-        },
-        include: { factura: { select: { tasaCambio: true, moneda: true } } }
-      });
-      
-      let sumMes = new (require('decimal.js').Decimal)(0);
-      pagosHist.forEach(p => {
-        const monto = new (require('decimal.js').Decimal)(p.monto.toString());
-        const tasa = new (require('decimal.js').Decimal)(p.factura.tasaCambio.toString());
-        if (p.factura.moneda === 'VES' && !tasa.isZero()) {
-          sumMes = sumMes.add(monto.div(tasa));
-        } else {
-          sumMes = sumMes.add(monto);
-        }
-      });
-      
-      ingresosHistorico.push({
-        mes: fechaInicio.toLocaleString('es-VE', { month: 'short', year: 'numeric' }),
-        total: sumMes.toFixed(2),
-      });
-    }
+    const ingresosHistorico = ingresosHistoricoRaw.map(row => ({
+      mes: new Date(row.mes).toLocaleString('es-VE', { month: 'short', year: 'numeric' }),
+      total: new (require('decimal.js').Decimal)(row.total_usd || 0).toFixed(2),
+    }));
 
     res.json({
       ingresosDelMes: ingresosDelMes.toFixed(2),
       facturasVencidas,
-      productosStockBajo: stockBajoCount,
+      productosStockBajo: productosStockBajoCount,
       facturasRecientes,
       totalesPorEstado,
       ingresosHistorico,

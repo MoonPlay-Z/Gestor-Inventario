@@ -104,14 +104,29 @@ img {
 .page-header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 24px 32px;
+  padding: 16px 20px;
   color: var(--text-primary);
 }
 
 .page-body {
-  padding: 24px 32px 40px;
+  padding: 16px 20px 32px;
   background: var(--bg-page);
   color: var(--text-primary);
+}
+
+@media (min-width: 768px) {
+  .page-header { padding: 20px 28px; }
+  .page-body { padding: 20px 28px 36px; }
+}
+
+@media (min-width: 1280px) {
+  .page-header { padding: 24px 32px; }
+  .page-body { padding: 24px 32px 40px; }
+}
+
+@media (min-width: 1920px) {
+  .page-header { padding: 28px 40px; }
+  .page-body { padding: 28px 40px 48px; }
 }
 
 .card {
@@ -164,6 +179,26 @@ img {
 .form-control.error { border-color: var(--danger); }
 .form-error { font-size: 0.75rem; color: var(--danger); display: none; }
 .form-error.visible { display: block; }
+.help-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: 6px;
+  cursor: help;
+  vertical-align: middle;
+  transition: background 0.2s, color 0.2s;
+}
+.help-icon:hover {
+  background: var(--accent);
+  color: white;
+}
 .form-grid { display: grid; gap: 16px; }
 .form-grid-2 { grid-template-columns: 1fr 1fr; }
 .form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }

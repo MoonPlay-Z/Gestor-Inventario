@@ -3,6 +3,7 @@ const prisma = require('../db/prisma');
 const bcrypt = require('bcrypt');
 const { requireRole } = require('../middleware/auth');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
+const { paginate, paginatedResponse } = require('../utils/pagination');
 
 const router = express.Router();
 
@@ -10,10 +11,11 @@ const router = express.Router();
 // el usuario SUPER_ADMIN que actualiza su propio perfil desde configuración.
 router.use(requireRole('EMPRESA', 'SUPER_ADMIN'));
 
-// GET /api/usuarios — Listar sub-usuarios
+// GET /api/usuarios — Listar sub-usuarios (con paginación)
 router.get('/', async (req, res, next) => {
   try {
     const { rol, q } = req.query;
+    const { skip, take, page, limit } = paginate(req.query, { limit: 50 });
     const where = { empresaId: req.user.id };
 
     if (rol) {
@@ -27,23 +29,28 @@ router.get('/', async (req, res, next) => {
       ];
     }
 
-    const usuarios = await prisma.usuario.findMany({
-      where,
-      select: {
-        id: true,
-        username: true,
-        nombre: true,
-        rol: true,
-        activo: true,
-        createdAt: true,
-        _count: {
-          select: { facturas: true, cierresCaja: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    const [usuarios, total] = await Promise.all([
+      prisma.usuario.findMany({
+        where,
+        skip,
+        take,
+        select: {
+          id: true,
+          username: true,
+          nombre: true,
+          rol: true,
+          activo: true,
+          createdAt: true,
+          _count: {
+            select: { facturas: true, cierresCaja: true }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.usuario.count({ where }),
+    ]);
 
-    res.json(usuarios);
+    res.json(paginatedResponse(usuarios, total, page, limit));
   } catch (err) {
     next(err);
   }

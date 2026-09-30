@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Icon } from '@iconify/react';
 import { Button } from './Button';
 import { Utils } from '../../services/api';
 
 export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
+  const [monedaImpresion, setMonedaImpresion] = useState('VES'); // 'VES' o 'USD'
+  
   if (!factura) return null;
   const isCotizacion = type === 'cotizacion';
   const numero = isCotizacion ? factura.numero : factura.numeroFactura;
+  const tasaBcv = Number(config?.moneda?.tasaDolar || 1);
 
   const sanitizeFilenamePart = (value) => {
     return String(value || '')
@@ -28,30 +31,85 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
       factura.referenciaTransaccion ||
       'sin-referencia'
     );
-
     return `Factura_${cliente}_${fecha}_${referencia}`;
   };
 
   const handlePrint = () => {
     const previousTitle = document.title;
     const printableTitle = buildPrintableTitle();
-
     document.title = printableTitle;
     const restoreTitle = () => {
       document.title = previousTitle;
       window.removeEventListener('afterprint', restoreTitle);
     };
-
     window.addEventListener('afterprint', restoreTitle, { once: true });
     window.print();
   };
 
-  const currency = config?.moneda?.simbolo || '$';
   const empresa = config?.empresa || {};
+  const simboloMoneda = monedaImpresion === 'VES' ? 'Bs.' : '$';
+
+  // Calcular totales por tipo de IVA
+  const calcularTotalesPorAliquota = () => {
+    const totales = { G: { base: 0, iva: 0 }, E: { base: 0, iva: 0 }, R: { base: 0, iva: 0 } };
+    
+    factura.items?.forEach(item => {
+      const tipoIVA = item.tipoIVA || 'G'; // G = General, E = Exento, R = Reducido
+      const subtotal = Number(item.subtotalLinea || 0);
+      const iva = Number(item.impuestoLinea || 0);
+      
+      if (totales[tipoIVA]) {
+        totales[tipoIVA].base += subtotal;
+        totales[tipoIVA].iva += iva;
+      }
+    });
+    
+    return totales;
+  };
+
+  const totalesIVA = calcularTotalesPorAliquota();
+  const subtotalUSD = Number(factura.subtotal || 0);
+  const impuestoTotalUSD = Number(factura.impuestoTotal || 0);
+  const totalUSD = Number(factura.total || 0);
+
+  // Convertir valores según la moneda seleccionada
+  const convertir = (valorUSD) => {
+    return monedaImpresion === 'VES' ? valorUSD * tasaBcv : valorUSD;
+  };
+
+  const subtotal = convertir(subtotalUSD);
+  const impuestoTotal = convertir(impuestoTotalUSD);
+  const total = convertir(totalUSD);
+
+  // Formatear valores
+  const formatValue = (valor) => {
+    return valor.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  // Obtener letra de tipo IVA para un item
+  const getTipoIVALetra = (item) => {
+    const tasa = Number(item.tasaImpuestoAplicada || 16);
+    if (tasa === 0) return 'E'; // Exento
+    if (tasa === 16) return 'G'; // General
+    return 'R'; // Reducido
+  };
+
+  // Agrupar items por tipo de IVA para mostrar en la factura
+  const itemsAgrupados = () => {
+    const grupos = {};
+    factura.items?.forEach(item => {
+      const tipo = getTipoIVALetra(item);
+      if (!grupos[tipo]) grupos[tipo] = [];
+      grupos[tipo].push(item);
+    });
+    return grupos;
+  };
+
+  const itemsPorTipo = itemsAgrupados();
 
   return (
     <div className="modal-overlay open receipt-overlay" onClick={onClose}>
-      <div className="modal receipt-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '400px', width: '100%' }}>
+      <div className="modal receipt-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px', width: '100%' }}>
         <div className="modal-header no-print">
           <h3 className="modal-title">
             {isCotizacion ? 'Cotización' : 'Factura'} #{numero?.toString().padStart(5, '0')}
@@ -59,122 +117,201 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
           <Button variant="ghost" size="icon" onClick={onClose} icon="mdi:close" />
         </div>
 
-        <div className="modal-body receipt-content" style={{ padding: '24px', background: '#fff', color: '#000', fontSize: '14px' }}>
-          {/* Cabecera de la factura */}
-          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <h2 style={{ margin: '0 0 5px 0', fontSize: '20px', fontWeight: 'bold' }}>{empresa.nombre || 'Mi Empresa'}</h2>
-            {empresa.documento && <div style={{ fontSize: '13px' }}>ID Fiscal: {empresa.documento}</div>}
-            {empresa.direccion && <div style={{ fontSize: '13px' }}>{empresa.direccion}</div>}
-            {empresa.telefono && <div style={{ fontSize: '13px' }}>Tel: {empresa.telefono}</div>}
-            <div style={{ margin: '15px 0', borderBottom: '1px dashed #ccc' }}></div>
-            <h3 style={{ margin: '0 0 5px 0', fontSize: '16px' }}>
-              {isCotizacion ? 'PRESUPUESTO' : (['PAID', 'PARTIALLY_PAID'].includes(factura.estado) ? 'RECIBO DE PAGO' : 'NOTA DE ENTREGA')}
-            </h3>
-            <div style={{ fontSize: '13px' }}>N° {numero?.toString().padStart(5, '0')}</div>
-            <div style={{ fontSize: '13px' }}>Fecha: {Utils.formatDate(factura.fechaEmision || new Date())}</div>
-            {isCotizacion && factura.fechaValidez && (
-              <div style={{ fontSize: '13px' }}>Validez hasta: {Utils.formatDate(factura.fechaValidez)}</div>
-            )}
+        <div className="modal-body receipt-content" style={{ padding: '20px', background: '#fff', color: '#000', fontSize: '12px', fontFamily: 'monospace' }}>
+          {/* ── CABECERA ── */}
+          <div style={{ textAlign: 'center', marginBottom: '10px', borderBottom: '2px solid #000', paddingBottom: '10px' }}>
+            <div style={{ fontSize: '16px', fontWeight: 'bold', textTransform: 'uppercase' }}>
+              {empresa.nombre || 'MI EMPRESA'}
+            </div>
+            <div style={{ fontSize: '11px' }}>RIF: {empresa.rif || empresa.documento || 'J-00000000-0'}</div>
+            {empresa.direccion && <div style={{ fontSize: '10px', marginTop: '2px' }}>{empresa.direccion}</div>}
+            {empresa.telefono && <div style={{ fontSize: '10px' }}>Tel: {empresa.telefono}</div>}
           </div>
 
-          {/* Datos del Cliente */}
-          <div style={{ marginBottom: '15px', fontSize: '13px' }}>
-            <div><strong>Cliente:</strong> {factura.cliente?.razonSocial}</div>
-            <div><strong>ID Fiscal:</strong> {factura.cliente?.rifCedula}</div>
-            {factura.cliente?.direccion && <div><strong>Dir:</strong> {factura.cliente.direccion}</div>}
+          {/* ── IDENTIFICACIÓN DEL DOCUMENTO ── */}
+          <div style={{ textAlign: 'center', marginBottom: '10px', fontSize: '11px' }}>
+            <div style={{ fontSize: '14px', fontWeight: 'bold', letterSpacing: '1px' }}>
+              {isCotizacion ? 'PRESUPUESTO' : 'FACTURA'}
+            </div>
+            <div>NRO: {numero?.toString().padStart(8, '0')}</div>
+            {!isCotizacion && <div>NRO CONTROL: 00-{numero?.toString().padStart(8, '0')}</div>}
+            <div>
+              FECHA: {new Date(factura.fechaEmision || new Date()).toLocaleDateString('es-VE')} 
+              HORA: {new Date(factura.fechaEmision || new Date()).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}
+            </div>
           </div>
 
-          <div style={{ borderBottom: '1px dashed #ccc', marginBottom: '10px' }}></div>
+          <div style={{ borderBottom: '1px dashed #000', marginBottom: '10px' }}></div>
 
-          {/* Ítems */}
-          <table style={{ width: '100%', fontSize: '13px', marginBottom: '15px', borderCollapse: 'collapse' }}>
+          {/* ── DATOS DEL CLIENTE ── */}
+          <div style={{ marginBottom: '10px', fontSize: '11px' }}>
+            <div><strong>CLIENTE:</strong> {factura.cliente?.razonSocial || 'N/A'}</div>
+            <div><strong>C.I/RIF:</strong> {factura.cliente?.rifCedula || 'N/A'}</div>
+            {factura.cliente?.direccion && <div><strong>DIR:</strong> {factura.cliente.direccion}</div>}
+          </div>
+
+          <div style={{ borderBottom: '1px dashed #000', marginBottom: '10px' }}></div>
+
+          {/* ── ÍTEMS ── */}
+          <table style={{ width: '100%', fontSize: '11px', marginBottom: '10px', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #eee' }}>
-                <th style={{ textAlign: 'left', paddingBottom: '5px' }}>Cant</th>
-                <th style={{ textAlign: 'left', paddingBottom: '5px' }}>Descripción</th>
-                <th style={{ textAlign: 'right', paddingBottom: '5px' }}>Total</th>
+              <tr style={{ borderBottom: '1px solid #000' }}>
+                <th style={{ textAlign: 'left', padding: '4px 2px' }}>CANT</th>
+                <th style={{ textAlign: 'left', padding: '4px 2px' }}>DESCRIPCION</th>
+                <th style={{ textAlign: 'right', padding: '4px 2px' }}>P.UNIT</th>
+                <th style={{ textAlign: 'right', padding: '4px 2px' }}>TOTAL</th>
               </tr>
             </thead>
             <tbody>
-              {factura.items?.map((item, idx) => (
-                <tr key={idx}>
-                  <td style={{ padding: '4px 0', verticalAlign: 'top' }}>{item.cantidad}</td>
-                  <td style={{ padding: '4px 0', paddingRight: '5px' }}>
-                    {item.descripcionHistorica || item.producto?.nombre}
-                    <div style={{ fontSize: '11px', color: '#666' }}>
-                      {Utils.formatMoney(item.precioUnitarioHistorico, currency)} c/u
-                    </div>
-                  </td>
-                  <td style={{ padding: '4px 0', textAlign: 'right', verticalAlign: 'top' }}>
-                    {Utils.formatMoney(item.totalLinea || (item.precioUnitarioHistorico * item.cantidad), currency)}
-                  </td>
-                </tr>
-              ))}
+              {factura.items?.map((item, idx) => {
+                const tipoIVA = getTipoIVALetra(item);
+                return (
+                  <tr key={idx} style={{ borderBottom: '1px dotted #ccc' }}>
+                    <td style={{ padding: '4px 2px', verticalAlign: 'top' }}>
+                      {item.cantidad}
+                      {item.unidadMedida && item.unidadMedida !== 'UNIDAD' && (
+                        <span style={{ fontSize: '9px' }}> ({item.unidadMedida.substring(0, 3)})</span>
+                      )}
+                    </td>
+                    <td style={{ padding: '4px 2px', paddingRight: '4px' }}>
+                      {item.descripcionHistorica || item.producto?.nombre}
+                      <span style={{ 
+                        display: 'inline-block', 
+                        marginLeft: '4px',
+                        padding: '0 3px',
+                        border: '1px solid #000',
+                        fontSize: '9px',
+                        fontWeight: 'bold'
+                      }}>
+                        {tipoIVA}
+                      </span>
+                    </td>
+                    <td style={{ padding: '4px 2px', textAlign: 'right', verticalAlign: 'top' }}>
+                      {formatValue(Number(item.precioUnitarioHistorico || 0))}
+                    </td>
+                    <td style={{ padding: '4px 2px', textAlign: 'right', verticalAlign: 'top' }}>
+                      {formatValue(Number(item.totalLinea || 0))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
 
-          <div style={{ borderBottom: '1px dashed #ccc', marginBottom: '10px' }}></div>
+          <div style={{ borderBottom: '1px dashed #000', marginBottom: '10px' }}></div>
 
-          {/* Totales */}
-          <div style={{ fontSize: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {/* ── TOTALES ── */}
+          <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Subtotal:</span>
-              <span>{Utils.formatMoney(factura.subtotal, currency)}</span>
+              <span>SUBTOTAL:</span>
+              <span>{simboloMoneda} {formatValue(subtotal)}</span>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>Impuesto:</span>
-              <span>{Utils.formatMoney(factura.impuestoTotal, currency)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '16px', marginTop: '4px', paddingTop: '4px', borderTop: '1px solid #eee' }}>
-              <span>TOTAL:</span>
-              <span>{Utils.formatMoney(factura.total, currency)}</span>
+            
+            {/* Base Exenta */}
+            {totalesIVA.E.base > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>BASE EXENTA (E):</span>
+                <span>{simboloMoneda} {formatValue(totalesIVA.E.base)}</span>
+              </div>
+            )}
+            
+            {/* Base Imponible General */}
+            {totalesIVA.G.base > 0 && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>BASE IMPONIBLE (G) 16%:</span>
+                  <span>{simboloMoneda} {formatValue(totalesIVA.G.base)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>IVA 16%:</span>
+                  <span>{simboloMoneda} {formatValue(totalesIVA.G.iva)}</span>
+                </div>
+              </>
+            )}
+            
+            {/* Base Imponible Reducido */}
+            {totalesIVA.R.base > 0 && (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>BASE IMPONIBLE (R) 8%:</span>
+                  <span>{simboloMoneda} {formatValue(totalesIVA.R.base)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>IVA 8%:</span>
+                  <span>{simboloMoneda} {formatValue(totalesIVA.R.iva)}</span>
+                </div>
+              </>
+            )}
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '14px', marginTop: '6px', paddingTop: '6px', borderTop: '2px solid #000' }}>
+              <span>TOTAL {simboloMoneda}:</span>
+              <span>{simboloMoneda} {formatValue(total)}</span>
             </div>
           </div>
 
-          {/* Cuotas si es financiada */}
-          {!isCotizacion && factura.cuotasTotales > 1 && (
-            <div style={{ marginTop: '15px', padding: '10px', background: '#f9f9f9', borderRadius: '4px', fontSize: '13px', border: '1px solid #eee' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>Financiamiento</div>
-              <div>Cuotas Totales: {factura.cuotasTotales}</div>
-              <div>Monto Cuota: {Utils.formatMoney(factura.total / factura.cuotasTotales, currency)}</div>
-              <div>Vencimiento: {Utils.formatDate(factura.fechaVencimiento)}</div>
+          {/* ── INFORMACIÓN ADICIONAL ── */}
+          <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px dashed #000', fontSize: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>TASA BCV: {tasaBcv.toFixed(2)} BS/USD</span>
             </div>
-          )}
-
-          {/* Registro de Pagos */}
-          {!isCotizacion && factura.pagos?.length > 0 && (
-            <div style={{ marginTop: '15px', padding: '10px', background: '#f9f9f9', borderRadius: '4px', fontSize: '13px', border: '1px solid #eee' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '6px', borderBottom: '1px solid #ddd', paddingBottom: '4px' }}>
-                Registro de Pagos
-              </div>
-              {factura.pagos.map((pago, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', marginBottom: '6px', fontSize: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>
-                      {Utils.formatDate(pago.fechaPago)} - {
-                        pago.metodoPago === 'CASH' ? 'Efectivo' :
-                        pago.metodoPago === 'MOBILE_PAYMENT' ? 'Pago Móvil' :
-                        pago.metodoPago === 'CREDIT_CARD' ? 'Punto' : 'Transferencia'
-                      }
-                    </span>
-                    <span style={{ fontWeight: 'bold' }}>{Utils.formatMoney(pago.monto, currency)}</span>
+            {/* Solo mostrar la moneda seleccionada, sin mezclar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
+              <span>TOTAL {monedaImpresion}:</span>
+              <span>{simboloMoneda} {formatValue(total)}</span>
+            </div>
+            
+            {/* Método de Pago */}
+            {factura.pagos && factura.pagos.length > 0 && (
+              <div style={{ marginTop: '6px' }}>
+                <strong>METODO DE PAGO:</strong>
+                {factura.pagos.map((pago, i) => (
+                  <div key={i} style={{ marginLeft: '10px' }}>
+                    {pago.metodoPago === 'CASH' ? 'EFECTIVO' :
+                     pago.metodoPago === 'MOBILE_PAYMENT' ? 'PAGO MOVIL' :
+                     pago.metodoPago === 'CREDIT_CARD' ? 'PUNTO DE VENTA' :
+                     pago.metodoPago === 'BANK_TRANSFER' ? 'TRANSFERENCIA' : pago.metodoPago}
+                    {pago.referenciaTransaccion && ` - Ref: ${pago.referenciaTransaccion}`}
                   </div>
-                  {pago.referenciaTransaccion && (
-                    <div style={{ color: '#666' }}>Ref: {pago.referenciaTransaccion}</div>
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+            
+            {/* Cuotas si es financiada */}
+            {!isCotizacion && factura.cuotasTotales > 1 && (
+              <div style={{ marginTop: '6px' }}>
+                <strong>FINANCIAMIENTO:</strong> {factura.cuotasTotales} cuotas de {simboloMoneda} {formatValue(total / factura.cuotasTotales)}
+              </div>
+            )}
+          </div>
+
+          {/* ── PIE DE PÁGINA ── */}
+          <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '9px', color: '#333', borderTop: '1px solid #000', paddingTop: '10px' }}>
+            <div>Requisitos Estructurales (SENIAT)</div>
+            <div style={{ marginTop: '5px', fontWeight: 'bold' }}>
+              {isCotizacion ? 'Precios sujetos a cambio sin previo aviso.' : 'GRACIAS POR SU COMPRA'}
             </div>
-          )}
-          
-          <div style={{ marginTop: '30px', textAlign: 'center', fontSize: '12px', color: '#555' }}>
-            {isCotizacion ? 'Precios sujetos a cambio sin previo aviso.' : '¡Gracias por su compra!'}
           </div>
         </div>
 
-        <div className="modal-footer no-print" style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap' }}>
-          <Button variant="ghost" onClick={onClose}>Cerrar</Button>
+        {/* ── CONTROLES DE IMPRESIÓN ── */}
+        <div className="modal-footer no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>Imprimir en:</span>
+            <button 
+              onClick={() => setMonedaImpresion('VES')}
+              className={`btn btn-sm ${monedaImpresion === 'VES' ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              Bs.
+            </button>
+            <button 
+              onClick={() => setMonedaImpresion('USD')}
+              className={`btn btn-sm ${monedaImpresion === 'USD' ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              USD
+            </button>
+          </div>
           <div style={{ display: 'flex', gap: '8px' }}>
+            <Button variant="ghost" onClick={onClose}>Cerrar</Button>
             {!isCotizacion && (
               <Button
                 variant="secondary"
@@ -183,17 +320,17 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
                   try {
                     const { API } = require('../../services/api');
                     await API.imprimirFiscal(factura.id);
-                    alert('🎉 Imprimiendo en máquina fiscal...');
+                    alert('Imprimiendo en máquina fiscal...');
                   } catch (err) {
                     alert('Error Máquina Fiscal: ' + err.message);
                   }
                 }}
               >
-                Imprimir Fiscal
+                Fiscal
               </Button>
             )}
             <Button variant="primary" icon="mdi:printer" onClick={handlePrint}>
-              Imprimir / Guardar
+              Imprimir
             </Button>
           </div>
         </div>

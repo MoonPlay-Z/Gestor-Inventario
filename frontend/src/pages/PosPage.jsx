@@ -4,6 +4,7 @@ import closeIcon from '@iconify/icons-mdi/close';
 import cashIcon from '@iconify/icons-mdi/cash';
 import flashIcon from '@iconify/icons-mdi/flash';
 import lockOpenIcon from '@iconify/icons-mdi/lock-open';
+import scaleIcon from '@iconify/icons-mdi/scale';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
@@ -34,6 +35,7 @@ export function PosPage() {
   const [referencia, setReferencia] = useState('');
   const [cuotas, setCuotas] = useState(1);
   const [loadingEmitir, setLoadingEmitir] = useState(false);
+  const [monedaVisualizacion, setMonedaVisualizacion] = useState('USD'); // 'USD' o 'VES'
 
   const [showClienteModal, setShowClienteModal] = useState(false);
   const [newCliente, setNewCliente] = useState(EMPTY_CLIENT);
@@ -97,7 +99,7 @@ export function PosPage() {
     };
   }, [searchTerm]);
 
-  const tasaDolar = Number((config?.moneda?.tasaDolar || 1).toFixed(2));
+  const tasaDolar = parseFloat(config?.moneda?.tasaDolar) || 1;
   const currencySymbol = config?.moneda?.simbolo || '$';
 
   // Buscador de productos por texto usando el backend
@@ -107,7 +109,8 @@ export function PosPage() {
   }, [searchTerm, searchResults]);
 
   const addToCart = (product) => {
-    if (product.stockActual <= 0) {
+    const stockActual = Number(product.stockActual);
+    if (!stockActual || stockActual <= 0) {
       showToast(`El producto "${product.nombre}" no tiene stock disponible`, 'warning');
       return;
     }
@@ -115,36 +118,65 @@ export function PosPage() {
     setCart(prev => {
       const exists = prev.find(item => item.productoId === product.id);
       if (exists) {
-        if (exists.cantidad + 1 > product.stockActual) {
-          showToast(`Stock insuficiente. Disponible: ${product.stockActual}`, 'warning');
+        const nuevaCantidad = exists.cantidad + 1;
+        if (nuevaCantidad > stockActual) {
+          showToast(`Stock insuficiente. Disponible: ${stockActual}`, 'warning');
           return prev;
         }
-        return prev.map(item => item.productoId === product.id ? { ...item, cantidad: item.cantidad + 1 } : item);
+        return prev.map(item => item.productoId === product.id ? { ...item, cantidad: nuevaCantidad } : item);
       }
       return [...prev, {
         productoId: product.id,
         nombre: product.nombre,
         precioUnitario: parseFloat(product.precioVenta),
         cantidad: 1,
-        stockMax: product.stockActual
+        stockMax: stockActual,
+        unidadMedida: product.unidadMedida || 'UNIDAD',
+        esVentaPorPeso: product.esVentaPorPeso || false,
+        precioPorKilo: product.precioPorKilo ? parseFloat(product.precioPorKilo) : null,
+        unidadPeso: 'kg', // Por defecto kilogramos
       }];
     });
     setSearchTerm('');
   };
 
   const updateQuantity = (productoId, newQty) => {
-    const qty = parseInt(newQty, 10);
-    if (isNaN(qty) || qty <= 0) {
-      removeFromCart(productoId);
+    const qty = parseFloat(newQty);
+    // No eliminar si es 0 o NaN, solo actualizar la cantidad
+    if (isNaN(qty)) {
+      return;
+    }
+    // Si es 0 o negativo, no hacer nada (no eliminar)
+    if (qty <= 0) {
       return;
     }
     setCart(prev => prev.map(item => {
       if (item.productoId === productoId) {
-        if (qty > item.stockMax) {
-          showToast(`Stock máximo disponible: ${item.stockMax}`, 'warning');
-          return { ...item, cantidad: item.stockMax };
+        // Convertir a kg para validar stock
+        const cantidadEnKg = item.unidadPeso === 'g' ? qty / 1000 : qty;
+        if (cantidadEnKg > item.stockMax) {
+          showToast(`Stock máximo disponible: ${item.stockMax} kg`, 'warning');
+          return { ...item, cantidad: item.stockMax, unidadPeso: 'kg' };
         }
-        return { ...item, cantidad: qty };
+        // Para productos por peso, redondear a 3 decimales; para unidades, a enteros
+        const cantidadFinal = item.esVentaPorPeso ? Math.round(qty * 1000) / 1000 : Math.round(qty);
+        return { ...item, cantidad: cantidadFinal };
+      }
+      return item;
+    }));
+  };
+
+  const cambiarUnidadPeso = (productoId, nuevaUnidad) => {
+    setCart(prev => prev.map(item => {
+      if (item.productoId === productoId && item.esVentaPorPeso) {
+        // Convertir la cantidad a la nueva unidad
+        let nuevaCantidad = item.cantidad;
+        if (item.unidadPeso === 'kg' && nuevaUnidad === 'g') {
+          nuevaCantidad = item.cantidad * 1000; // kg a g
+        } else if (item.unidadPeso === 'g' && nuevaUnidad === 'kg') {
+          nuevaCantidad = item.cantidad / 1000; // g a kg
+        }
+        return { ...item, unidadPeso: nuevaUnidad, cantidad: nuevaCantidad };
       }
       return item;
     }));
@@ -154,8 +186,20 @@ export function PosPage() {
     setCart(prev => prev.filter(item => item.productoId !== productoId));
   };
 
+  // Calcular subtotal según la unidad de peso (kg/g)
+  const calcularSubtotal = (item) => {
+    if (item.esVentaPorPeso) {
+      // Si es venta por peso, el precio es por kg
+      // Si la unidad es gramos, convertir a kg para el cálculo
+      const cantidadEnKg = item.unidadPeso === 'g' ? Number(item.cantidad) / 1000 : Number(item.cantidad);
+      return item.precioUnitario * cantidadEnKg;
+    }
+    // Productos normales (por unidad)
+    return item.precioUnitario * Number(item.cantidad);
+  };
+
   const totalUsd = useMemo(() => {
-    return cart.reduce((acc, item) => acc + (item.precioUnitario * item.cantidad), 0);
+    return cart.reduce((acc, item) => acc + calcularSubtotal(item), 0);
   }, [cart]);
 
   const totalVes = totalUsd * tasaDolar;
@@ -185,6 +229,7 @@ export function PosPage() {
         items: cart.map(item => ({
           productoId: item.productoId,
           cantidad: item.cantidad,
+          unidadPeso: item.unidadPeso || 'kg', // Enviar la unidad de peso al backend
         })),
         metodoPago: metodoPago ? paymentMethodMap[metodoPago] : null,
         referenciaTransaccion: referencia || null,
@@ -252,16 +297,9 @@ export function PosPage() {
               <Icon icon={lockOpenIcon} style={{ fontSize: '4rem', color: 'var(--danger)' }} />
             </div>
             <h2 style={{ marginBottom: '8px', color: 'var(--text-primary)' }}>Turno No Iniciado</h2>
-            <p style={{ color: 'var(--text-secondary)', marginBottom: '28px', lineHeight: 1.6 }}>
+            <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6' }}>
               No hay ningún turno activo. Para realizar ventas, primero debes <strong>abrir la caja</strong> desde el módulo de Cierre de Caja.
             </p>
-            <Button
-              variant="primary"
-              icon="mdi:lock-open"
-              onClick={() => navigate('/app/caja')}
-            >
-              Ir a Cierre de Caja
-            </Button>
           </div>
         </div>
       ) : (
@@ -309,36 +347,57 @@ export function PosPage() {
               </div>
 
               {filteredProducts.length > 0 && (
-                <div style={{ marginTop: '12px', maxHeight: '240px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)' }}>
+                <div style={{ marginTop: '12px', maxHeight: '280px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)' }}>
                   {filteredProducts.map(p => (
                     <div
                       key={p.id}
                       onClick={() => addToCart(p)}
-                      style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
+                      style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
                       className="nav-item hover:bg-[var(--surface3)]"
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         {p.imagenUrl ? (
-                          <img src={p.imagenUrl} alt={p.nombre} style={{ width: '42px', height: '42px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #cbd5e1' }} onError={e => { e.target.style.display = 'none'; }} />
+                          <img src={p.imagenUrl} alt={p.nombre} style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #cbd5e1' }} onError={e => { e.target.style.display = 'none'; }} />
                         ) : (
-                          <div style={{ width: '42px', height: '42px', borderRadius: '8px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                          <div style={{ width: '48px', height: '48px', borderRadius: '8px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
                             <Icon icon="mdi:package-variant" className="h-5 w-5" />
                           </div>
                         )}
                         <div>
-                          <div style={{ fontWeight: 600 }}>{p.nombre}</div>
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                            Inventario: {p.stockActual} | SKU: {p.sku || 'N/A'}
+                          <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{p.nombre}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>Stock: {p.stockActual}</span>
+                            {p.esVentaPorPeso && (
+                              <span style={{ 
+                                background: 'rgba(16, 185, 129, 0.15)', 
+                                color: 'var(--success)', 
+                                padding: '2px 6px', 
+                                borderRadius: '4px',
+                                fontSize: '0.7rem',
+                                fontWeight: 600
+                              }}>
+                                <Icon icon={scaleIcon} style={{ fontSize: '0.85em', verticalAlign: 'middle', marginRight: '2px' }} />
+                                Por peso
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            SKU: {p.sku || 'N/A'}
                           </div>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', minWidth: '150px' }}>
-                        <div style={{ fontWeight: 700, color: 'var(--accent)' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', minWidth: '140px' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--accent)', fontSize: '1rem' }}>
                           {Utils.formatMoney(p.precioVenta, '$')}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                           {Utils.formatMoney(Number((Number(p.precioVenta || 0) * tasaDolar).toFixed(2)), 'Bs.')}
                         </div>
+                        {p.esVentaPorPeso && p.precioPorKilo && (
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                            ${Number(p.precioPorKilo || 0).toFixed(2)}/kg
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -376,21 +435,82 @@ export function PosPage() {
                     ) : (
                       cart.map(item => (
                         <tr key={item.productoId}>
-                          <td style={{ fontWeight: 600 }}>{item.nombre}</td>
-                          <td>{Utils.formatMoney(item.precioUnitario, currencySymbol)}</td>
                           <td>
-                            <input
-                              type="number"
-                              className="form-control"
-                              style={{ width: '70px', padding: '4px 8px' }}
-                              value={item.cantidad}
-                              min={1}
-                              max={item.stockMax}
-                              onChange={e => updateQuantity(item.productoId, e.target.value)}
-                            />
+                            <div style={{ fontWeight: 600 }}>{item.nombre}</div>
+                            {item.esVentaPorPeso && (
+                              <div style={{ fontSize: '0.7rem', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Icon icon={scaleIcon} style={{ fontSize: '0.9em' }} />
+                                Venta por peso
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 600 }}>{Utils.formatMoney(item.precioUnitario, '$')}</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                              {Utils.formatMoney(item.precioUnitario * tasaDolar, 'Bs.')}
+                            </div>
+                            {item.esVentaPorPeso && (
+                              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                                por kg
+                              </div>
+                            )}
+                          </td>
+                          <td>
+                            {item.esVentaPorPeso ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <input
+                                    type="number"
+                                    step={item.unidadPeso === 'g' ? '1' : '0.001'}
+                                    className="form-control"
+                                    style={{ width: '80px', padding: '4px 8px' }}
+                                    value={item.cantidad}
+                                    min={item.unidadPeso === 'g' ? '1' : '0.001'}
+                                    max={item.unidadPeso === 'g' ? item.stockMax * 1000 : item.stockMax}
+                                    onChange={e => updateQuantity(item.productoId, e.target.value)}
+                                  />
+                                  <select
+                                    value={item.unidadPeso || 'kg'}
+                                    onChange={e => cambiarUnidadPeso(item.productoId, e.target.value)}
+                                    style={{ 
+                                      padding: '4px 8px', 
+                                      borderRadius: '4px', 
+                                      border: '1px solid var(--border)',
+                                      fontSize: '0.75rem',
+                                      background: 'var(--bg-secondary)'
+                                    }}
+                                  >
+                                    <option value="kg">kg</option>
+                                    <option value="g">g</option>
+                                  </select>
+                                </div>
+                                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                                  = {(item.unidadPeso === 'g' ? Number(item.cantidad) / 1000 : Number(item.cantidad)).toFixed(3)} kg
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <input
+                                  type="number"
+                                  step="1"
+                                  className="form-control"
+                                  style={{ width: '70px', padding: '4px 8px' }}
+                                  value={item.cantidad}
+                                  min={1}
+                                  max={item.stockMax}
+                                  onChange={e => updateQuantity(item.productoId, e.target.value)}
+                                />
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                  {item.unidadMedida === 'UNIDAD' ? 'ud' : item.unidadMedida.toLowerCase()}
+                                </span>
+                              </div>
+                            )}
                           </td>
                           <td style={{ fontWeight: 700, color: 'var(--accent)' }}>
-                            {Utils.formatMoney(item.precioUnitario * item.cantidad, currencySymbol)}
+                            <div>{Utils.formatMoney(calcularSubtotal(item), '$')}</div>
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                              {Utils.formatMoney(calcularSubtotal(item) * tasaDolar, 'Bs.')}
+                            </div>
                           </td>
                           <td>
                             <button
@@ -412,19 +532,52 @@ export function PosPage() {
 
           {/* Panel Derecho: Resumen Financiero y Pago */}
           <div className="card" style={{ position: 'sticky', top: '20px' }}>
-            <h3 className="card-title" style={{ marginBottom: '16px' }}>Resumen de Cobro</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 className="card-title" style={{ margin: 0 }}>Resumen de Cobro</h3>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button 
+                  onClick={() => setMonedaVisualizacion('USD')}
+                  className={`btn btn-sm ${monedaVisualizacion === 'USD' ? 'btn-primary' : 'btn-secondary'}`}
+                >
+                  $
+                </button>
+                <button 
+                  onClick={() => setMonedaVisualizacion('VES')}
+                  className={`btn btn-sm ${monedaVisualizacion === 'VES' ? 'btn-primary' : 'btn-secondary'}`}
+                >
+                  Bs.
+                </button>
+              </div>
+            </div>
 
             <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', marginBottom: '20px', border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Total a Pagar (USD)</div>
-              <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--accent)' }}>
-                {Utils.formatMoney(totalUsd, currencySymbol)}
-              </div>
-              <div style={{ borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tasa de Cambio: {tasaDolar.toFixed(2)}</span>
-                <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--success)' }}>
-                  {totalVes.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.
-                </span>
-              </div>
+              {monedaVisualizacion === 'USD' ? (
+                <>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Total a Pagar (USD)</div>
+                  <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--accent)' }}>
+                    {Utils.formatMoney(totalUsd, '$')}
+                  </div>
+                  <div style={{ borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tasa: {tasaDolar.toFixed(2)}</span>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--success)' }}>
+                      {totalVes.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Total a Pagar (VES)</div>
+                  <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--success)' }}>
+                    {totalVes.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.
+                  </div>
+                  <div style={{ borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tasa: {tasaDolar.toFixed(2)}</span>
+                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)' }}>
+                      {Utils.formatMoney(totalUsd, '$')}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
 
             <form onSubmit={handleEmitirFactura} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>

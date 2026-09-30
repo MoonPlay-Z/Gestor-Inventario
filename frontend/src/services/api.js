@@ -116,7 +116,7 @@ export const API = {
   saveConfig: (data) => request('/config', { method: 'POST', body: data }),
 
   // Dashboard
-  getDashboardStats: () => request('/dashboard'),
+  getDashboardStats: (periodo = 'mes') => request(`/dashboard?periodo=${periodo}`),
 
   // Clientes
   getClientes: (params = {}) => {
@@ -133,6 +133,7 @@ export const API = {
     const qs = new URLSearchParams(params).toString();
     return request(`/productos${qs ? `?${qs}` : ''}`);
   },
+  getMetricasInventario: () => request('/productos/metricas'),
   getProducto: (id) => request(`/productos/${id}`),
   lookupProducto: (codigo) => request(`/productos/lookup/${encodeURIComponent(codigo)}`),
   getNextSku: () => request('/productos/next-sku'),
@@ -229,6 +230,15 @@ export const API = {
   reportarPagoSaaS: (data) => request('/auth/reportar-pago', { method: 'POST', body: data }),
   getMetodosPagoSaaS: () => request('/auth/metodos-pago'),
   getPublicNoticias: () => request('/public/noticias'),
+
+  // Reportes
+  getReportesVentas: (params) => request(`/reportes/ventas?${params}`),
+  getReportesGanancias: (params) => request(`/reportes/ganancias?${params}`),
+  getReportesInversion: () => request('/reportes/inversion'),
+  getReportesProductosTop: (params) => request(`/reportes/productos-top?${params}`),
+  getReportesClientesTop: (params) => request(`/reportes/clientes-top?${params}`),
+  getReportesCaja: (params) => request(`/reportes/caja?${params}`),
+  getReportesImpuestos: (params) => request(`/reportes/impuestos?${params}`),
 };
 
 export const Utils = {
@@ -251,5 +261,11 @@ export const Utils = {
     return new Date(dateString).toLocaleDateString('es-VE', {
       year: 'numeric', month: '2-digit', day: '2-digit'
     });
+  },
+
+  formatearPorcentaje: (valor) => {
+    const num = Number(valor || 0);
+    const signo = num > 0 ? '+' : '';
+    return `${signo}${num.toFixed(1)}%`;
   }
 };
