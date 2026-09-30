@@ -1,19 +1,10 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+# Base de Datos - Sistema POS y Gestor de Inventario
+# Schema Prisma (PostgreSQL)
+# Fuente: backend/prisma/schema.prisma
 
-generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x", "windows"]
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ENUMS
-// ─────────────────────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+# ENUMS
+# ═══════════════════════════════════════════════════════════════
 
 enum EstadoFactura {
   PENDING
@@ -30,27 +21,9 @@ enum MetodoPago {
   PAGO_MOVIL
 }
 
-enum UnidadMedida {
-  UNIDAD
-  KILOGRAMO
-  GRAMO
-  LITRO
-  MILILITRO
-  METRO
-  CENTIMETRO
-  BULTO
-  PAQUETE
-  CAJA
-  SACO
-  BOTELLA
-  LATA
-  DOCENA
-  MEDIA_DOCENA
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MODELOS
-// ─────────────────────────────────────────────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+# MODELOS
+# ═══════════════════════════════════════════════════════════════
 
 model Empresa {
   id                 String    @id @default(uuid())
@@ -157,32 +130,21 @@ model Cliente {
 }
 
 model Producto {
-  id              String        @id @default(uuid())
-  sku             String
-  nombre          String
-  descripcion     String?
-  imagenUrl       String?
-  
-  // ── Unidad de medida ──
-  unidadMedida    UnidadMedida @default(UNIDAD)
-  
-  // ── Stock decimal (permite fracciones) ──
-  stockActual     Decimal       @db.Decimal(12, 4) @default(0)
-  stockMinimo     Decimal       @db.Decimal(12, 4) @default(5)
-  
-  // ── Venta por peso (verduras, hortalizas) ──
-  esVentaPorPeso  Boolean       @default(false)
-  precioPorKilo  Decimal?      @db.Decimal(10, 2)
-  toleranciaPeso Decimal?      @db.Decimal(5, 2)
-  
-  precioVenta     Decimal       @db.Decimal(10, 2)
-  costoCompra     Decimal       @db.Decimal(10, 2) @default(0.00)
-  tasaImpuesto    Decimal       @db.Decimal(5, 2)  @default(16.00)
-  categoria       String        @default("General")
-  activo          Boolean       @default(true)
-  empresaId       String
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id           String   @id @default(uuid())
+  sku          String
+  nombre       String
+  descripcion  String?
+  imagenUrl    String?
+  stockActual  Int      @default(0)
+  stockMinimo  Int      @default(5)
+  precioVenta  Decimal  @db.Decimal(10, 2)
+  costoCompra  Decimal  @db.Decimal(10, 2) @default(0.00)
+  tasaImpuesto Decimal  @db.Decimal(5, 2)  @default(16.00)
+  categoria    String   @default("General")
+  activo       Boolean  @default(true)
+  empresaId    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   empresa      Usuario      @relation("EmpresaProductos", fields: [empresaId], references: [id])
   itemsFactura ItemFactura[]
@@ -230,21 +192,19 @@ model Factura {
 }
 
 model ItemFactura {
-  id                      String        @id @default(uuid())
+  id                      String    @id @default(uuid())
   facturaId               String
-  factura                 Factura       @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  factura                 Factura   @relation(fields: [facturaId], references: [id], onDelete: Cascade)
   productoId              String?
-  producto                Producto?     @relation(fields: [productoId], references: [id], onDelete: SetNull)
+  producto                Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
   descripcionHistorica    String
-  cantidad                Decimal       @db.Decimal(12, 4)
-  unidadMedida            UnidadMedida  @default(UNIDAD)
-  pesoReal                Decimal?      @db.Decimal(10, 3)
-  precioUnitarioHistorico Decimal       @db.Decimal(10, 2)
-  tasaImpuestoAplicada    Decimal       @db.Decimal(5, 2)
-  subtotalLinea           Decimal       @db.Decimal(12, 2)
-  impuestoLinea           Decimal       @db.Decimal(12, 2)
-  totalLinea              Decimal       @db.Decimal(12, 2)
-  createdAt               DateTime      @default(now())
+  cantidad                Int
+  precioUnitarioHistorico Decimal   @db.Decimal(10, 2)
+  tasaImpuestoAplicada    Decimal   @db.Decimal(5, 2)
+  subtotalLinea           Decimal   @db.Decimal(12, 2)
+  impuestoLinea           Decimal   @db.Decimal(12, 2)
+  totalLinea              Decimal   @db.Decimal(12, 2)
+  createdAt               DateTime  @default(now())
 
   @@index([facturaId])
   @@map("items_factura")
@@ -351,13 +311,11 @@ model Usuario {
   empresaId          String?
   empresaRefId       String?
   empresaRef         Empresa?  @relation("EmpresaUsuarios", fields: [empresaRefId], references: [id], onDelete: SetNull)
-  // ── Suscripción SaaS ──
   subscriptionStatus String    @default("trialing")
   planType           String?
   trialStartsAt      DateTime?
   trialEndsAt        DateTime?
   currentPeriodEnd   DateTime?
-  // ── Seguridad Avanzada ──
   mfaEnabled         Boolean   @default(false)
   mfaSecret          String?
   sessionVersion     Int       @default(1)

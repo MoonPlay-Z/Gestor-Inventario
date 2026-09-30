@@ -4,9 +4,15 @@ import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
 import { API } from '../../services/api';
 
+const MOBILE_BREAKPOINT = 767;
+const DESKTOP_BREAKPOINT = 1024;
+
 export default function Layout() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth >= DESKTOP_BREAKPOINT && window.innerWidth < 1600;
+  });
   const [brandName, setBrandName] = useState('GestorPOS');
 
   useEffect(() => {
@@ -19,13 +25,27 @@ export default function Layout() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const mq = window.matchMedia(`(min-width: ${DESKTOP_BREAKPOINT}px)`);
+    const handleResize = (e) => {
+      if (!e.matches) {
+        setIsCollapsed(false);
+        setIsMobileOpen(false);
+      }
+    };
+    mq.addEventListener('change', handleResize);
+    return () => mq.removeEventListener('change', handleResize);
+  }, []);
+
   const toggleSidebar = () => {
-    if (window.matchMedia('(max-width: 767px)').matches) {
+    if (window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`).matches) {
       setIsMobileOpen(prev => !prev);
     } else {
       setIsCollapsed(prev => !prev);
     }
   };
+
+  const sidebarWidth = isCollapsed ? 'md:ml-20' : 'md:ml-64';
 
   return (
     <div className="flex min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)]">
@@ -49,9 +69,7 @@ export default function Layout() {
       {/* Main Content Area */}
       <main
         id="main-content"
-        className={`flex-1 min-h-screen transition-[margin] duration-200 pb-16 md:pb-0 ${
-          isCollapsed ? 'md:ml-20' : 'md:ml-64'
-        }`}
+        className={`flex-1 min-h-screen transition-[margin] duration-200 pb-16 md:pb-0 ${sidebarWidth}`}
       >
         <Outlet context={{ toggleSidebar, setIsMobileOpen, setBrandName, isCollapsed, brandName }} />
       </main>

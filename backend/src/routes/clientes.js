@@ -2,6 +2,10 @@ const express = require('express');
 const router  = express.Router();
 const prisma = require('../db/prisma');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
+const { requireRole } = require('../middleware/auth');
+
+// SUPER_ADMIN no gestiona clientes
+router.use(requireRole('EMPRESA', 'CAJA', 'INVENTARIO'));
 
 const getEmpresaId = (req) => req.user?.empresaId || req.user?.id;
 
@@ -30,12 +34,34 @@ router.get('/', async (req, res, next) => {
         skip,
         take: parseInt(limit),
         orderBy: { razonSocial: 'asc' },
-        include: { _count: { select: { facturas: true } } },
       }),
       prisma.cliente.count({ where }),
     ]);
 
-    res.json({ data: clientes, total, page: parseInt(page), limit: parseInt(limit) });
+    const clienteIds = clientes.map(c => c.id);
+    const facturasCount = clienteIds.length > 0
+      ? await prisma.factura.groupBy({
+          by: ['clienteId'],
+          where: { clienteId: { in: clienteIds } },
+          _count: { _all: true },
+        }).catch(() => [])
+      : [];
+
+    // Crear mapa de conteos de facturas por cliente
+    const facturasCountMap = new Map();
+    if (Array.isArray(facturasCount)) {
+      for (const row of facturasCount) {
+        facturasCountMap.set(row.clienteId, row._count._all);
+      }
+    }
+
+    // Agregar el conteo a cada cliente
+    const clientesConCount = clientes.map(c => ({
+      ...c,
+      _count: { facturas: facturasCountMap.get(c.id) || 0 },
+    }));
+
+    res.json({ data: clientesConCount, total, page: parseInt(page), limit: parseInt(limit) });
   } catch (err) { next(err); }
 });
 
@@ -45,11 +71,29 @@ router.get('/:id', async (req, res, next) => {
     const empresaId = getEmpresaId(req);
     const cliente = await prisma.cliente.findFirstOrThrow({
       where: { id: req.params.id, empresaId },
-      include: {
+      select: {
+        id: true,
+        razonSocial: true,
+        rifCedula: true,
+        direccion: true,
+        telefono: true,
+        correo: true,
+        empresaId: true,
+        createdAt: true,
+        updatedAt: true,
         facturas: {
+          select: {
+            id: true,
+            numeroFactura: true,
+            fechaEmision: true,
+            fechaVencimiento: true,
+            total: true,
+            estado: true,
+            moneda: true,
+            _count: { select: { items: true } },
+          },
           orderBy: { fechaEmision: 'desc' },
           take: 10,
-          include: { _count: { select: { items: true } } },
         },
         _count: { select: { facturas: true } },
       },

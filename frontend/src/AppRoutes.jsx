@@ -24,6 +24,7 @@ import { InventarioPage }   from './pages/InventarioPage';
 import { ClientesPage }     from './pages/ClientesPage';
 import { UsuariosPage }     from './pages/UsuariosPage';
 import { ActivacionesPage } from './pages/ActivacionesPage';
+import { ReportesPage }       from './pages/ReportesPage';
 
 export default function AppRoutes() {
   return (
@@ -78,6 +79,11 @@ export default function AppRoutes() {
         <Route path="/caja" element={
           <ProtectedRoute allowedRoles={ROLE_GROUPS.VENTAS}>
             <CajaPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/reportes" element={
+          <ProtectedRoute allowedRoles={ROLE_GROUPS.REPORTES}>
+            <ReportesPage />
           </ProtectedRoute>
         } />
 

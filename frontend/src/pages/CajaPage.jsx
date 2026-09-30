@@ -49,7 +49,7 @@ export function CajaPage() {
         API.getConfig().catch(() => null),
       ]);
       setCajaActual(actual);
-      setHistorial(hist.cajas || hist || []);
+      setHistorial(Array.isArray(hist) ? hist : (hist.data || []));
       setConfig(conf);
     } catch (err) {
       showToast('Error cargando caja: ' + err.message, 'error');

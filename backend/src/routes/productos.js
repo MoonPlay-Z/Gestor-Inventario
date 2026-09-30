@@ -3,11 +3,53 @@ const router  = express.Router();
 const prisma = require('../db/prisma');
 const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
+const { requireRole } = require('../middleware/auth');
+const { getSystemConfig } = require('./config');
+
+// SUPER_ADMIN no gestiona inventario
+router.use(requireRole('EMPRESA', 'CAJA', 'INVENTARIO'));
+
+// GET /api/productos/metricas - Métricas agregadas del inventario
+router.get('/metricas', async (req, res, next) => {
+  try {
+    const empresaId = req.user.id;
+
+    if (!empresaId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    const metricas = await prisma.$queryRaw`
+      SELECT
+        COALESCE(SUM("stockActual" * "precioVenta"), 0) AS valor_total_venta,
+        COALESCE(SUM("stockActual" * "costoCompra"), 0) AS valor_total_costo,
+        COALESCE(SUM("stockActual" * ("precioVenta" - "costoCompra")), 0) AS ganancia_potencial,
+        COUNT(*) AS total_productos,
+        COUNT(CASE WHEN "stockActual" > 0 THEN 1 END) AS productos_con_stock,
+        COUNT(CASE WHEN "stockActual" = 0 THEN 1 END) AS productos_sin_stock,
+        COUNT(CASE WHEN "stockActual" <= "stockMinimo" THEN 1 END) AS productos_stock_bajo
+      FROM productos
+      WHERE "empresaId" = ${empresaId}
+        AND activo = true
+    `;
+
+    res.json({
+      valorTotalVenta: Number(metricas[0]?.valor_total_venta || 0).toFixed(2),
+      valorTotalCosto: Number(metricas[0]?.valor_total_costo || 0).toFixed(2),
+      gananciaPotencial: Number(metricas[0]?.ganancia_potencial || 0).toFixed(2),
+      totalProductos: Number(metricas[0]?.total_productos || 0),
+      productosConStock: Number(metricas[0]?.productos_con_stock || 0),
+      productosSinStock: Number(metricas[0]?.productos_sin_stock || 0),
+      productosStockBajo: Number(metricas[0]?.productos_stock_bajo || 0),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // GET /api/productos
 router.get('/', async (req, res, next) => {
   try {
-    const { q, soloActivos = 'true', stockBajo, page = 1, limit, limite } = req.query;
+    const { q, soloActivos = 'true', stockBajo, categoria, page = 1, limit, limite } = req.query;
     const pageNumber = parseInt(page) || 1;
     const take = parseInt(limit ?? limite) || 25;
     const skip = (pageNumber - 1) * take;
@@ -15,6 +57,7 @@ router.get('/', async (req, res, next) => {
 
     const where = { empresaId };
     if (soloActivos === 'true') where.activo = true;
+    if (categoria) where.categoria = categoria;
     if (q) {
       const terms = q.split(' ').filter(t => t.length > 0);
       where.AND = terms.map(term => ({
@@ -33,6 +76,27 @@ router.get('/', async (req, res, next) => {
         skip,
         take,
         orderBy: { nombre: 'asc' },
+        select: {
+          id: true,
+          sku: true,
+          nombre: true,
+          descripcion: true,
+          imagenUrl: true,
+          unidadMedida: true,
+          esVentaPorPeso: true,
+          precioPorKilo: true,
+          toleranciaPeso: true,
+          stockActual: true,
+          stockMinimo: true,
+          precioVenta: true,
+          costoCompra: true,
+          tasaImpuesto: true,
+          categoria: true,
+          activo: true,
+          empresaId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
       }),
       prisma.producto.count({ where }),
     ]);
@@ -40,7 +104,7 @@ router.get('/', async (req, res, next) => {
     // Agregar campo derivado stockBajoMinimo
     productos = productos.map(p => ({
       ...p,
-      stockBajoMinimo: p.stockActual <= p.stockMinimo,
+      stockBajoMinimo: Number(p.stockActual) <= Number(p.stockMinimo),
     }));
 
     if (stockBajo === 'true') {
@@ -66,33 +130,26 @@ router.get('/lookup/:codigo', async (req, res, next) => {
       baseWhere.empresaId = empresaId;
     }
 
-    // 1. Buscar por SKU exacto o ID exacto
+    // Una sola query con OR para búsqueda exacta y parcial (evita 3 queries secuenciales)
     let producto = await prisma.producto.findFirst({
       where: {
         ...baseWhere,
         OR: [
           { sku: { equals: rawCodigo, mode: 'insensitive' } },
-          { id: rawCodigo }
+          { id: rawCodigo },
+          { sku: { contains: rawCodigo, mode: 'insensitive' } },
+          { nombre: { contains: rawCodigo, mode: 'insensitive' } },
+          { descripcion: { contains: rawCodigo, mode: 'insensitive' } },
+          { categoria: { contains: rawCodigo, mode: 'insensitive' } }
         ]
+      },
+      orderBy: {
+        // Priorizar coincidencias exactas de SKU
+        sku: 'asc',
       }
     });
 
-    // 2. Si no hay coincidencia exacta, buscar por coincidencia parcial en SKU o Nombre
-    if (!producto) {
-      producto = await prisma.producto.findFirst({
-        where: {
-          ...baseWhere,
-          OR: [
-            { sku: { contains: rawCodigo, mode: 'insensitive' } },
-            { nombre: { contains: rawCodigo, mode: 'insensitive' } },
-            { descripcion: { contains: rawCodigo, mode: 'insensitive' } },
-            { categoria: { contains: rawCodigo, mode: 'insensitive' } }
-          ]
-        }
-      });
-    }
-
-    // 3. Si no hay coincidencia y el usuario no es superadmin, intentar fallback buscando en la BD por si el producto pertenecía a su empresa padre
+    // Fallback: buscar en la empresa padre si no se encontró
     if (!producto && req.user.empresaId) {
       producto = await prisma.producto.findFirst({
         where: {
@@ -112,10 +169,7 @@ router.get('/lookup/:codigo', async (req, res, next) => {
 
     let tasaBcv = 36.5;
     try {
-      const configRoute = require('./config');
-      if (configRoute.getSystemConfig) {
-        tasaBcv = configRoute.getSystemConfig().moneda?.tasaDolar || 36.5;
-      }
+      tasaBcv = getSystemConfig().moneda?.tasaDolar || 36.5;
     } catch (_) {}
 
     const precioUsd = Number(producto.precioVenta);
@@ -126,7 +180,7 @@ router.get('/lookup/:codigo', async (req, res, next) => {
       precioUsd,
       precioVes,
       tasaBcv,
-      stockBajoMinimo: producto.stockActual <= producto.stockMinimo
+      stockBajoMinimo: Number(producto.stockActual) <= Number(producto.stockMinimo)
     });
   } catch (err) { next(err); }
 });
@@ -145,16 +199,43 @@ router.get('/:id', async (req, res, next) => {
   try {
     const empresaId = req.user.empresaId || req.user.id;
     const producto = await prisma.producto.findFirstOrThrow({
-      where: { id: req.params.id, empresaId }
+      where: { id: req.params.id, empresaId },
+      select: {
+        id: true,
+        sku: true,
+        nombre: true,
+        descripcion: true,
+        imagenUrl: true,
+        stockActual: true,
+        stockMinimo: true,
+        precioVenta: true,
+        costoCompra: true,
+        tasaImpuesto: true,
+        categoria: true,
+        activo: true,
+        empresaId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
-    res.json({ ...producto, stockBajoMinimo: producto.stockActual <= producto.stockMinimo });
+    res.json({ ...producto, stockBajoMinimo: Number(producto.stockActual) <= Number(producto.stockMinimo) });
   } catch (err) { next(err); }
 });
 
 // POST /api/productos
 router.post('/', async (req, res, next) => {
   try {
-    const { sku, nombre, descripcion, imagenUrl, stockActual, stockMinimo, precioVenta, costoCompra, tasaImpuesto, categoria } = req.body;
+    const { 
+      sku, nombre, descripcion, imagenUrl, 
+      stockActual, stockMinimo, 
+      precioVenta, costoCompra, tasaImpuesto, 
+      categoria,
+      // ── NUEVOS CAMPOS ──
+      unidadMedida = 'UNIDAD',
+      esVentaPorPeso = false,
+      precioPorKilo,
+      toleranciaPeso
+    } = req.body;
 
     // Validaciones
     if (!nombre?.trim())  throw createValidationError('El nombre es obligatorio', { nombre: 'Campo requerido' });
@@ -162,14 +243,52 @@ router.post('/', async (req, res, next) => {
     const precio = new Decimal(precioVenta ?? 0);
     const costo  = new Decimal(costoCompra ?? 0);
     const tasa   = new Decimal(tasaImpuesto ?? 16);
-    const stock  = parseInt(stockActual ?? 0);
-    const smin   = parseInt(stockMinimo ?? 5);
+    const stock  = new Decimal(stockActual ?? 0);
+    const smin   = new Decimal(stockMinimo ?? 5);
 
     if (precio.lte(0))   throw createValidationError('El precio debe ser mayor a 0', { precioVenta: 'Debe ser positivo' });
     if (costo.lt(0))     throw createValidationError('El costo no puede ser negativo', { costoCompra: 'Debe ser no negativo' });
     if (tasa.lt(0) || tasa.gt(100)) throw createValidationError('La tasa de impuesto debe estar entre 0 y 100', { tasaImpuesto: 'Rango inválido' });
-    if (stock < 0)       throw createValidationError('El stock no puede ser negativo', { stockActual: 'No puede ser negativo' });
-    if (smin < 0)        throw createValidationError('El stock mínimo no puede ser negativo', { stockMinimo: 'No puede ser negativo' });
+    if (stock.lt(0))     throw createValidationError('El stock no puede ser negativo', { stockActual: 'No puede ser negativo' });
+    if (smin.lt(0))      throw createValidationError('El stock mínimo no puede ser negativo', { stockMinimo: 'No puede ser negativo' });
+
+    // ── VALIDACIONES DE UNIDAD DE MEDIDA ──
+    const unidadesValidas = ['UNIDAD', 'KILOGRAMO', 'GRAMO', 'LITRO', 'MILILITRO', 
+                             'METRO', 'CENTIMETRO', 'BULTO', 'PAQUETE', 'CAJA', 
+                             'SACO', 'BOTELLA', 'LATA', 'DOCENA', 'MEDIA_DOCENA'];
+    
+    if (!unidadesValidas.includes(unidadMedida)) {
+      throw createValidationError('Unidad de medida inválida', { 
+        unidadMedida: 'Debe ser una unidad válida' 
+      });
+    }
+
+    // Validar venta por peso
+    if (esVentaPorPeso && !['KILOGRAMO', 'GRAMO'].includes(unidadMedida)) {
+      throw createValidationError('La venta por peso solo permite unidades de peso', {
+        unidadMedida: 'Debe ser KILOGRAMO o GRAMO'
+      });
+    }
+
+    // Validar precio por kilo si es venta por peso
+    if (esVentaPorPeso) {
+      const precioKilo = new Decimal(precioPorKilo ?? 0);
+      if (precioKilo.lte(0)) {
+        throw createValidationError('El precio por kilo debe ser mayor a 0 para venta por peso', {
+          precioPorKilo: 'Debe ser positivo'
+        });
+      }
+    }
+
+    // Validar tolerancia de peso (solo si se proporciona)
+    if (toleranciaPeso !== undefined && toleranciaPeso !== null && toleranciaPeso !== '') {
+      const tolerancia = new Decimal(toleranciaPeso);
+      if (tolerancia.lt(0) || tolerancia.gt(100)) {
+        throw createValidationError('La tolerancia de peso debe estar entre 0 y 100', {
+          toleranciaPeso: 'Rango inválido'
+        });
+      }
+    }
 
     let finalSku = sku?.trim();
     if (!finalSku) {
@@ -189,8 +308,16 @@ router.post('/', async (req, res, next) => {
         nombre: nombre.trim(),
         descripcion: descripcion?.trim() || null,
         imagenUrl: imagenUrl?.trim() || null,
-        stockActual: stock,
-        stockMinimo: smin,
+        // ── NUEVOS CAMPOS ──
+        unidadMedida,
+        esVentaPorPeso,
+        precioPorKilo: esVentaPorPeso ? new Decimal(precioPorKilo ?? 0).toFixed(2) : null,
+        toleranciaPeso: toleranciaPeso !== undefined && toleranciaPeso !== null 
+          ? new Decimal(toleranciaPeso).toFixed(2) 
+          : null,
+        // ── CAMPOS EXISTENTES ──
+        stockActual: stock.toFixed(4),
+        stockMinimo: smin.toFixed(4),
         precioVenta: precio.toFixed(2),
         costoCompra: costo.toFixed(2),
         tasaImpuesto: tasa.toFixed(2),

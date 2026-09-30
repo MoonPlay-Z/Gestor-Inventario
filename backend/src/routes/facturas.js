@@ -3,18 +3,14 @@ const router  = express.Router();
 const prisma = require('../db/prisma');
 const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
+const { requireRole } = require('../middleware/auth');
+
+// SUPER_ADMIN no genera facturas
+router.use(requireRole('EMPRESA', 'CAJA'));
+
 const getEmpresaId = (req) => req.user?.empresaId || req.user?.id;
-const resolveEmpresaRefId = async (req) => {
-  if (req.user?.empresaRefId) return req.user.empresaRefId;
-  if (!req.user?.empresaId) return null;
-
-  const usuarioPadre = await prisma.usuario.findUnique({
-    where: { id: req.user.empresaId },
-    select: { empresaRefId: true }
-  });
-
-  return usuarioPadre?.empresaRefId || null;
-};
+// empresaRefId ya viene en req.user desde authMiddleware (no necesita query adicional)
+const getEmpresaRefId = (req) => req.user?.empresaRefId || null;
 const facturaTenantFilter = (empresaId) => ({
   OR: [
     { usuarioId: empresaId },
@@ -30,7 +26,9 @@ router.get('/', async (req, res, next) => {
     const hoy  = new Date();
 
     const empresaId = getEmpresaId(req);
-    const where = { ...facturaTenantFilter(empresaId) };
+    const where = req.user.rol === 'CAJA'
+      ? { usuarioId: req.user.id }
+      : { ...facturaTenantFilter(empresaId) };
 
     if (estado)    where.estado    = estado;
     if (clienteId) where.clienteId = clienteId;
@@ -62,15 +60,31 @@ router.get('/', async (req, res, next) => {
           cliente: true,
           usuario: { select: { id: true, username: true, nombre: true, rol: true } },
           _count: { select: { items: true } },
-          pagos: { select: { monto: true } },
         },
       }),
       prisma.factura.count({ where }),
     ]);
 
+    const facturaIds = facturas.map(f => f.id);
+    const pagosAgregados = facturaIds.length > 0
+      ? await prisma.pago.groupBy({
+          by: ['facturaId'],
+          where: { facturaId: { in: facturaIds } },
+          _sum: { monto: true },
+        }).catch(() => [])
+      : [];
+
+    // Crear mapa de totales pagados por factura
+    const pagosMap = new Map();
+    if (Array.isArray(pagosAgregados)) {
+      for (const row of pagosAgregados) {
+        pagosMap.set(row.facturaId, new Decimal(row.total_pagado || 0));
+      }
+    }
+
     // Agregar campos derivados (estaVencida y saldoPendiente)
     const facturasConEstado = facturas.map(f => {
-      const totalPagado = f.pagos.reduce((acc, p) => acc.add(new Decimal(p.monto.toString())), new Decimal(0));
+      const totalPagado = pagosMap.get(f.id) || new Decimal(0);
       const saldoPendiente = new Decimal(f.total.toString()).sub(totalPagado);
       
       return {
@@ -91,15 +105,57 @@ router.get('/:id', async (req, res, next) => {
     const factura = await prisma.factura.findFirstOrThrow({
       where: {
         id: req.params.id,
-        ...facturaTenantFilter(empresaId),
+        ...(req.user.rol === 'CAJA'
+          ? { usuarioId: req.user.id }
+          : facturaTenantFilter(empresaId)),
       },
-      include: {
-        cliente: true,
+      select: {
+        id: true,
+        numeroFactura: true,
+        clienteId: true,
+        usuarioId: true,
+        empresaId: true,
+        fechaEmision: true,
+        fechaVencimiento: true,
+        subtotal: true,
+        impuestoTotal: true,
+        total: true,
+        estado: true,
+        moneda: true,
+        tasaCambio: true,
+        cuotasTotales: true,
+        observaciones: true,
+        anuladoPor: true,
+        motivoAnulacion: true,
+        createdAt: true,
+        updatedAt: true,
+        cliente: { select: { id: true, razonSocial: true, rifCedula: true, direccion: true, telefono: true, correo: true } },
         usuario: { select: { id: true, username: true, nombre: true, rol: true } },
         items: {
-          include: { producto: { select: { id: true, sku: true, nombre: true, stockActual: true } } },
+          select: {
+            id: true,
+            productoId: true,
+            descripcionHistorica: true,
+            cantidad: true,
+            precioUnitarioHistorico: true,
+            tasaImpuestoAplicada: true,
+            subtotalLinea: true,
+            impuestoLinea: true,
+            totalLinea: true,
+            producto: { select: { id: true, sku: true, nombre: true, stockActual: true } },
+          },
         },
-        pagos: { orderBy: { fechaPago: 'asc' } },
+        pagos: {
+          select: {
+            id: true,
+            monto: true,
+            metodoPago: true,
+            referenciaTransaccion: true,
+            fechaPago: true,
+            notas: true,
+          },
+          orderBy: { fechaPago: 'asc' },
+        },
       },
     });
 
@@ -125,7 +181,7 @@ router.post('/', async (req, res, next) => {
   try {
     const { clienteId, items, fechaVencimiento, observaciones, metodoPago, referenciaTransaccion, cuotas, moneda = 'USD', tasaCambio = 1 } = req.body;
     const empresaId = req.user?.empresaId || req.user?.id;
-    const empresaRefId = await resolveEmpresaRefId(req);
+    const empresaRefId = getEmpresaRefId(req);
 
     const tasaFacturacion = new Decimal(tasaCambio);
 
@@ -172,9 +228,21 @@ router.post('/', async (req, res, next) => {
       if (!producto) {
         throw createValidationError(`El producto con ID "${item.productoId}" no existe o está inactivo`);
       }
-      if (producto.stockActual < parseInt(item.cantidad)) {
+      
+      // Validar stock con soporte para venta por peso (kg/g)
+      const cantidadSolicitada = parseFloat(item.cantidad);
+      const unidadPeso = item.unidadPeso || 'kg'; // Unidad de peso enviada por el frontend
+      let cantidadEnKg = cantidadSolicitada;
+      
+      // Si el producto es venta por peso y la unidad es gramos, convertir a kg
+      if (producto.esVentaPorPeso && unidadPeso === 'g') {
+        cantidadEnKg = cantidadSolicitada / 1000;
+      }
+      
+      const stockActual = parseFloat(producto.stockActual);
+      if (stockActual < cantidadEnKg) {
         throw createBusinessError(
-          `Stock insuficiente para "${producto.nombre}": disponible ${producto.stockActual}, solicitado ${item.cantidad}`
+          `Stock insuficiente para "${producto.nombre}": disponible ${stockActual} kg, solicitado ${cantidadEnKg} kg (${cantidadSolicitada} ${unidadPeso})`
         );
       }
     }
@@ -182,27 +250,45 @@ router.post('/', async (req, res, next) => {
     // ── Calcular totales con Decimal.js ───────────────────────────────────────
     const itemsCalculados = items.map(item => {
       const producto  = productoMap[item.productoId];
-      // Si la moneda es VES, se multiplica por la tasa. Si es USD, la tasa suele ser 1.
-      const precioBase  = new Decimal(producto.precioVenta.toString());
-      const precio      = precioBase.mul(tasaFacturacion);
-      const cantidad  = new Decimal(parseInt(item.cantidad));
-      const tasa      = new Decimal(producto.tasaImpuesto.toString()).div(100);
+      const unidadPeso = item.unidadPeso || 'kg';
+      
+      // Determinar precio y cantidad según el tipo de venta
+      let precioBase, cantidadParaCalculo;
+      
+      if (producto.esVentaPorPeso) {
+        // Venta por peso: el precio es por kg
+        precioBase = new Decimal(producto.precioPorKilo?.toString() || producto.precioVenta.toString());
+        // Convertir a kg si es necesario
+        cantidadParaCalculo = unidadPeso === 'g' 
+          ? new Decimal(item.cantidad).div(1000) 
+          : new Decimal(item.cantidad);
+      } else {
+        // Venta normal por unidad
+        precioBase = new Decimal(producto.precioVenta.toString());
+        cantidadParaCalculo = new Decimal(item.cantidad);
+      }
+      
+      const precio = precioBase.mul(tasaFacturacion);
+      const tasa = new Decimal(producto.tasaImpuesto.toString()).div(100);
 
-      const subtotalLinea = precio.mul(cantidad);
+      const subtotalLinea = precio.mul(cantidadParaCalculo);
       const impuestoLinea = subtotalLinea.mul(tasa);
       const totalLinea    = subtotalLinea.add(impuestoLinea);
 
       return {
         productoId:              producto.id,
         descripcionHistorica:    producto.nombre,
-        cantidad:                parseInt(item.cantidad),
+        cantidad:                parseFloat(item.cantidad),
+        unidadMedida:            producto.esVentaPorPeso ? (unidadPeso === 'g' ? 'GRAMO' : 'KILOGRAMO') : producto.unidadMedida,
         precioUnitarioHistorico: precio.toFixed(2),
         tasaImpuestoAplicada:    producto.tasaImpuesto.toString(),
         subtotalLinea:           subtotalLinea.toFixed(2),
         impuestoLinea:           impuestoLinea.toFixed(2),
         totalLinea:              totalLinea.toFixed(2),
         _productoId:             producto.id,
-        _cantidad:               parseInt(item.cantidad),
+        _cantidad:               producto.esVentaPorPeso 
+          ? (unidadPeso === 'g' ? parseFloat(item.cantidad) / 1000 : parseFloat(item.cantidad))
+          : parseFloat(item.cantidad),
       };
     });
 
@@ -242,11 +328,45 @@ router.post('/', async (req, res, next) => {
             create: itemsCalculados.map(({ _productoId, _cantidad, ...item }) => item),
           },
         },
-        include: {
-          cliente: true,
+        select: {
+          id: true,
+          numeroFactura: true,
+          clienteId: true,
+          usuarioId: true,
+          empresaId: true,
+          fechaEmision: true,
+          fechaVencimiento: true,
+          subtotal: true,
+          impuestoTotal: true,
+          total: true,
+          estado: true,
+          moneda: true,
+          tasaCambio: true,
+          cuotasTotales: true,
+          observaciones: true,
+          cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
           usuario: { select: { id: true, username: true, nombre: true, rol: true } },
-          items:   true,
-          pagos:   true,
+          items: {
+            select: {
+              id: true,
+              productoId: true,
+              descripcionHistorica: true,
+              cantidad: true,
+              precioUnitarioHistorico: true,
+              tasaImpuestoAplicada: true,
+              subtotalLinea: true,
+              impuestoLinea: true,
+              totalLinea: true,
+            },
+          },
+          pagos: {
+            select: {
+              id: true,
+              monto: true,
+              metodoPago: true,
+              fechaPago: true,
+            },
+          },
         },
       });
 
@@ -263,14 +383,28 @@ router.post('/', async (req, res, next) => {
         });
       }
 
-      // 3. Decrementar stock de cada producto
+      // 3. Decrementar stock de cada producto (con verificación atómica dentro de la transacción)
       for (const item of itemsCalculados) {
         const updated = await tx.producto.updateMany({
-          where: { id: item._productoId, empresaId },
+          where: {
+            id: item._productoId,
+            empresaId,
+            stockActual: { gte: item._cantidad }, // Solo decrementa si hay stock suficiente
+          },
           data:  { stockActual: { decrement: item._cantidad } },
         });
         if (updated.count === 0) {
-          throw new Error('No se pudo actualizar el stock del producto porque no pertenece a tu empresa');
+          // Verificar si el producto existe o si no hay stock
+          const producto = await tx.producto.findFirst({
+            where: { id: item._productoId, empresaId },
+            select: { nombre: true, stockActual: true },
+          });
+          if (!producto) {
+            throw new Error('No se pudo actualizar el stock del producto porque no pertenece a tu empresa');
+          }
+          throw new Error(
+            `Stock insuficiente para "${producto.nombre}": disponible ${producto.stockActual}, solicitado ${item._cantidad}`
+          );
         }
       }
 
@@ -319,7 +453,23 @@ router.patch('/:id/anular', async (req, res, next) => {
         id: req.params.id,
         ...facturaTenantFilter(empresaId),
       },
-      include: { items: true, pagos: true },
+      select: {
+        id: true,
+        estado: true,
+        items: {
+          select: {
+            id: true,
+            productoId: true,
+            cantidad: true,
+          },
+        },
+        pagos: {
+          select: {
+            id: true,
+            monto: true,
+          },
+        },
+      },
     });
 
     if (factura.estado === 'VOIDED') {
@@ -335,10 +485,41 @@ router.patch('/:id/anular', async (req, res, next) => {
           anuladoPor: req.user?.nombre || req.user?.username || 'Anónimo',
           motivoAnulacion: motivo?.trim() || 'Anulación solicitada por la caja',
         },
-        include: {
-          cliente: true,
+        select: {
+          id: true,
+          numeroFactura: true,
+          clienteId: true,
+          usuarioId: true,
+          empresaId: true,
+          fechaEmision: true,
+          fechaVencimiento: true,
+          subtotal: true,
+          impuestoTotal: true,
+          total: true,
+          estado: true,
+          moneda: true,
+          tasaCambio: true,
+          cuotasTotales: true,
+          observaciones: true,
+          anuladoPor: true,
+          motivoAnulacion: true,
+          createdAt: true,
+          updatedAt: true,
+          cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
           usuario: { select: { id: true, username: true, nombre: true } },
-          items: true,
+          items: {
+            select: {
+              id: true,
+              productoId: true,
+              descripcionHistorica: true,
+              cantidad: true,
+              precioUnitarioHistorico: true,
+              tasaImpuestoAplicada: true,
+              subtotalLinea: true,
+              impuestoLinea: true,
+              totalLinea: true,
+            },
+          },
         },
       });
 

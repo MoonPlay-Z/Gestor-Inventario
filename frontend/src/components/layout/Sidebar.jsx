@@ -7,8 +7,6 @@ import { NavItem, NavSection, ROLE_GROUPS } from '../ui';
 // ─── Iconos ─────────────────────────────────────────────────────────────────
 import closeIcon from '@iconify/icons-mdi/close';
 import logoutIcon from '@iconify/icons-mdi/logout';
-import chevronLeftIcon from '@iconify/icons-mdi/chevron-left';
-import chevronRightIcon from '@iconify/icons-mdi/chevron-right';
 import packageIcon from '@iconify/icons-mdi/package-variant';
 import dashboardIcon from '@iconify/icons-mdi/view-dashboard';
 import cartIcon from '@iconify/icons-mdi/cart';
@@ -20,6 +18,7 @@ import accountGroupIcon from '@iconify/icons-mdi/account-group';
 import accountKeyIcon from '@iconify/icons-mdi/account-key';
 import bellRingIcon from '@iconify/icons-mdi/bell-ring';
 import cogIcon from '@iconify/icons-mdi/cog';
+import chartBarIcon from '@iconify/icons-mdi/chart-bar';
 
 const ROL_LABEL = {
   SUPER_ADMIN: 'Super Admin',
@@ -63,22 +62,12 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
           {!isCollapsed && (
             <div className="truncate">
               <h1 id="brand-name" className="text-base font-black text-white tracking-tight truncate leading-tight">
-                {brandName || 'GestorPOS'}
+                {user?.nombre || brandName || 'Sistema Administrativo'}
               </h1>
-              <p className="text-[0.7rem] text-[#93c5fd] font-medium">Sistema Multi-Tenant</p>
+              <p className="text-[0.7rem] text-[#93c5fd] font-medium">Sistema Administrativo</p>
             </div>
           )}
         </div>
-
-        {/* Desktop Expand / Collapse Button */}
-        <button
-          onClick={toggleSidebar}
-          className="hidden md:flex p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white transition items-center justify-center"
-          title={isCollapsed ? "Expandir menú" : "Contraer menú"}
-          aria-label="Contraer o expandir barra lateral"
-        >
-          <Icon icon={isCollapsed ? chevronRightIcon : chevronLeftIcon} className="h-5 w-5" />
-        </button>
 
         {/* Mobile Close Button */}
         <button
@@ -111,6 +100,8 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
             roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
           <NavItem to="/caja" icon={cashRegIcon} label="Cierre de Caja"
             roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
+          <NavItem to="/reportes" icon={chartBarIcon} label="Reportes"
+            roles={ROLE_GROUPS.REPORTES} onClick={closeMobile} isCollapsed={isCollapsed} />
         </NavSection>
 
         <NavSection label="Administración" isCollapsed={isCollapsed}>

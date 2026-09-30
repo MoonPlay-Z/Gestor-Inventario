@@ -35,7 +35,7 @@ export function UsuariosPage() {
     setLoading(true);
     try {
       const data = await API.getUsuarios();
-      setUsuarios(data);
+      setUsuarios(Array.isArray(data) ? data : (data.data || []));
     } catch (err) {
       showToast('Error al cargar usuarios: ' + err.message, 'error');
     } finally {

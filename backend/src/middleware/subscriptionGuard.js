@@ -57,8 +57,8 @@ const subscriptionGuard = async (req, res, next) => {
       if (subSource.currentPeriodEnd && now > new Date(subSource.currentPeriodEnd)) {
         // Periodo expirado → marcar como canceled en ambas tablas
         await prisma.usuario.update({ where: { id: usuario.id }, data: { subscriptionStatus: 'canceled' } });
-        if (usuario.empresaId) {
-          await prisma.empresa.update({ where: { id: usuario.empresaId }, data: { subscriptionStatus: 'canceled' } });
+        if (usuario.empresaRefId) {
+          await prisma.empresa.update({ where: { id: usuario.empresaRefId }, data: { subscriptionStatus: 'canceled' } });
         }
         return res.status(403).json({
           code: 'SUBSCRIPTION_EXPIRED',
@@ -72,8 +72,8 @@ const subscriptionGuard = async (req, res, next) => {
     if (status === 'trialing') {
       if (subSource.trialEndsAt && now > new Date(subSource.trialEndsAt)) {
         await prisma.usuario.update({ where: { id: usuario.id }, data: { subscriptionStatus: 'expired_trial' } });
-        if (usuario.empresaId) {
-          await prisma.empresa.update({ where: { id: usuario.empresaId }, data: { subscriptionStatus: 'expired_trial' } });
+        if (usuario.empresaRefId) {
+          await prisma.empresa.update({ where: { id: usuario.empresaRefId }, data: { subscriptionStatus: 'expired_trial' } });
         }
         return res.status(403).json({
           code: 'SUBSCRIPTION_EXPIRED',

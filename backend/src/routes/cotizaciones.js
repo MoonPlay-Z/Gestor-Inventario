@@ -2,25 +2,23 @@ const express = require('express');
 const prisma = require('../db/prisma');
 const Decimal = require('decimal.js').Decimal;
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
+const { requireRole } = require('../middleware/auth');
+const { paginate, paginatedResponse } = require('../utils/pagination');
 
 const router = express.Router();
+
+// SUPER_ADMIN no genera cotizaciones
+router.use(requireRole('EMPRESA', 'CAJA'));
+
 const getEmpresaId = (req) => req.user?.empresaId || req.user?.id;
-const resolveEmpresaRefId = async (req) => {
-  if (req.user?.empresaRefId) return req.user.empresaRefId;
-  if (!req.user?.empresaId) return null;
+// empresaRefId ya viene en req.user desde authMiddleware (no necesita query adicional)
+const getEmpresaRefId = (req) => req.user?.empresaRefId || null;
 
-  const usuarioPadre = await prisma.usuario.findUnique({
-    where: { id: req.user.empresaId },
-    select: { empresaRefId: true }
-  });
-
-  return usuarioPadre?.empresaRefId || null;
-};
-
-// 1. Obtener todas las cotizaciones
+// 1. Obtener todas las cotizaciones (con paginación)
 router.get('/', async (req, res, next) => {
   try {
     const { q, estado } = req.query;
+    const { skip, take, page, limit } = paginate(req.query, { limit: 25 });
     const empresaId = getEmpresaId(req);
     const where = { usuario: { empresaId } };
     if (estado) where.estado = estado;
@@ -36,17 +34,33 @@ router.get('/', async (req, res, next) => {
       ];
     }
 
-    const cotizaciones = await prisma.cotizacion.findMany({
-      where,
-      include: {
-        cliente: true,
-        items: true,
-        _count: { select: { items: true } }
-      },
-      orderBy: { fechaEmision: 'desc' }
-    });
+    const [cotizaciones, total] = await Promise.all([
+      prisma.cotizacion.findMany({
+        where,
+        skip,
+        take,
+        select: {
+          id: true,
+          numero: true,
+          clienteId: true,
+          usuarioId: true,
+          empresaId: true,
+          fechaEmision: true,
+          fechaValidez: true,
+          subtotal: true,
+          impuestoTotal: true,
+          total: true,
+          moneda: true,
+          estado: true,
+          cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
+          _count: { select: { items: true } },
+        },
+        orderBy: { fechaEmision: 'desc' }
+      }),
+      prisma.cotizacion.count({ where }),
+    ]);
 
-    res.json(cotizaciones);
+    res.json(paginatedResponse(cotizaciones, total, page, limit));
   } catch (err) {
     next(err);
   }
@@ -59,11 +73,31 @@ router.get('/:id', async (req, res, next) => {
     const empresaId = getEmpresaId(req);
     const cotizacion = await prisma.cotizacion.findFirst({
       where: { id, usuario: { empresaId } },
-      include: {
-        cliente: true,
+      select: {
+        id: true,
+        numero: true,
+        clienteId: true,
+        usuarioId: true,
+        empresaId: true,
+        fechaEmision: true,
+        fechaValidez: true,
+        subtotal: true,
+        impuestoTotal: true,
+        total: true,
+        moneda: true,
+        estado: true,
+        cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
         items: {
-          include: { producto: true }
-        }
+          select: {
+            id: true,
+            productoId: true,
+            descripcion: true,
+            cantidad: true,
+            precioUnitario: true,
+            totalLinea: true,
+            producto: { select: { id: true, sku: true, nombre: true } },
+          },
+        },
       }
     });
 
@@ -79,7 +113,7 @@ router.post('/', async (req, res, next) => {
   try {
     const { clienteId, items, validezDias = 15, moneda = 'USD' } = req.body;
     const empresaId = req.user.empresaId || req.user.id;
-    const empresaRefId = await resolveEmpresaRefId(req);
+    const empresaRefId = getEmpresaRefId(req);
 
     if (!clienteId) throw createValidationError('El cliente es obligatorio');
     if (!items || items.length === 0) throw createValidationError('Debe agregar al menos un producto');
@@ -87,6 +121,16 @@ router.post('/', async (req, res, next) => {
     const fechaEmision = new Date();
     const fechaValidez = new Date(fechaEmision);
     fechaValidez.setDate(fechaValidez.getDate() + parseInt(validezDias));
+
+    // ── Cargar todos los productos en una sola query (evita N+1) ────────────────
+    const productoIds = [...new Set(items.filter(i => i.productoId).map(i => i.productoId))];
+    const productosDB = productoIds.length > 0
+      ? await prisma.producto.findMany({
+          where: { id: { in: productoIds }, empresaId, activo: true },
+          select: { id: true, nombre: true, precioVenta: true, tasaImpuesto: true },
+        })
+      : [];
+    const productoMap = new Map(productosDB.map(p => [p.id, p]));
 
     let subtotalTotal = new Decimal(0);
     let impuestoTotal = new Decimal(0);
@@ -100,7 +144,7 @@ router.post('/', async (req, res, next) => {
       let tasa = new Decimal(item.tasa || 16);
 
       if (item.productoId) {
-        const prod = await prisma.producto.findFirst({ where: { id: item.productoId, empresaId, activo: true } });
+        const prod = productoMap.get(item.productoId);
         if (!prod) throw createValidationError(`Producto con ID ${item.productoId} no encontrado`);
         nombre = prod.nombre;
         precioU = new Decimal(prod.precioVenta.toString());
@@ -162,19 +206,51 @@ router.post('/:id/convert', async (req, res, next) => {
     const { metodoPago, referenciaTransaccion } = req.body;
 
     const empresaId = getEmpresaId(req);
-    const empresaRefId = await resolveEmpresaRefId(req);
+    const empresaRefId = getEmpresaRefId(req);
     const cotizacion = await prisma.cotizacion.findFirst({
       where: { id, usuario: { empresaId } },
-      include: { items: true, cliente: true }
+      select: {
+        id: true,
+        numero: true,
+        clienteId: true,
+        usuarioId: true,
+        empresaId: true,
+        fechaEmision: true,
+        fechaValidez: true,
+        subtotal: true,
+        impuestoTotal: true,
+        total: true,
+        moneda: true,
+        estado: true,
+        cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
+        items: {
+          select: {
+            id: true,
+            productoId: true,
+            descripcion: true,
+            cantidad: true,
+            precioUnitario: true,
+            totalLinea: true,
+          },
+        },
+      },
     });
 
     if (!cotizacion) throw createValidationError('Cotización no encontrada');
     if (cotizacion.estado === 'ACCEPTED') throw createBusinessError('La cotización ya fue convertida a factura');
 
-    // Validar productos y stock de la cotización
-    for (const item of cotizacion.items) {
-      if (item.productoId) {
-        const prod = await prisma.producto.findFirst({ where: { id: item.productoId, empresaId, activo: true } });
+    // Validar productos y stock de la cotización en una sola query (evita N+1)
+    const itemsConProducto = cotizacion.items.filter(i => i.productoId);
+    if (itemsConProducto.length > 0) {
+      const productoIds = [...new Set(itemsConProducto.map(i => i.productoId))];
+      const productosDB = await prisma.producto.findMany({
+        where: { id: { in: productoIds }, empresaId, activo: true },
+        select: { id: true, nombre: true, stockActual: true },
+      });
+      const productoMap = new Map(productosDB.map(p => [p.id, p]));
+
+      for (const item of itemsConProducto) {
+        const prod = productoMap.get(item.productoId);
         if (!prod) throw createBusinessError(`El producto "${item.descripcion}" ya no existe`);
         if (prod.stockActual < item.cantidad) {
           throw createBusinessError(`Stock insuficiente para "${prod.nombre}": disponible ${prod.stockActual}, requerido ${item.cantidad}`);
@@ -218,7 +294,35 @@ router.post('/:id/convert', async (req, res, next) => {
             }))
           }
         },
-        include: { cliente: true, items: true }
+        select: {
+          id: true,
+          numeroFactura: true,
+          clienteId: true,
+          usuarioId: true,
+          empresaId: true,
+          fechaEmision: true,
+          fechaVencimiento: true,
+          subtotal: true,
+          impuestoTotal: true,
+          total: true,
+          estado: true,
+          moneda: true,
+          observaciones: true,
+          cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
+          items: {
+            select: {
+              id: true,
+              productoId: true,
+              descripcionHistorica: true,
+              cantidad: true,
+              precioUnitarioHistorico: true,
+              tasaImpuestoAplicada: true,
+              subtotalLinea: true,
+              impuestoLinea: true,
+              totalLinea: true,
+            },
+          },
+        }
       });
 
       // Crear pago si se especificó método de pago
@@ -247,7 +351,8 @@ router.post('/:id/convert', async (req, res, next) => {
       // Marcar cotización como ACEPTADA
       await tx.cotizacion.update({
         where: { id: cotizacion.id },
-        data: { estado: 'ACCEPTED' }
+        data: { estado: 'ACCEPTED' },
+        select: { id: true, estado: true }
       });
 
       return nuevaFactura;

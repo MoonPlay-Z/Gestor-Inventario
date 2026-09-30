@@ -3,6 +3,12 @@ const router  = express.Router();
 const prisma = require('../db/prisma');
 const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
+const { requireRole } = require('../middleware/auth');
+const { paginate, paginatedResponse } = require('../utils/pagination');
+
+// SUPER_ADMIN no gestiona pagos
+router.use(requireRole('EMPRESA', 'CAJA'));
+
 const getEmpresaId = (req) => req.user?.empresaId || req.user?.id;
 const facturaTenantFilter = (empresaId) => ({
   OR: [
@@ -13,22 +19,40 @@ const facturaTenantFilter = (empresaId) => ({
 
 const METODOS_VALIDOS = ['CASH', 'BANK_TRANSFER', 'CREDIT_CARD', 'MOBILE_PAYMENT'];
 
-// GET /api/pagos?facturaId=
+// GET /api/pagos?facturaId= (con paginación)
 router.get('/', async (req, res, next) => {
   try {
     const { facturaId } = req.query;
+    const { skip, take, page, limit } = paginate(req.query, { limit: 50 });
     const empresaId = getEmpresaId(req);
     const where = {
       factura: facturaTenantFilter(empresaId),
       ...(facturaId ? { facturaId } : {}),
     };
 
-    const pagos = await prisma.pago.findMany({
-      where,
-      orderBy: { fechaPago: 'desc' },
-      include: { factura: { include: { cliente: true } } },
-    });
-    res.json(pagos);
+    const [pagos, total] = await Promise.all([
+      prisma.pago.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { fechaPago: 'desc' },
+        include: {
+          factura: {
+            select: {
+              id: true,
+              numeroFactura: true,
+              estado: true,
+              total: true,
+              moneda: true,
+              tasaCambio: true,
+              cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
+            },
+          },
+        },
+      }),
+      prisma.pago.count({ where }),
+    ]);
+    res.json(paginatedResponse(pagos, total, page, limit));
   } catch (err) { next(err); }
 });
 
@@ -109,7 +133,36 @@ router.post('/', async (req, res, next) => {
       const facturaUpd = await tx.factura.update({
         where: { id: facturaId },
         data:  { estado: nuevoEstado },
-        include: { cliente: true, pagos: true },
+        select: {
+          id: true,
+          numeroFactura: true,
+          clienteId: true,
+          usuarioId: true,
+          empresaId: true,
+          fechaEmision: true,
+          fechaVencimiento: true,
+          subtotal: true,
+          impuestoTotal: true,
+          total: true,
+          estado: true,
+          moneda: true,
+          tasaCambio: true,
+          cuotasTotales: true,
+          observaciones: true,
+          anuladoPor: true,
+          motivoAnulacion: true,
+          createdAt: true,
+          updatedAt: true,
+          cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
+          pagos: {
+            select: {
+              id: true,
+              monto: true,
+              metodoPago: true,
+              fechaPago: true,
+            },
+          },
+        },
       });
 
       return { pago: nuevoPago, facturaActualizada: facturaUpd };
@@ -142,7 +195,34 @@ router.delete('/:id', async (req, res, next) => {
         id: req.params.id,
         factura: facturaTenantFilter(empresaId),
       },
-      include: { factura: { include: { pagos: true } } },
+      select: {
+        id: true,
+        facturaId: true,
+        monto: true,
+        metodoPago: true,
+        referenciaTransaccion: true,
+        fechaPago: true,
+        notas: true,
+        createdAt: true,
+        factura: {
+          select: {
+            id: true,
+            numeroFactura: true,
+            estado: true,
+            total: true,
+            moneda: true,
+            tasaCambio: true,
+            pagos: {
+              select: {
+                id: true,
+                monto: true,
+                metodoPago: true,
+                fechaPago: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     const factura = pago.factura;

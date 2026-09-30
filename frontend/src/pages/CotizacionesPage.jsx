@@ -55,7 +55,7 @@ export function CotizacionesPage() {
     setLoadingHistorial(true);
     try {
       const data = await API.getCotizaciones();
-      setCotizaciones(data.cotizaciones || data || []);
+      setCotizaciones(Array.isArray(data) ? data : (data.data || []));
     } catch (err) {
       showToast('Error al cargar cotizaciones: ' + err.message, 'error');
     } finally {

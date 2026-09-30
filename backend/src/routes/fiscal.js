@@ -1,9 +1,12 @@
 const express = require('express');
 const prisma   = require('../db/prisma');
-const { authMiddleware } = require('../middleware/auth');
+const { authMiddleware, requireRole } = require('../middleware/auth');
 const { getFiscalMachine } = require('../services/fiscalMachine');
 
 const router = express.Router();
+
+// SUPER_ADMIN no opera máquina fiscal
+router.use(requireRole('EMPRESA', 'CAJA'));
 
 // Todas las rutas fiscales requieren autenticación (aplicada globalmente en app.js)
 

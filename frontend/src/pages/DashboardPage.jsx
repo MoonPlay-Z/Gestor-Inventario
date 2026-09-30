@@ -40,15 +40,16 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [currencySymbol, setCurrencySymbol] = useState('$');
+  const [periodo, setPeriodo] = useState('mes');
 
-  const loadData = async () => {
+  const loadData = async (periodoSeleccionado = periodo) => {
     setLoading(true);
     try {
       const config = await API.getConfig();
       if (config?.moneda?.simbolo) {
         setCurrencySymbol(config.moneda.simbolo);
       }
-      const data = await API.getDashboardStats();
+      const data = await API.getDashboardStats(periodoSeleccionado);
       setStats(data);
     } catch (err) {
       showToast('Error cargando el dashboard: ' + err.message, 'error');
@@ -58,8 +59,8 @@ export function DashboardPage() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(periodo);
+  }, [periodo]);
 
   // Prepara datos de Chart.js
   const chartData = stats?.ingresosHistorico ? [...stats.ingresosHistorico].reverse() : [];
@@ -190,7 +191,23 @@ export function DashboardPage() {
                 <div className="card-header">
                   <div>
                     <h3 className="card-title">Histórico de Ingresos</h3>
-                    <p className="card-subtitle">Evolución mensual de facturación</p>
+                    <p className="card-subtitle">
+                      {periodo === 'dia' && 'Evolución diaria de facturación'}
+                      {periodo === 'semana' && 'Evolución semanal de facturación'}
+                      {periodo === 'mes' && 'Evolución mensual de facturación'}
+                      {periodo === 'anio' && 'Evolución anual de facturación'}
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    {[{ key: 'dia', label: 'Días' }, { key: 'semana', label: 'Semanas' }, { key: 'mes', label: 'Meses' }, { key: 'anio', label: 'Años' }].map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => setPeriodo(key)}
+                        className={`btn btn-sm ${periodo === key ? 'btn-primary' : 'btn-secondary'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 </div>
                 <div style={{ height: '300px', width: '100%' }}>
