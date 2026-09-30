@@ -1,0 +1,9 @@
+# GestorPOS
+
+> Sistema POS y gestion de inventario multimoneda para comercios en Venezuela.
+
+## Paginas principales
+
+- [Pagina principal](https://gestor-inventario-pos.netlify.app/)
+- [Crear una cuenta](https://gestor-inventario-pos.netlify.app/registro)
+- [Planes y pagos](https://gestor-inventario-pos.netlify.app/pagos-saas)

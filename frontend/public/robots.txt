@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://gestor-inventario-pos.netlify.app/sitemap.xml
