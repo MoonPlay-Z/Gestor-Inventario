@@ -82,7 +82,7 @@ export function LandingPage() {
           }}>
             Iniciar Sesión
           </Link>
-          <a href={trialWhatsAppUrl} target="_blank" rel="noreferrer" style={{
+          <Link to="/registro" style={{
             backgroundColor: '#2563eb',
             color: '#ffffff',
             fontSize: '0.88rem',
@@ -92,8 +92,8 @@ export function LandingPage() {
             borderRadius: '8px',
             boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)'
           }}>
-            Solicitar mes de prueba
-          </a>
+            Registrar
+          </Link>
         </div>
       </header>
 
