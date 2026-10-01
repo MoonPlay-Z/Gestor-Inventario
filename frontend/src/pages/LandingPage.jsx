@@ -66,6 +66,7 @@ export function LandingPage() {
         <nav style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <a href="#beneficios" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Beneficios</a>
           <a href="#modulos" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Módulos</a>
+          <Link to="/blog" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Blog</Link>
           <a href="#preguntas" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Preguntas</a>
           <a href="#contacto" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Contacto</a>
         </nav>
@@ -628,6 +629,7 @@ export function LandingPage() {
               <a href="#inicio" style={{ color: '#cbd5e1' }}>Inicio</a>
               <a href="#beneficios" style={{ color: '#cbd5e1' }}>Beneficios</a>
               <a href="#modulos" style={{ color: '#cbd5e1' }}>Módulos</a>
+              <Link to="/blog" style={{ color: '#cbd5e1' }}>Blog</Link>
               <a href="#preguntas" style={{ color: '#cbd5e1' }}>Preguntas frecuentes</a>
               <Link to={trialWhatsAppUrl} target="_blank" rel="noreferrer" style={{ color: '#cbd5e1' }}>Solicitar mes de prueba</Link>
               <Link to="/login" style={{ color: '#cbd5e1' }}>Iniciar sesión</Link>

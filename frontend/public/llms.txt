@@ -7,3 +7,15 @@
 - [Pagina principal](https://gestor-inventario-pos.netlify.app/)
 - [Crear una cuenta](https://gestor-inventario-pos.netlify.app/registro)
 - [Planes y pagos](https://gestor-inventario-pos.netlify.app/pagos-saas)
+- [Blog](https://gestor-inventario-pos.netlify.app/blog)
+
+## Articulos del blog
+
+- [Como controlar el inventario de tu tienda en Venezuela](https://gestor-inventario-pos.netlify.app/blog/control-inventario-tienda)
+- [Facturacion para pequenos comercios: guia completa 2026](https://gestor-inventario-pos.netlify.app/blog/facturacion-pequenos-comercios)
+- [5 errores que cometen los comercios con su inventario](https://gestor-inventario-pos.netlify.app/blog/errores-inventario)
+- [Como elegir un sistema POS para tu negocio en Venezuela](https://gestor-inventario-pos.netlify.app/blog/como-elegir-sistema-pos)
+- [Inventario manual vs sistema: cuando dar el salto](https://gestor-inventario-pos.netlify.app/blog/inventario-manual-vs-sistema)
+- [Como aumentar ventas en tu tienda con datos](https://gestor-inventario-pos.netlify.app/blog/aumentar-ventas-datos)
+- [Guia de facturacion electronica en Venezuela 2026](https://gestor-inventario-pos.netlify.app/blog/facturacion-electronica-venezuela)
+- [Como administrar multiples productos sin perder el control](https://gestor-inventario-pos.netlify.app/blog/administrar-multiples-productos)
