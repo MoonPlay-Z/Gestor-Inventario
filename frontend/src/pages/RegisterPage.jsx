@@ -15,7 +15,10 @@ export function RegisterPage() {
     nombre: '',
     username: '',
     email: '',
-    password: ''
+    password: '',
+    aceptaTerminos: false,
+    aceptaPrivacidad: false,
+    aceptaComunicaciones: false
   });
   const [loading, setLoading] = useState(false);
   const { loginUser } = useAuth();
@@ -23,15 +26,29 @@ export function RegisterPage() {
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validar aceptación de términos y privacidad
+    if (!formData.aceptaTerminos || !formData.aceptaPrivacidad) {
+      showToast('Debes aceptar los Términos y Condiciones y la Política de Privacidad para continuar', 'error');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const res = await API.register(formData);
+      const res = await API.register({
+        nombre: formData.nombre,
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        aceptaComunicaciones: formData.aceptaComunicaciones
+      });
       loginUser(res.usuario, res.token);
       showToast('🎉 ¡Cuenta creada con éxito! Tus 7 días de prueba gratuita han comenzado.', 'success');
       navigate('/dashboard');
@@ -313,6 +330,90 @@ export function RegisterPage() {
                 required
                 minLength={6}
               />
+            </div>
+
+            {/* Checkboxes de aceptación */}
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              padding: '16px',
+              backgroundColor: '#f8fafc',
+              borderRadius: '10px',
+              border: '1px solid #e2e8f0'
+            }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                color: '#334155',
+                lineHeight: 1.5
+              }}>
+                <input
+                  type="checkbox"
+                  name="aceptaTerminos"
+                  checked={formData.aceptaTerminos}
+                  onChange={handleChange}
+                  required
+                  style={{ marginTop: '2px', cursor: 'pointer' }}
+                />
+                <span>
+                  He leído y acepto los{' '}
+                  <Link to="/terminos" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
+                    Términos y Condiciones
+                  </Link>{' '}
+                  *
+                </span>
+              </label>
+
+              <label style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                color: '#334155',
+                lineHeight: 1.5
+              }}>
+                <input
+                  type="checkbox"
+                  name="aceptaPrivacidad"
+                  checked={formData.aceptaPrivacidad}
+                  onChange={handleChange}
+                  required
+                  style={{ marginTop: '2px', cursor: 'pointer' }}
+                />
+                <span>
+                  He leído y acepto la{' '}
+                  <Link to="/politica-privacidad" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
+                    Política de Privacidad
+                  </Link>{' '}
+                  y el tratamiento de mis datos personales *
+                </span>
+              </label>
+
+              <label style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                cursor: 'pointer',
+                fontSize: '0.8rem',
+                color: '#334155',
+                lineHeight: 1.5
+              }}>
+                <input
+                  type="checkbox"
+                  name="aceptaComunicaciones"
+                  checked={formData.aceptaComunicaciones}
+                  onChange={handleChange}
+                  style={{ marginTop: '2px', cursor: 'pointer' }}
+                />
+                <span>
+                  [Opcional] Deseo recibir comunicaciones comerciales y novedades por email/WhatsApp
+                </span>
+              </label>
             </div>
 
             <button
