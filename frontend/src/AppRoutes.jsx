@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ROLE_GROUPS } from './components/ui';
+import { CookieBanner } from './components/CookieBanner';
 
 // --- Public Pages ---
 import { LandingPage }             from './pages/LandingPage';
@@ -33,6 +34,7 @@ import { ReportesPage }       from './pages/ReportesPage';
 
 export default function AppRoutes() {
   return (
+    <>
     <Routes>
       {/* ── Públicas — sin layout ─────────────────────────────── */}
       <Route path="/"          element={<LandingPage />} />
@@ -132,5 +134,9 @@ export default function AppRoutes() {
       {/* Catch-all → dashboard */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+
+    {/* Banner de cookies - se muestra en todas las páginas */}
+    <CookieBanner />
+    </>
   );
 }
