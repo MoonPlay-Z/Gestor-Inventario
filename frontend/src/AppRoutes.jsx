@@ -11,6 +11,8 @@ import { RegisterPage }            from './pages/RegisterPage';
 import { SuscripcionExpiradaPage } from './pages/SuscripcionExpiradaPage';
 import { PagosSaaSPage }           from './pages/PagosSaaSPage';
 import { VisorPreciosPage }        from './pages/VisorPreciosPage';
+import { BlogPage }               from './pages/BlogPage';
+import { BlogArticlePage }        from './pages/BlogArticlePage';
 
 // --- Protected Pages ---
 import { DashboardPage }    from './pages/DashboardPage';
@@ -34,6 +36,8 @@ export default function AppRoutes() {
       <Route path="/login"     element={<LoginPage />} />
       <Route path="/registro"  element={<RegisterPage />} />
       <Route path="/pagos-saas" element={<PagosSaaSPage />} />
+      <Route path="/blog"     element={<BlogPage />} />
+      <Route path="/blog/:slug" element={<BlogArticlePage />} />
       <Route path="/suscripcion-expirada" element={
         <ProtectedRoute>
           <SuscripcionExpiradaPage />
