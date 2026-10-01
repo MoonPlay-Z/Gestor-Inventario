@@ -13,6 +13,9 @@ import { PagosSaaSPage }           from './pages/PagosSaaSPage';
 import { VisorPreciosPage }        from './pages/VisorPreciosPage';
 import { BlogPage }               from './pages/BlogPage';
 import { BlogArticlePage }        from './pages/BlogArticlePage';
+import { CookiePolicyPage }        from './pages/CookiePolicyPage';
+import { PrivacyPolicyPage }       from './pages/PrivacyPolicyPage';
+import { TermsPage }               from './pages/TermsPage';
 
 // --- Protected Pages ---
 import { DashboardPage }    from './pages/DashboardPage';
@@ -38,6 +41,9 @@ export default function AppRoutes() {
       <Route path="/pagos-saas" element={<PagosSaaSPage />} />
       <Route path="/blog"     element={<BlogPage />} />
       <Route path="/blog/:slug" element={<BlogArticlePage />} />
+      <Route path="/politica-cookies" element={<CookiePolicyPage />} />
+      <Route path="/politica-privacidad" element={<PrivacyPolicyPage />} />
+      <Route path="/terminos" element={<TermsPage />} />
       <Route path="/suscripcion-expirada" element={
         <ProtectedRoute>
           <SuscripcionExpiradaPage />

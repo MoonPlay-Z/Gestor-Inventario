@@ -635,6 +635,11 @@ export function LandingPage() {
               <Link to="/login" style={{ color: '#cbd5e1' }}>Iniciar sesión</Link>
               <Link to="/pagos-saas" style={{ color: '#cbd5e1' }}>Pagos de suscripción</Link>
             </nav>
+            <nav aria-label="Enlaces legales" style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', marginBottom: '16px', fontSize: '0.8rem' }}>
+              <Link to="/politica-cookies" style={{ color: '#94a3b8' }}>Política de Cookies</Link>
+              <Link to="/politica-privacidad" style={{ color: '#94a3b8' }}>Política de Privacidad</Link>
+              <Link to="/terminos" style={{ color: '#94a3b8' }}>Términos y Condiciones</Link>
+            </nav>
             <div style={{ display: 'flex', gap: '14px' }}>
               <a href="https://github.com/MoonPlay-Z/Gestor-Inventario" target="_blank" rel="noreferrer" aria-label="Proyecto GestorPOS en GitHub" style={{ color: '#94a3b8', fontSize: '1.2rem' }}><Icon icon={githubIcon} /></a>
               <a href="https://www.linkedin.com/in/jadeveloper/" target="_blank" rel="noreferrer" aria-label="Perfil de Juan Arcila en LinkedIn" style={{ color: '#94a3b8', fontSize: '1.2rem' }}><Icon icon={linkedinIcon} /></a>
@@ -645,7 +650,12 @@ export function LandingPage() {
         </div>
 
         <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '24px', textAlign: 'center', fontSize: '0.8rem', color: '#64748b' }}>
-          © {new Date().getFullYear()} ING. Juan Arcila. Todos los derechos reservados.
+          <p style={{ margin: '0 0 8px' }}>
+            © {new Date().getFullYear()} ING. Juan Arcila. Todos los derechos reservados.
+          </p>
+          <p style={{ margin: 0, fontSize: '0.75rem', color: '#475569' }}>
+            Sitio desarrollado y mantenido con asistencia de inteligencia artificial.
+          </p>
         </div>
       </footer>
 
