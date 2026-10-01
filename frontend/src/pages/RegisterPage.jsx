@@ -9,6 +9,8 @@ import checkDecagramIcon from '@iconify/icons-mdi/check-decagram';
 import { API } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { FieldError, FormError } from '../components/ui';
+import { ValidationRules, getErrorMessage } from '../utils/validation';
 
 export function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -21,6 +23,8 @@ export function RegisterPage() {
     aceptaComunicaciones: false
   });
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formError, setFormError] = useState('');
   const { loginUser } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -28,14 +32,45 @@ export function RegisterPage() {
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    
+    // Limpiar error del campo al modificar
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: null }));
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    
+    const nombreError = ValidationRules.required(formData.nombre, 'El nombre del negocio');
+    if (nombreError) errors.nombre = nombreError;
+    
+    const usernameError = ValidationRules.username(formData.username);
+    if (usernameError) errors.username = usernameError;
+    
+    const emailError = ValidationRules.email(formData.email);
+    if (emailError) errors.email = emailError;
+    
+    const passwordError = ValidationRules.password(formData.password);
+    if (passwordError) errors.password = passwordError;
+    
+    if (!formData.aceptaTerminos) {
+      errors.aceptaTerminos = 'Debes aceptar los Términos y Condiciones';
+    }
+    
+    if (!formData.aceptaPrivacidad) {
+      errors.aceptaPrivacidad = 'Debes aceptar la Política de Privacidad';
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validar aceptación de términos y privacidad
-    if (!formData.aceptaTerminos || !formData.aceptaPrivacidad) {
-      showToast('Debes aceptar los Términos y Condiciones y la Política de Privacidad para continuar', 'error');
+    setFormError('');
+    
+    if (!validateForm()) {
       return;
     }
 
@@ -53,11 +88,14 @@ export function RegisterPage() {
       showToast('🎉 ¡Cuenta creada con éxito! Tus 7 días de prueba gratuita han comenzado.', 'success');
       navigate('/dashboard');
     } catch (err) {
-      showToast(err.message || 'Error al crear la cuenta', 'error');
+      const errorMessage = getErrorMessage(err, 'Error al crear la cuenta. Inténtalo de nuevo.');
+      setFormError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  const passwordStrength = ValidationRules.passwordStrength(formData.password);
 
   return (
     <div style={{
@@ -239,6 +277,8 @@ export function RegisterPage() {
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <FormError message={formError} onDismiss={() => setFormError('')} />
+            
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', letterSpacing: '0.05em' }}>
                 NOMBRE DEL NEGOCIO O TITULAR *
@@ -247,19 +287,21 @@ export function RegisterPage() {
                 type="text"
                 name="nombre"
                 style={{
-                  border: '1px solid #cbd5e1',
+                  border: fieldErrors.nombre ? '1px solid #ef4444' : '1px solid #cbd5e1',
                   borderRadius: '8px',
                   padding: '12px 14px',
                   fontSize: '0.9rem',
                   color: '#0f172a',
                   outline: 'none',
-                  backgroundColor: '#ffffff'
+                  backgroundColor: '#ffffff',
+                  transition: 'border-color 0.2s'
                 }}
                 placeholder="Ej: Inversiones Los Andes C.A."
                 value={formData.nombre}
                 onChange={handleChange}
                 required
               />
+              <FieldError message={fieldErrors.nombre} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -270,19 +312,21 @@ export function RegisterPage() {
                 type="text"
                 name="username"
                 style={{
-                  border: '1px solid #cbd5e1',
+                  border: fieldErrors.username ? '1px solid #ef4444' : '1px solid #cbd5e1',
                   borderRadius: '8px',
                   padding: '12px 14px',
                   fontSize: '0.9rem',
                   color: '#0f172a',
                   outline: 'none',
-                  backgroundColor: '#ffffff'
+                  backgroundColor: '#ffffff',
+                  transition: 'border-color 0.2s'
                 }}
                 placeholder="ej: mi_negocio"
                 value={formData.username}
                 onChange={handleChange}
                 required
               />
+              <FieldError message={fieldErrors.username} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -293,19 +337,21 @@ export function RegisterPage() {
                 type="email"
                 name="email"
                 style={{
-                  border: '1px solid #cbd5e1',
+                  border: fieldErrors.email ? '1px solid #ef4444' : '1px solid #cbd5e1',
                   borderRadius: '8px',
                   padding: '12px 14px',
                   fontSize: '0.9rem',
                   color: '#0f172a',
                   outline: 'none',
-                  backgroundColor: '#ffffff'
+                  backgroundColor: '#ffffff',
+                  transition: 'border-color 0.2s'
                 }}
                 placeholder="contacto@minegocio.com"
                 value={formData.email}
                 onChange={handleChange}
                 required
               />
+              <FieldError message={fieldErrors.email} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -316,13 +362,14 @@ export function RegisterPage() {
                 type="password"
                 name="password"
                 style={{
-                  border: '1px solid #cbd5e1',
+                  border: fieldErrors.password ? '1px solid #ef4444' : '1px solid #cbd5e1',
                   borderRadius: '8px',
                   padding: '12px 14px',
                   fontSize: '0.9rem',
                   color: '#0f172a',
                   outline: 'none',
-                  backgroundColor: '#ffffff'
+                  backgroundColor: '#ffffff',
+                  transition: 'border-color 0.2s'
                 }}
                 placeholder="Mínimo 6 caracteres"
                 value={formData.password}
@@ -330,6 +377,34 @@ export function RegisterPage() {
                 required
                 minLength={6}
               />
+              <FieldError message={fieldErrors.password} />
+              
+              {/* Indicador de fortaleza de contraseña */}
+              {formData.password && (
+                <div style={{ marginTop: '8px' }}>
+                  <div style={{
+                    height: '4px',
+                    backgroundColor: '#e2e8f0',
+                    borderRadius: '2px',
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{
+                      height: '100%',
+                      width: `${(passwordStrength.score / 5) * 100}%`,
+                      backgroundColor: passwordStrength.color,
+                      transition: 'all 0.3s ease'
+                    }} />
+                  </div>
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: passwordStrength.color,
+                    marginTop: '4px',
+                    fontWeight: 600
+                  }}>
+                    Fortaleza: {passwordStrength.label}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Checkboxes de aceptación */}
@@ -340,59 +415,65 @@ export function RegisterPage() {
               padding: '16px',
               backgroundColor: '#f8fafc',
               borderRadius: '10px',
-              border: '1px solid #e2e8f0'
+              border: fieldErrors.aceptaTerminos || fieldErrors.aceptaPrivacidad ? '1px solid #ef4444' : '1px solid #e2e8f0'
             }}>
-              <label style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '10px',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                color: '#334155',
-                lineHeight: 1.5
-              }}>
-                <input
-                  type="checkbox"
-                  name="aceptaTerminos"
-                  checked={formData.aceptaTerminos}
-                  onChange={handleChange}
-                  required
-                  style={{ marginTop: '2px', cursor: 'pointer' }}
-                />
-                <span>
-                  He leído y acepto los{' '}
-                  <Link to="/terminos" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
-                    Términos y Condiciones
-                  </Link>{' '}
-                  *
-                </span>
-              </label>
+              <div>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  color: '#334155',
+                  lineHeight: 1.5
+                }}>
+                  <input
+                    type="checkbox"
+                    name="aceptaTerminos"
+                    checked={formData.aceptaTerminos}
+                    onChange={handleChange}
+                    required
+                    style={{ marginTop: '2px', cursor: 'pointer' }}
+                  />
+                  <span>
+                    He leído y acepto los{' '}
+                    <Link to="/terminos" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
+                      Términos y Condiciones
+                    </Link>{' '}
+                    *
+                  </span>
+                </label>
+                <FieldError message={fieldErrors.aceptaTerminos} />
+              </div>
 
-              <label style={{
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '10px',
-                cursor: 'pointer',
-                fontSize: '0.8rem',
-                color: '#334155',
-                lineHeight: 1.5
-              }}>
-                <input
-                  type="checkbox"
-                  name="aceptaPrivacidad"
-                  checked={formData.aceptaPrivacidad}
-                  onChange={handleChange}
-                  required
-                  style={{ marginTop: '2px', cursor: 'pointer' }}
-                />
-                <span>
-                  He leído y acepto la{' '}
-                  <Link to="/politica-privacidad" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
-                    Política de Privacidad
-                  </Link>{' '}
-                  y el tratamiento de mis datos personales *
-                </span>
-              </label>
+              <div>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  fontSize: '0.8rem',
+                  color: '#334155',
+                  lineHeight: 1.5
+                }}>
+                  <input
+                    type="checkbox"
+                    name="aceptaPrivacidad"
+                    checked={formData.aceptaPrivacidad}
+                    onChange={handleChange}
+                    required
+                    style={{ marginTop: '2px', cursor: 'pointer' }}
+                  />
+                  <span>
+                    He leído y acepto la{' '}
+                    <Link to="/politica-privacidad" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
+                      Política de Privacidad
+                    </Link>{' '}
+                    y el tratamiento de mis datos personales *
+                  </span>
+                </label>
+                <FieldError message={fieldErrors.aceptaPrivacidad} />
+              </div>
 
               <label style={{
                 display: 'flex',

@@ -10,19 +10,37 @@ import loginIcon from '@iconify/icons-mdi/login';
 import { API } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { FieldError, FormError } from '../components/ui';
+import { ValidationRules, getErrorMessage } from '../utils/validation';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [formError, setFormError] = useState('');
   const { loginUser } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  const validateForm = () => {
+    const errors = {};
+    
+    const usernameError = ValidationRules.required(username, 'El usuario');
+    if (usernameError) errors.username = usernameError;
+    
+    const passwordError = ValidationRules.required(password, 'La contraseña');
+    if (passwordError) errors.password = passwordError;
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username || !password) {
-      showToast('Por favor ingresa usuario y contraseña', 'error');
+    setFormError('');
+    
+    if (!validateForm()) {
       return;
     }
 
@@ -46,7 +64,9 @@ export function LoginPage() {
         });
         return;
       }
-      showToast(err.message || 'Credenciales inválidas', 'error');
+      
+      const errorMessage = getErrorMessage(err, 'Usuario o contraseña incorrectos. Verifica tus credenciales.');
+      setFormError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -232,6 +252,8 @@ export function LoginPage() {
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <FormError message={formError} onDismiss={() => setFormError('')} />
+            
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', letterSpacing: '0.05em' }}>
                 USUARIO O CORREO *
@@ -239,20 +261,27 @@ export function LoginPage() {
               <input
                 type="text"
                 style={{
-                  border: '1px solid #cbd5e1',
+                  border: fieldErrors.username ? '1px solid #ef4444' : '1px solid #cbd5e1',
                   borderRadius: '8px',
                   padding: '12px 14px',
                   fontSize: '0.9rem',
                   color: '#0f172a',
                   outline: 'none',
-                  backgroundColor: '#ffffff'
+                  backgroundColor: '#ffffff',
+                  transition: 'border-color 0.2s'
                 }}
                 placeholder="ej: admin o tu_usuario"
                 value={username}
-                onChange={e => setUsername(e.target.value)}
+                onChange={e => {
+                  setUsername(e.target.value);
+                  if (fieldErrors.username) {
+                    setFieldErrors(prev => ({ ...prev, username: null }));
+                  }
+                }}
                 required
                 autoFocus
               />
+              <FieldError message={fieldErrors.username} />
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -262,19 +291,26 @@ export function LoginPage() {
               <input
                 type="password"
                 style={{
-                  border: '1px solid #cbd5e1',
+                  border: fieldErrors.password ? '1px solid #ef4444' : '1px solid #cbd5e1',
                   borderRadius: '8px',
                   padding: '12px 14px',
                   fontSize: '0.9rem',
                   color: '#0f172a',
                   outline: 'none',
-                  backgroundColor: '#ffffff'
+                  backgroundColor: '#ffffff',
+                  transition: 'border-color 0.2s'
                 }}
                 placeholder="••••••••"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={e => {
+                  setPassword(e.target.value);
+                  if (fieldErrors.password) {
+                    setFieldErrors(prev => ({ ...prev, password: null }));
+                  }
+                }}
                 required
               />
+              <FieldError message={fieldErrors.password} />
             </div>
 
             <button
