@@ -19,3 +19,9 @@
 - [Como aumentar ventas en tu tienda con datos](https://gestor-inventario-pos.netlify.app/blog/aumentar-ventas-datos)
 - [Guia de facturacion electronica en Venezuela 2026](https://gestor-inventario-pos.netlify.app/blog/facturacion-electronica-venezuela)
 - [Como administrar multiples productos sin perder el control](https://gestor-inventario-pos.netlify.app/blog/administrar-multiples-productos)
+
+## Paginas legales
+
+- [Politica de Cookies](https://gestor-inventario-pos.netlify.app/politica-cookies)
+- [Politica de Privacidad](https://gestor-inventario-pos.netlify.app/politica-privacidad)
+- [Terminos y Condiciones](https://gestor-inventario-pos.netlify.app/terminos)
