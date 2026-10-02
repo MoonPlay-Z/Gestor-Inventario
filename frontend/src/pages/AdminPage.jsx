@@ -481,53 +481,80 @@ export function AdminPage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   const tabStyle = (t) => ({
-    padding: '0.5rem 1rem',
-    borderRadius: '8px',
-    border: 'none',
+    padding: '0.6rem 1.2rem',
+    borderRadius: '10px',
+    border: tab === t ? 'none' : '2px solid var(--border)',
     cursor: 'pointer',
     fontSize: '0.875rem',
-    fontWeight: 600,
-    transition: 'all 0.15s',
+    fontWeight: 700,
+    transition: 'all 0.2s',
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
-    background: tab === t ? 'var(--primary)' : 'var(--surface3)',
+    gap: '8px',
+    background: tab === t ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'var(--surface)',
     color: tab === t ? '#fff' : 'var(--text-secondary)',
+    boxShadow: tab === t ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none',
   });
 
   const inputStyle = (hasError) => ({
-    border: hasError ? '1px solid #ef4444' : '1px solid var(--border)',
-    borderRadius: '8px',
-    padding: '10px 12px',
+    border: hasError ? '2px solid #ef4444' : '2px solid var(--border)',
+    borderRadius: '10px',
+    padding: '12px 14px',
     fontSize: '0.875rem',
     color: 'var(--text-primary)',
     outline: 'none',
     backgroundColor: 'var(--surface)',
     width: '100%',
-    transition: 'border-color 0.2s',
+    transition: 'all 0.2s',
   });
 
   const statCardStyle = {
-    background: 'var(--surface)',
+    background: 'linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%)',
     border: '1px solid var(--border)',
-    borderRadius: '12px',
-    padding: '1rem',
+    borderRadius: '16px',
+    padding: '1.25rem',
     display: 'flex',
     alignItems: 'center',
-    gap: '0.75rem',
+    gap: '1rem',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
+    transition: 'all 0.2s',
   };
 
   const statIconStyle = (color) => ({
-    width: '40px',
-    height: '40px',
-    borderRadius: '10px',
+    width: '48px',
+    height: '48px',
+    borderRadius: '12px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: `${color}20`,
-    color: color,
+    background: `linear-gradient(135deg, ${color} 0%, ${color}dd 100%)`,
+    color: '#fff',
     flexShrink: 0,
+    boxShadow: `0 4px 12px ${color}40`,
   });
+
+  const actionBtnStyle = (type) => {
+    const colors = {
+      primary: { bg: '#3b82f6', hover: '#2563eb' },
+      danger: { bg: '#ef4444', hover: '#dc2626' },
+      success: { bg: '#10b981', hover: '#059669' },
+      warning: { bg: '#f59e0b', hover: '#d97706' },
+    };
+    const c = colors[type] || colors.primary;
+    return {
+      padding: '0.5rem',
+      borderRadius: '8px',
+      border: 'none',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: c.bg,
+      color: '#fff',
+      transition: 'all 0.2s',
+      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.15)',
+    };
+  };
 
   return (
     <>
@@ -737,13 +764,13 @@ export function AdminPage() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                            <button onClick={() => openActivarModal(u)} className="btn btn-primary btn-sm" title="Activar/Renovar">
+                            <button onClick={() => openActivarModal(u)} style={actionBtnStyle('primary')} title="Activar/Renovar">
                               <Icon icon={calendarIcon} className="h-4 w-4" />
                             </button>
-                            <button onClick={() => handleCambiarEstado(u)} className="btn btn-sm" style={{ background: u.activo ? 'var(--surface3)' : 'var(--primary)', color: u.activo ? 'var(--text-secondary)' : '#fff' }} title={u.activo ? 'Bloquear' : 'Desbloquear'}>
+                            <button onClick={() => handleCambiarEstado(u)} style={actionBtnStyle(u.activo ? 'warning' : 'success')} title={u.activo ? 'Bloquear' : 'Desbloquear'}>
                               <Icon icon={u.activo ? blockIcon : unblockIcon} className="h-4 w-4" />
                             </button>
-                            <button onClick={() => handleEliminarEmpresa(u)} className="btn btn-sm" style={{ background: '#fee2e2', color: '#dc2626' }} title="Eliminar">
+                            <button onClick={() => handleEliminarEmpresa(u)} style={actionBtnStyle('danger')} title="Eliminar">
                               <Icon icon={deleteForeverIcon} className="h-4 w-4" />
                             </button>
                           </div>
@@ -853,10 +880,10 @@ export function AdminPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button onClick={() => openPromocionModal(p)} className="btn btn-sm" style={{ background: 'var(--surface3)' }} title="Editar">
+                          <button onClick={() => openPromocionModal(p)} style={actionBtnStyle('primary')} title="Editar">
                             <Icon icon={editIcon} className="h-4 w-4" />
                           </button>
-                          <button onClick={() => handleEliminarPromocion(p)} className="btn btn-sm" style={{ background: '#fee2e2', color: '#dc2626' }} title="Eliminar">
+                          <button onClick={() => handleEliminarPromocion(p)} style={actionBtnStyle('danger')} title="Eliminar">
                             <Icon icon={deleteIcon} className="h-4 w-4" />
                           </button>
                         </div>
@@ -914,10 +941,10 @@ export function AdminPage() {
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button onClick={() => openNoticiaModal(n)} className="btn btn-sm" style={{ background: 'var(--surface3)' }} title="Editar">
+                          <button onClick={() => openNoticiaModal(n)} style={actionBtnStyle('primary')} title="Editar">
                             <Icon icon={editIcon} className="h-4 w-4" />
                           </button>
-                          <button onClick={() => handleEliminarNoticia(n)} className="btn btn-sm" style={{ background: '#fee2e2', color: '#dc2626' }} title="Eliminar">
+                          <button onClick={() => handleEliminarNoticia(n)} style={actionBtnStyle('danger')} title="Eliminar">
                             <Icon icon={deleteIcon} className="h-4 w-4" />
                           </button>
                         </div>

@@ -15,15 +15,6 @@ export function Header({ title, subtitle, toggleSidebar, setIsMobileOpen, action
   return (
     <header className="page-header flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)] sticky top-0 z-30 shadow-sm">
       <div className="flex items-center gap-3">
-        {/* Toggle Sidebar for Desktop & Mobile Hamburger */}
-        <button
-          onClick={handleToggle}
-          className="p-2 rounded-xl border border-[var(--border)] bg-[var(--surface2)] text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition flex items-center justify-center"
-          aria-label="Abrir Menú"
-        >
-          <Icon icon={isCollapsed ? chevronRightIcon : menuIcon} className="h-5 w-5" />
-        </button>
-
         <div>
           <h2 className="text-lg md:text-xl font-extrabold text-[var(--text-primary)] leading-tight">{title}</h2>
           {subtitle && <p className="text-xs text-[var(--text-secondary)] hidden sm:block">{subtitle}</p>}
