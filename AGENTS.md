@@ -96,6 +96,49 @@ There is no test suite, linter, formatter, or CI configuration. Do not look for 
 - **N+1 prevention**: Use `$queryRaw` with `GROUP BY` for aggregations (pagos por factura, totales por estado) instead of loading related records into memory.
 - **Transactions**: Critical multi-table operations (factura creation, payment registration, cotización conversion) use `prisma.$transaction` for atomicity.
 
+## Error handling system
+
+### Frontend components
+- `FieldError` — per-field validation errors with icon and styling
+- `FormError` — general form errors with dismiss option
+- `ToastContext` — improved toast system with duration by type (error: 8s, warning: 6s, success: 5s)
+
+### Validation utilities
+- `frontend/src/utils/validation.js` — reusable validation rules (`ValidationRules`) and contextual error messages (`getErrorMessage`)
+- Password strength indicator with 5 levels
+- Form validation with `validateForm()` helper
+
+### Backend error handling
+- `backend/src/middleware/errorHandler.js` — centralized error handler
+- Prisma error codes mapped to user-friendly messages (P2002, P2025, P2003)
+- Custom error types: `VALIDATION_ERROR`, `BUSINESS_ERROR`
+- Error response format: `{ error, message, code?, fields?, details? }`
+
+## UI components
+
+Located in `frontend/src/components/ui/`:
+- `Button` — reusable button with variants
+- `FieldError` / `FieldSuccess` — field-level validation messages
+- `FormError` / `FormSuccess` — form-level messages
+- `RoleGuard` / `useRole` — role-based access control
+- `NavItem` / `NavSection` — navigation components
+- `ReceiptModal` — receipt display modal
+- `CashRegisterReport` — cash register report component
+
+## Legal & compliance pages
+
+- `/politica-cookies` — Cookie policy
+- `/politica-privacidad` — Privacy policy
+- `/terminos` — Terms and conditions
+- Cookie consent banner with granular preferences
+- Registration requires explicit acceptance of terms and privacy policy
+
+## Blog
+
+- `/blog` — Blog listing page
+- `/blog/:slug` — Individual blog articles
+- 8 SEO-optimized articles for keywords like "control de inventario", "facturación", "sistema POS"
+
 ## Env vars
 
 Required: `DATABASE_URL`, `JWT_SECRET`. Optional: `PORT` (default 3001), `EMPRESA_NOMBRE`, `EMPRESA_RIF`, `EMPRESA_DIRECCION`, `EMPRESA_TELEFONO`, `EMPRESA_EMAIL`, `MONEDA_SIMBOLO`, `MONEDA_CODIGO`, `B2B_API_KEY`, `ALLOWED_ORIGINS`, `DB_PROVIDER`, `NODE_ENV`.
