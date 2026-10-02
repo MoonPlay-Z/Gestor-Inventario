@@ -192,6 +192,19 @@ export const API = {
   cambiarEstadoEmpresa: (id, activo) => request(`/activaciones/empresas/${id}/estado`, { method: 'PUT', body: { activo } }),
   eliminarEmpresa: (id) => request(`/activaciones/empresas/${id}`, { method: 'DELETE' }),
   activarManual: (id, data) => request(`/activaciones/${id}/activar-manual`, { method: 'PUT', body: data }),
+  resetPassword: (userId, newPassword) => request(`/activaciones/usuarios/${userId}/reset-password`, { method: 'PUT', body: { newPassword } }),
+
+  // Promociones (Super Admin)
+  getPromociones: () => request('/activaciones/promociones'),
+  crearPromocion: (data) => request('/activaciones/promociones', { method: 'POST', body: data }),
+  actualizarPromocion: (id, data) => request(`/activaciones/promociones/${id}`, { method: 'PUT', body: data }),
+  eliminarPromocion: (id) => request(`/activaciones/promociones/${id}`, { method: 'DELETE' }),
+
+  // Noticias (Super Admin)
+  getNoticias: () => request('/activaciones/noticias'),
+  crearNoticia: (data) => request('/activaciones/noticias', { method: 'POST', body: data }),
+  actualizarNoticia: (id, data) => request(`/activaciones/noticias/${id}`, { method: 'PUT', body: data }),
+  eliminarNoticia: (id) => request(`/activaciones/noticias/${id}`, { method: 'DELETE' }),
 
   // Backup
   importarRespaldo: (data) => request('/backup/import', { method: 'POST', body: data }),

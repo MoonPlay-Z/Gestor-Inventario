@@ -4,7 +4,8 @@ import { useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
-import { Button } from '../components/ui';
+import { Button, FieldError, FormError } from '../components/ui';
+import { ValidationRules, getErrorMessage } from '../utils/validation';
 
 const EMPTY_FORM = {
   sku: '', nombre: '', descripcion: '', imagenUrl: '', categoria: 'General',
@@ -131,14 +132,35 @@ export function InventarioPage() {
     setShowModal(true);
   };
 
+  const validateForm = () => {
+    const errors = {};
+    
+    const nombreError = ValidationRules.required(form.nombre, 'El nombre del producto');
+    if (nombreError) errors.nombre = nombreError;
+    
+    const precioError = ValidationRules.positive(form.precioVenta, 'El precio de venta');
+    if (precioError) errors.precioVenta = precioError;
+    
+    const stockError = ValidationRules.positive(form.stockActual, 'El stock actual');
+    if (stockError) errors.stockActual = stockError;
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
     setSaving(true);
     setFieldErrors({});
     try {
       if (editTarget) {
         await API.actualizarProducto(editTarget.id, form);
-        showToast('Producto actualizado', 'success');
+        showToast('Producto actualizado exitosamente', 'success');
       } else {
         // Si el SKU no fue modificado manualmente, obtener el siguiente automáticamente
         let skuFinal = form.sku;
@@ -164,13 +186,14 @@ export function InventarioPage() {
         }
         
         await API.crearProducto(datosProducto);
-        showToast('Producto creado', 'success');
+        showToast('Producto creado exitosamente', 'success');
       }
       setShowModal(false);
       loadProductos(search, page, soloStockBajo, categoriaFiltro);
     } catch (err) {
       if (err.fields) setFieldErrors(err.fields);
-      showToast(err.message, 'error');
+      const errorMessage = getErrorMessage(err, 'Error al guardar el producto');
+      showToast(errorMessage, 'error');
     } finally { setSaving(false); }
   };
 

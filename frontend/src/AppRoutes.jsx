@@ -30,6 +30,7 @@ import { InventarioPage }   from './pages/InventarioPage';
 import { ClientesPage }     from './pages/ClientesPage';
 import { UsuariosPage }     from './pages/UsuariosPage';
 import { ActivacionesPage } from './pages/ActivacionesPage';
+import { AdminPage }         from './pages/AdminPage';
 import { ReportesPage }       from './pages/ReportesPage';
 
 export default function AppRoutes() {
@@ -122,6 +123,11 @@ export default function AppRoutes() {
         <Route path="/activaciones" element={
           <ProtectedRoute allowedRoles={ROLE_GROUPS.SUPER_ADMIN_ONLY}>
             <ActivacionesPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin" element={
+          <ProtectedRoute allowedRoles={ROLE_GROUPS.SUPER_ADMIN_ONLY}>
+            <AdminPage />
           </ProtectedRoute>
         } />
         <Route path="/config" element={
