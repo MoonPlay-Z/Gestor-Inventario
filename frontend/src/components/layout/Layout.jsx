@@ -45,7 +45,7 @@ export default function Layout() {
     }
   };
 
-  const sidebarWidth = isCollapsed ? 'md:ml-20' : 'md:ml-64';
+  const sidebarWidth = 'md:ml-72';
 
   return (
     <div className="flex min-h-screen bg-[var(--bg-page)] text-[var(--text-primary)]">
