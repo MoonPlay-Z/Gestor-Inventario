@@ -152,88 +152,123 @@ export function DashboardPage() {
           <>
             {/* Grid de Métricas */}
             <div className="metric-grid" style={{ marginBottom: '24px' }}>
-              <div className="metric-card accent">
-                <div className="metric-icon"><Icon icon={cashIcon} className="h-6 w-6" /></div>
+              <div className="metric-card accent" style={{ 
+                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+                border: 'none',
+                color: '#fff'
+              }}>
+                <div className="metric-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                  <Icon icon={cashIcon} className="h-6 w-6" />
+                </div>
                 <div>
-                  <div className="metric-value">{Utils.formatMoney(stats?.ingresosDelMes || 0, currencySymbol)}</div>
-                  <div className="metric-label">Ingresos del Mes</div>
+                  <div className="metric-value" style={{ color: '#fff' }}>{Utils.formatMoney(stats?.ingresosDelMes || 0, currencySymbol)}</div>
+                  <div className="metric-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Ingresos del Mes</div>
                 </div>
               </div>
 
-              <div className="metric-card success">
-                <div className="metric-icon"><Icon icon={receiptIcon} className="h-6 w-6" /></div>
+              <div className="metric-card success" style={{ 
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                border: 'none',
+                color: '#fff'
+              }}>
+                <div className="metric-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                  <Icon icon={receiptIcon} className="h-6 w-6" />
+                </div>
                 <div>
-                  <div className="metric-value">{totalFacturas}</div>
-                  <div className="metric-label">Facturas Emitidas</div>
+                  <div className="metric-value" style={{ color: '#fff' }}>{totalFacturas}</div>
+                  <div className="metric-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Facturas Emitidas</div>
                 </div>
               </div>
 
-              <div className="metric-card warning">
-                <div className="metric-icon"><Icon icon={timerIcon} className="h-6 w-6" /></div>
+              <div className="metric-card warning" style={{ 
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                border: 'none',
+                color: '#fff'
+              }}>
+                <div className="metric-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                  <Icon icon={timerIcon} className="h-6 w-6" />
+                </div>
                 <div>
-                  <div className="metric-value">{stats?.facturasVencidas || 0}</div>
-                  <div className="metric-label">Facturas Vencidas</div>
+                  <div className="metric-value" style={{ color: '#fff' }}>{stats?.facturasVencidas || 0}</div>
+                  <div className="metric-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Facturas Vencidas</div>
                 </div>
               </div>
 
-              <div className="metric-card danger">
-                <div className="metric-icon"><Icon icon={alertIcon} className="h-6 w-6" /></div>
+              <div className="metric-card danger" style={{ 
+                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                border: 'none',
+                color: '#fff'
+              }}>
+                <div className="metric-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
+                  <Icon icon={alertIcon} className="h-6 w-6" />
+                </div>
                 <div>
-                  <div className="metric-value">{stats?.productosStockBajo || 0}</div>
-                  <div className="metric-label">Productos Stock Bajo</div>
+                  <div className="metric-value" style={{ color: '#fff' }}>{stats?.productosStockBajo || 0}</div>
+                  <div className="metric-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Productos Stock Bajo</div>
                 </div>
               </div>
             </div>
 
             {/* Gráfico y Tabla */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-              <div className="card">
-                <div className="card-header">
+              <div className="card" style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                   <div>
-                    <h3 className="card-title">Histórico de Ingresos</h3>
-                    <p className="card-subtitle">
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Histórico de Ingresos</h3>
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                       {periodo === 'dia' && 'Evolución diaria de facturación'}
                       {periodo === 'semana' && 'Evolución semanal de facturación'}
                       {periodo === 'mes' && 'Evolución mensual de facturación'}
                       {periodo === 'anio' && 'Evolución anual de facturación'}
                     </p>
                   </div>
-                  <div className="flex gap-1">
+                  <div style={{ display: 'flex', gap: '6px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px' }}>
                     {[{ key: 'dia', label: 'Días' }, { key: 'semana', label: 'Semanas' }, { key: 'mes', label: 'Meses' }, { key: 'anio', label: 'Años' }].map(({ key, label }) => (
                       <button
                         key={key}
                         onClick={() => setPeriodo(key)}
-                        className={`btn btn-sm ${periodo === key ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: '0.8rem',
+                          fontWeight: 600,
+                          transition: 'all 0.2s',
+                          background: periodo === key ? 'var(--accent)' : 'transparent',
+                          color: periodo === key ? '#fff' : 'var(--text-secondary)',
+                          boxShadow: periodo === key ? '0 2px 8px rgba(37, 99, 235, 0.3)' : 'none',
+                        }}
                       >
                         {label}
                       </button>
                     ))}
                   </div>
                 </div>
-                <div style={{ height: '300px', width: '100%' }}>
+                <div style={{ height: '320px', width: '100%' }}>
                   <Line data={lineChartData} options={lineChartOptions} />
                 </div>
               </div>
 
-              <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title">Facturas Recientes</h3>
+              <div className="card" style={{ padding: '1.5rem' }}>
+                <div style={{ marginBottom: '1rem' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Facturas Recientes</h3>
                 </div>
                 <div className="table-wrapper">
-                  <table>
+                  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0' }}>
                     <thead>
                       <tr>
-                        <th>Número</th>
-                        <th>Cliente</th>
-                        <th>Fecha</th>
-                        <th>Monto Total</th>
-                        <th>Estado</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Número</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Cliente</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Fecha</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Monto Total</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Estado</th>
                       </tr>
                     </thead>
                     <tbody>
                       {stats?.facturasRecientes?.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="empty-state">No hay facturas recientes</td>
+                          <td colSpan={5} className="empty-state" style={{ padding: '32px' }}>No hay facturas recientes</td>
                         </tr>
                       ) : (
                         stats?.facturasRecientes?.map(f => {
@@ -243,15 +278,18 @@ export function DashboardPage() {
                           else if (f.estado === 'PARTIALLY_PAID') estadoHtml = <span className="badge badge-info">Abonada</span>;
 
                           return (
-                            <tr key={f.id}>
-                              <td style={{ fontWeight: 600 }}>#{f.numeroFactura.toString().padStart(5, '0')}</td>
-                              <td>
+                            <tr key={f.id} style={{ transition: 'background 0.15s' }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                              <td style={{ padding: '14px 16px', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>#{f.numeroFactura.toString().padStart(5, '0')}</td>
+                              <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
                                 <div style={{ fontWeight: 500 }}>{f.cliente.razonSocial}</div>
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{f.cliente.rifCedula}</div>
                               </td>
-                              <td>{Utils.formatDate(f.fechaEmision)}</td>
-                              <td style={{ fontWeight: 600 }}>{Utils.formatMoney(f.total, currencySymbol)}</td>
-                              <td>{estadoHtml}</td>
+                              <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{Utils.formatDate(f.fechaEmision)}</td>
+                              <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, textAlign: 'right' }}>{Utils.formatMoney(f.total, currencySymbol)}</td>
+                              <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>{estadoHtml}</td>
                             </tr>
                           );
                         })
