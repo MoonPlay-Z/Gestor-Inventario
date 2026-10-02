@@ -108,7 +108,7 @@ export function VentasPage() {
                       <td>{Utils.formatDate(f.fechaEmision)}</td>
                       <td style={{ fontWeight: 700 }}>{Utils.formatMoney(f.total)}</td>
                       <td style={{ color: 'var(--success)', fontWeight: 600 }}>
-                        {((f.total || 0) * (f.tasaDolar || 1)).toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.
+                        {(() => { const tasa = f.tasaDolar || f.tasaCambio || config?.tasaDolar || 1; const totalBS = (f.total || 0) * tasa; return `${totalBS.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.`; })()}
                       </td>
                       <td>
                         {f.estado === 'PAID' ? (
