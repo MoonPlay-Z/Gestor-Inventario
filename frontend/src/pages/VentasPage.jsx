@@ -76,41 +76,44 @@ export function VentasPage() {
       <div className="page-body">
         <div className="card">
           <div className="table-wrapper">
-            <table>
+            <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0' }}>
               <thead>
                 <tr>
-                  <th>N° Factura</th>
-                  <th>Cliente</th>
-                  <th>Fecha</th>
-                  <th>Total USD</th>
-                  <th>Total Bs.</th>
-                  <th>Estado</th>
-                  <th>Acciones</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>N° Factura</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Cliente</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Fecha</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Total USD</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Total Bs.</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Estado</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="empty-state">Cargando historial...</td>
+                    <td colSpan={7} className="empty-state" style={{ padding: '32px' }}>Cargando historial...</td>
                   </tr>
                 ) : facturas.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="empty-state">No hay facturas registradas</td>
+                    <td colSpan={7} className="empty-state" style={{ padding: '32px' }}>No hay facturas registradas</td>
                   </tr>
                 ) : (
                   facturas.map(f => (
-                    <tr key={f.id}>
-                      <td style={{ fontWeight: 600 }}>#{f.numeroFactura?.toString().padStart(5, '0')}</td>
-                      <td>
+                    <tr key={f.id} style={{ transition: 'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                      <td style={{ padding: '14px 16px', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>#{f.numeroFactura?.toString().padStart(5, '0')}</td>
+                      <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ fontWeight: 500 }}>{f.cliente?.razonSocial || 'N/A'}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{f.cliente?.rifCedula}</div>
                       </td>
-                      <td>{Utils.formatDate(f.fechaEmision)}</td>
-                      <td style={{ fontWeight: 700 }}>{Utils.formatMoney(f.total)}</td>
-                      <td style={{ color: 'var(--success)', fontWeight: 600 }}>
+                      <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{Utils.formatDate(f.fechaEmision)}</td>
+                      <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, textAlign: 'right' }}>{Utils.formatMoney(f.total)}</td>
+                      <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', color: 'var(--success)', fontWeight: 600, textAlign: 'right' }}>
                         {(() => { const tasa = f.tasaDolar || f.tasaCambio || config?.tasaDolar || 1; const totalBS = (f.total || 0) * tasa; return `${totalBS.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.`; })()}
                       </td>
-                      <td>
+                      <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
                         {f.estado === 'PAID' ? (
                           <span className="badge badge-success">Pagada</span>
                         ) : f.estado === 'PENDING' ? (
@@ -121,8 +124,8 @@ export function VentasPage() {
                           <span className="badge badge-danger">Anulada</span>
                         )}
                       </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '4px' }}>
+                      <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                           <button
                             onClick={() => handleVerFactura(f.id)}
                             className="btn btn-ghost btn-sm"
