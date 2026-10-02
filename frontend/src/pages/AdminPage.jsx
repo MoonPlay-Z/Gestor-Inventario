@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import { useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
@@ -24,6 +24,13 @@ import calendarIcon from '@iconify/icons-mdi/calendar-check';
 import blockIcon from '@iconify/icons-mdi/account-cancel';
 import unblockIcon from '@iconify/icons-mdi/account-check';
 import deleteForeverIcon from '@iconify/icons-mdi/delete-forever';
+import chartIcon from '@iconify/icons-mdi/chart-bar';
+import searchIcon from '@iconify/icons-mdi/magnify';
+import downloadIcon from '@iconify/icons-mdi/download';
+import alertIcon from '@iconify/icons-mdi/alert-circle';
+import checkCircleIcon from '@iconify/icons-mdi/check-circle';
+import clockIcon from '@iconify/icons-mdi/clock-outline';
+import currencyIcon from '@iconify/icons-mdi/currency-usd';
 
 const ESTADO_BADGE = {
   APROBADA: 'badge-success',
@@ -89,6 +96,62 @@ export function AdminPage() {
   const [noticiaForm, setNoticiaForm] = useState(EMPTY_NOTICIA);
   const [resetForm, setResetForm] = useState({ userId: '', newPassword: '' });
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Búsqueda y filtros
+  const [searchEmpresas, setSearchEmpresas] = useState('');
+  const [searchUsuarios, setSearchUsuarios] = useState('');
+  const [filterEstado, setFilterEstado] = useState('todos'); // todos, activos, bloqueados
+
+  // Estadísticas calculadas
+  const stats = useMemo(() => {
+    const totalEmpresas = empresas.length;
+    const empresasActivas = empresas.filter(e => e.activo).length;
+    const empresasBloqueadas = totalEmpresas - empresasActivas;
+    const enTrial = empresas.filter(e => e.subscriptionStatus === 'trialing').length;
+    const suscripcionesActivas = empresas.filter(e => e.subscriptionStatus === 'active').length;
+    const suscripcionesVitalicas = empresas.filter(e => e.subscriptionStatus === 'lifetime').length;
+    const totalUsuarios = usuarios.length;
+    const totalPromociones = promociones.length;
+    const promocionesActivas = promociones.filter(p => p.activo).length;
+    const totalNoticias = noticias.length;
+    const noticiasPublicadas = noticias.filter(n => n.publicado).length;
+
+    return {
+      totalEmpresas,
+      empresasActivas,
+      empresasBloqueadas,
+      enTrial,
+      suscripcionesActivas,
+      suscripcionesVitalicas,
+      totalUsuarios,
+      totalPromociones,
+      promocionesActivas,
+      totalNoticias,
+      noticiasPublicadas,
+    };
+  }, [empresas, usuarios, promociones, noticias]);
+
+  // Filtrar empresas por búsqueda y estado
+  const empresasFiltradas = useMemo(() => {
+    return empresas.filter(e => {
+      const matchSearch = !searchEmpresas || 
+        e.nombre?.toLowerCase().includes(searchEmpresas.toLowerCase()) ||
+        e.username?.toLowerCase().includes(searchEmpresas.toLowerCase());
+      const matchEstado = filterEstado === 'todos' || 
+        (filterEstado === 'activos' && e.activo) ||
+        (filterEstado === 'bloqueados' && !e.activo);
+      return matchSearch && matchEstado;
+    });
+  }, [empresas, searchEmpresas, filterEstado]);
+
+  // Filtrar usuarios por búsqueda
+  const usuariosFiltrados = useMemo(() => {
+    return usuarios.filter(u => {
+      return !searchUsuarios || 
+        u.nombre?.toLowerCase().includes(searchUsuarios.toLowerCase()) ||
+        u.username?.toLowerCase().includes(searchUsuarios.toLowerCase());
+    });
+  }, [usuarios, searchUsuarios]);
 
   // ─── Carga de datos ─────────────────────────────────────────────────────────
 
@@ -359,6 +422,62 @@ export function AdminPage() {
     }
   };
 
+  // ─── Exportar a CSV ─────────────────────────────────────────────────────────
+
+  const exportarCSV = (tipo) => {
+    let csvContent = '';
+    let filename = '';
+
+    if (tipo === 'empresas') {
+      const headers = ['Nombre', 'Usuario', 'Estado', 'Suscripción', 'Plan', 'Vence'];
+      const rows = empresasFiltradas.map(e => [
+        e.nombre,
+        e.username,
+        e.activo ? 'Activo' : 'Bloqueado',
+        e.subscriptionStatus,
+        e.planType || '—',
+        e.currentPeriodEnd ? Utils.formatDate(e.currentPeriodEnd) : '—',
+      ]);
+      csvContent = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+      filename = `empresas_${new Date().toISOString().slice(0, 10)}.csv`;
+    } else if (tipo === 'usuarios') {
+      const headers = ['Usuario', 'Nombre', 'Rol', 'Estado'];
+      const rows = usuariosFiltrados.map(u => [
+        u.username,
+        u.nombre || '—',
+        u.rol,
+        u.activo ? 'Activo' : 'Inactivo',
+      ]);
+      csvContent = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+      filename = `usuarios_${new Date().toISOString().slice(0, 10)}.csv`;
+    } else if (tipo === 'activaciones') {
+      const headers = ['Usuario', 'Plan', 'Método Pago', 'Referencia', 'Estado', 'Fecha'];
+      const rows = activaciones.map(a => [
+        a.usuario?.nombre || '—',
+        a.plan,
+        a.metodoPago?.replace('_', ' '),
+        a.referencia || '—',
+        a.estado,
+        Utils.formatDate(a.createdAt),
+      ]);
+      csvContent = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+      filename = `activaciones_${new Date().toISOString().slice(0, 10)}.csv`;
+    }
+
+    if (csvContent) {
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showToast('Archivo CSV exportado correctamente', 'success');
+    }
+  };
+
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   const tabStyle = (t) => ({
@@ -388,6 +507,28 @@ export function AdminPage() {
     transition: 'border-color 0.2s',
   });
 
+  const statCardStyle = {
+    background: 'var(--surface)',
+    border: '1px solid var(--border)',
+    borderRadius: '12px',
+    padding: '1rem',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.75rem',
+  };
+
+  const statIconStyle = (color) => ({
+    width: '40px',
+    height: '40px',
+    borderRadius: '10px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: `${color}20`,
+    color: color,
+    flexShrink: 0,
+  });
+
   return (
     <>
       <Header
@@ -415,6 +556,10 @@ export function AdminPage() {
       <div className="page-body">
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <button style={tabStyle('dashboard')} onClick={() => setTab('dashboard')}>
+            <Icon icon={chartIcon} className="h-4 w-4" />
+            Dashboard
+          </button>
           <button style={tabStyle('empresas')} onClick={() => setTab('empresas')}>
             <Icon icon={domainIcon} className="h-4 w-4" />
             Empresas
@@ -437,9 +582,122 @@ export function AdminPage() {
           </button>
         </div>
 
+        {/* ─── TAB: DASHBOARD ─── */}
+        {tab === 'dashboard' && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            {/* Empresas */}
+            <div style={statCardStyle}>
+              <div style={statIconStyle('#3b82f6')}>
+                <Icon icon={domainIcon} className="h-5 w-5" />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>{stats.totalEmpresas}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Empresas Totales</div>
+              </div>
+            </div>
+            <div style={statCardStyle}>
+              <div style={statIconStyle('#10b981')}>
+                <Icon icon={checkCircleIcon} className="h-5 w-5" />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>{stats.empresasActivas}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Empresas Activas</div>
+              </div>
+            </div>
+            <div style={statCardStyle}>
+              <div style={statIconStyle('#ef4444')}>
+                <Icon icon={blockIcon} className="h-5 w-5" />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>{stats.empresasBloqueadas}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Bloqueadas</div>
+              </div>
+            </div>
+            <div style={statCardStyle}>
+              <div style={statIconStyle('#f59e0b')}>
+                <Icon icon={clockIcon} className="h-5 w-5" />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>{stats.enTrial}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>En Trial</div>
+              </div>
+            </div>
+
+            {/* Suscripciones */}
+            <div style={statCardStyle}>
+              <div style={statIconStyle('#10b981')}>
+                <Icon icon={checkCircleIcon} className="h-5 w-5" />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>{stats.suscripcionesActivas}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Suscripciones Activas</div>
+              </div>
+            </div>
+            <div style={statCardStyle}>
+              <div style={statIconStyle('#6366f1')}>
+                <Icon icon={currencyIcon} className="h-5 w-5" />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>{stats.suscripcionesVitalicas}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Vitalicias</div>
+              </div>
+            </div>
+
+            {/* Usuarios y Contenido */}
+            <div style={statCardStyle}>
+              <div style={statIconStyle('#8b5cf6')}>
+                <Icon icon={accountIcon} className="h-5 w-5" />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>{stats.totalUsuarios}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Usuarios</div>
+              </div>
+            </div>
+            <div style={statCardStyle}>
+              <div style={statIconStyle('#ec4899')}>
+                <Icon icon={tagIcon} className="h-5 w-5" />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>{stats.promocionesActivas}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Promociones Activas</div>
+              </div>
+            </div>
+            <div style={statCardStyle}>
+              <div style={statIconStyle('#14b8a6')}>
+                <Icon icon={newsIcon} className="h-5 w-5" />
+              </div>
+              <div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)' }}>{stats.noticiasPublicadas}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Noticias Publicadas</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ─── TAB: EMPRESAS ─── */}
         {tab === 'empresas' && (
           <div className="card">
+            {/* Búsqueda y filtros */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ position: 'relative', flex: '1', minWidth: '200px' }}>
+                <Icon icon={searchIcon} className="h-4 w-4" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre o usuario..."
+                  value={searchEmpresas}
+                  onChange={e => setSearchEmpresas(e.target.value)}
+                  style={{ ...inputStyle(false), paddingLeft: '32px' }}
+                />
+              </div>
+              <select value={filterEstado} onChange={e => setFilterEstado(e.target.value)} style={{ ...inputStyle(false), width: 'auto' }}>
+                <option value="todos">Todos</option>
+                <option value="activos">Activos</option>
+                <option value="bloqueados">Bloqueados</option>
+              </select>
+              <Button onClick={() => exportarCSV('empresas')} variant="secondary" size="sm" icon="mdi:download">
+                Exportar CSV
+              </Button>
+            </div>
             <div className="table-wrapper">
               <table>
                 <thead>
@@ -455,9 +713,9 @@ export function AdminPage() {
                 <tbody>
                   {loading ? (
                     <tr><td colSpan={6} className="empty-state">Cargando empresas...</td></tr>
-                  ) : empresas.length === 0 ? (
+                  ) : empresasFiltradas.length === 0 ? (
                     <tr><td colSpan={6} className="empty-state">No hay empresas registradas</td></tr>
-                  ) : empresas.map(u => {
+                  ) : empresasFiltradas.map(u => {
                     const sub = SUB_BADGE[u.subscriptionStatus] || { cls: '', label: u.subscriptionStatus };
                     return (
                       <tr key={u.id} style={{ opacity: u.activo ? 1 : 0.6 }}>
@@ -675,6 +933,21 @@ export function AdminPage() {
         {/* ─── TAB: USUARIOS ─── */}
         {tab === 'usuarios' && (
           <div className="card">
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ position: 'relative', flex: '1', minWidth: '200px' }}>
+                <Icon icon={searchIcon} className="h-4 w-4" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                <input
+                  type="text"
+                  placeholder="Buscar por nombre o usuario..."
+                  value={searchUsuarios}
+                  onChange={e => setSearchUsuarios(e.target.value)}
+                  style={{ ...inputStyle(false), paddingLeft: '32px' }}
+                />
+              </div>
+              <Button onClick={() => exportarCSV('usuarios')} variant="secondary" size="sm" icon="mdi:download">
+                Exportar CSV
+              </Button>
+            </div>
             <div style={{ marginBottom: '1rem' }}>
               <h3 style={{ margin: 0, fontSize: '1rem' }}>Reset de Contraseñas</h3>
               <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
@@ -695,9 +968,9 @@ export function AdminPage() {
                 <tbody>
                   {loading ? (
                     <tr><td colSpan={5} className="empty-state">Cargando usuarios...</td></tr>
-                  ) : usuarios.length === 0 ? (
+                  ) : usuariosFiltrados.length === 0 ? (
                     <tr><td colSpan={5} className="empty-state">No hay usuarios registrados</td></tr>
-                  ) : usuarios.map(u => (
+                  ) : usuariosFiltrados.map(u => (
                     <tr key={u.id}>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

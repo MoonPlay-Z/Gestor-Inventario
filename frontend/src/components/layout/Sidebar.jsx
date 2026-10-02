@@ -82,43 +82,51 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
       {/* ── Navigation Links ──────────────────────────────────── */}
       <nav className="flex-1 px-3 py-4 space-y-4 w-full">
 
-        <NavSection label="Principal" isCollapsed={isCollapsed}>
-          <NavItem to="/dashboard" icon={dashboardIcon} label="Dashboard"
-            roles={ROLE_GROUPS.ALL} onClick={closeMobile} isCollapsed={isCollapsed} />
-        </NavSection>
+        {/* SuperAdmin: solo ve la página de administración */}
+        {user?.rol === 'SUPER_ADMIN' ? (
+          <NavSection label="Administración" isCollapsed={isCollapsed}>
+            <NavItem to="/admin" icon={dashboardIcon} label="Panel de Administración"
+              roles={ROLE_GROUPS.SUPER_ADMIN_ONLY} onClick={closeMobile} isCollapsed={isCollapsed} />
+          </NavSection>
+        ) : (
+          <>
+            <NavSection label="Principal" isCollapsed={isCollapsed}>
+              <NavItem to="/dashboard" icon={dashboardIcon} label="Dashboard"
+                roles={ROLE_GROUPS.ALL} onClick={closeMobile} isCollapsed={isCollapsed} />
+            </NavSection>
 
-        <NavSection label="Operaciones" roles={ROLE_GROUPS.VISOR_ONLY} isCollapsed={isCollapsed}>
-          <NavItem to="/pos" icon={cartIcon} label="Nueva Factura"
-            roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
-          <NavItem to="/visor" icon={packageIcon} label="Visor de Precios"
-            roles={ROLE_GROUPS.VISOR_ONLY} onClick={closeMobile} isCollapsed={isCollapsed} />
-          <NavItem to="/cotizaciones" icon={fileDocIcon} label="Cotizaciones"
-            roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
-          <NavItem to="/ventas" icon={clipboardIcon} label="Historial Ventas"
-            roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
-          <NavItem to="/pagos" icon={cashMultipleIcon} label="Cuentas por Cobrar"
-            roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
-          <NavItem to="/caja" icon={cashRegIcon} label="Cierre de Caja"
-            roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
-          <NavItem to="/reportes" icon={chartBarIcon} label="Reportes"
-            roles={ROLE_GROUPS.REPORTES} onClick={closeMobile} isCollapsed={isCollapsed} />
-        </NavSection>
+            <NavSection label="Operaciones" roles={ROLE_GROUPS.VISOR_ONLY} isCollapsed={isCollapsed}>
+              <NavItem to="/pos" icon={cartIcon} label="Nueva Factura"
+                roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
+              <NavItem to="/visor" icon={packageIcon} label="Visor de Precios"
+                roles={ROLE_GROUPS.VISOR_ONLY} onClick={closeMobile} isCollapsed={isCollapsed} />
+              <NavItem to="/cotizaciones" icon={fileDocIcon} label="Cotizaciones"
+                roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
+              <NavItem to="/ventas" icon={clipboardIcon} label="Historial Ventas"
+                roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
+              <NavItem to="/pagos" icon={cashMultipleIcon} label="Cuentas por Cobrar"
+                roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
+              <NavItem to="/caja" icon={cashRegIcon} label="Cierre de Caja"
+                roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
+              <NavItem to="/reportes" icon={chartBarIcon} label="Reportes"
+                roles={ROLE_GROUPS.REPORTES} onClick={closeMobile} isCollapsed={isCollapsed} />
+            </NavSection>
 
-        <NavSection label="Administración" isCollapsed={isCollapsed}>
-          <NavItem to="/inventario" icon={packageIcon} label="Inventario"
-            roles={ROLE_GROUPS.INVENTARIO} onClick={closeMobile} isCollapsed={isCollapsed} />
-          <NavItem to="/clientes" icon={accountGroupIcon} label="Clientes"
-            roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
-          <NavItem to="/usuarios" icon={accountKeyIcon} label="Usuarios / Cajas"
-            roles={ROLE_GROUPS.ADMIN_ONLY} onClick={closeMobile} isCollapsed={isCollapsed} />
-          <NavItem to="/activaciones" icon={bellRingIcon} label="Historial Activaciones"
-            roles={ROLE_GROUPS.SUPER_ADMIN_ONLY} onClick={closeMobile} isCollapsed={isCollapsed} />
-        </NavSection>
+            <NavSection label="Administración" isCollapsed={isCollapsed}>
+              <NavItem to="/inventario" icon={packageIcon} label="Inventario"
+                roles={ROLE_GROUPS.INVENTARIO} onClick={closeMobile} isCollapsed={isCollapsed} />
+              <NavItem to="/clientes" icon={accountGroupIcon} label="Clientes"
+                roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={isCollapsed} />
+              <NavItem to="/usuarios" icon={accountKeyIcon} label="Usuarios / Cajas"
+                roles={ROLE_GROUPS.ADMIN_ONLY} onClick={closeMobile} isCollapsed={isCollapsed} />
+            </NavSection>
 
-        <NavSection label="Ajustes" roles={ROLE_GROUPS.ADMIN_ONLY} isCollapsed={isCollapsed}>
-          <NavItem to="/config" icon={cogIcon} label="Configuración"
-            roles={ROLE_GROUPS.ADMIN_ONLY} onClick={closeMobile} isCollapsed={isCollapsed} />
-        </NavSection>
+            <NavSection label="Ajustes" roles={ROLE_GROUPS.ADMIN_ONLY} isCollapsed={isCollapsed}>
+              <NavItem to="/config" icon={cogIcon} label="Configuración"
+                roles={ROLE_GROUPS.ADMIN_ONLY} onClick={closeMobile} isCollapsed={isCollapsed} />
+            </NavSection>
+          </>
+        )}
 
       </nav>
 
