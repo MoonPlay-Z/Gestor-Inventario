@@ -5,6 +5,7 @@ import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { useRole } from '../components/ui/RoleGuard';
+import { getErrorMessage } from '../utils/validation';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -93,25 +94,29 @@ export function ReportesPage() {
         API.getReportesVentas(params)
           .then(setVentas)
           .catch(err => {
-            setErrors(prev => ({ ...prev, ventas: err.message }));
+            const errorMessage = getErrorMessage(err, 'Error cargando ventas');
+            setErrors(prev => ({ ...prev, ventas: errorMessage }));
             setVentas(null);
           }),
         API.getReportesProductosTop(params)
           .then(setProductosTop)
           .catch(err => {
-            setErrors(prev => ({ ...prev, productosTop: err.message }));
+            const errorMessage = getErrorMessage(err, 'Error cargando productos top');
+            setErrors(prev => ({ ...prev, productosTop: errorMessage }));
             setProductosTop([]);
           }),
         API.getReportesClientesTop(params)
           .then(setClientesTop)
           .catch(err => {
-            setErrors(prev => ({ ...prev, clientesTop: err.message }));
+            const errorMessage = getErrorMessage(err, 'Error cargando clientes top');
+            setErrors(prev => ({ ...prev, clientesTop: errorMessage }));
             setClientesTop([]);
           }),
         API.getReportesCaja(params)
           .then(setCaja)
           .catch(err => {
-            setErrors(prev => ({ ...prev, caja: err.message }));
+            const errorMessage = getErrorMessage(err, 'Error cargando caja');
+            setErrors(prev => ({ ...prev, caja: errorMessage }));
             setCaja(null);
           }),
       ];
@@ -121,7 +126,8 @@ export function ReportesPage() {
           API.getReportesGanancias(params)
             .then(setGanancias)
             .catch(err => {
-              setErrors(prev => ({ ...prev, ganancias: err.message }));
+              const errorMessage = getErrorMessage(err, 'Error cargando ganancias');
+              setErrors(prev => ({ ...prev, ganancias: errorMessage }));
               setGanancias(null);
             })
         );
@@ -129,7 +135,8 @@ export function ReportesPage() {
           API.getReportesInversion()
             .then(setInversion)
             .catch(err => {
-              setErrors(prev => ({ ...prev, inversion: err.message }));
+              const errorMessage = getErrorMessage(err, 'Error cargando inversión');
+              setErrors(prev => ({ ...prev, inversion: errorMessage }));
               setInversion(null);
             })
         );
@@ -137,7 +144,8 @@ export function ReportesPage() {
           API.getReportesImpuestos(params)
             .then(setImpuestos)
             .catch(err => {
-              setErrors(prev => ({ ...prev, impuestos: err.message }));
+              const errorMessage = getErrorMessage(err, 'Error cargando impuestos');
+              setErrors(prev => ({ ...prev, impuestos: errorMessage }));
               setImpuestos(null);
             })
         );
@@ -145,7 +153,8 @@ export function ReportesPage() {
 
       await Promise.all(promises);
     } catch (err) {
-      showToast('Error cargando reportes: ' + err.message, 'error');
+      const errorMessage = getErrorMessage(err, 'Error cargando reportes');
+      showToast(errorMessage, 'error');
     } finally {
       setLoading(false);
     }

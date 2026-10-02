@@ -1,0 +1,907 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { Icon } from '@iconify/react';
+import { useOutletContext } from 'react-router-dom';
+import { Header } from '../components/layout/Header';
+import { API, Utils } from '../services/api';
+import { useToast } from '../context/ToastContext';
+import { Button, FieldError, FormError } from '../components/ui';
+import { ValidationRules, getErrorMessage } from '../utils/validation';
+
+// Iconos
+import domainIcon from '@iconify/icons-mdi/domain';
+import historyIcon from '@iconify/icons-mdi/history';
+import tagIcon from '@iconify/icons-mdi/tag-multiple';
+import newsIcon from '@iconify/icons-mdi/newspaper';
+import keyIcon from '@iconify/icons-mdi/key-variant';
+import refreshIcon from '@iconify/icons-mdi/refresh';
+import plusIcon from '@iconify/icons-mdi/plus';
+import deleteIcon from '@iconify/icons-mdi/delete';
+import editIcon from '@iconify/icons-mdi/pencil';
+import checkIcon from '@iconify/icons-mdi/check';
+import closeIcon from '@iconify/icons-mdi/close';
+import accountIcon from '@iconify/icons-mdi/account';
+import calendarIcon from '@iconify/icons-mdi/calendar-check';
+import blockIcon from '@iconify/icons-mdi/account-cancel';
+import unblockIcon from '@iconify/icons-mdi/account-check';
+import deleteForeverIcon from '@iconify/icons-mdi/delete-forever';
+
+const ESTADO_BADGE = {
+  APROBADA: 'badge-success',
+  PENDIENTE: 'badge-warning',
+  RECHAZADA: 'badge-danger',
+};
+
+const PLAN_LABEL = { monthly: 'Mensual', lifetime: 'Vitalicio' };
+
+const SUB_BADGE = {
+  trialing: { cls: 'badge-warning', label: 'Trial' },
+  active: { cls: 'badge-success', label: 'Activo' },
+  expired_trial: { cls: 'badge-danger', label: 'Trial Expirado' },
+  canceled: { cls: 'badge-danger', label: 'Cancelado' },
+  lifetime: { cls: 'badge-info', label: 'Vitalicio' },
+};
+
+const EMPTY_PROMOCION = {
+  codigo: '',
+  titulo: '',
+  descripcion: '',
+  descuentoPorc: '',
+  diasExtraTrial: 0,
+  planDestino: 'monthly',
+  usosMaximos: 100,
+  fechaFin: '',
+  activo: true,
+};
+
+const EMPTY_NOTICIA = {
+  titulo: '',
+  subtitulo: '',
+  contenido: '',
+  imagenUrl: '',
+  categoria: 'Anuncio',
+  destacado: false,
+  publicado: true,
+};
+
+export function AdminPage() {
+  const { toggleSidebar } = useOutletContext();
+  const { showToast } = useToast();
+
+  const [tab, setTab] = useState('empresas');
+  const [loading, setLoading] = useState(false);
+
+  // Datos
+  const [empresas, setEmpresas] = useState([]);
+  const [activaciones, setActivaciones] = useState([]);
+  const [promociones, setPromociones] = useState([]);
+  const [noticias, setNoticias] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
+
+  // Modales
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState('');
+  const [modalTarget, setModalTarget] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  // Formularios
+  const [activarForm, setActivarForm] = useState({ plan_type: 'monthly', meses: 1 });
+  const [promocionForm, setPromocionForm] = useState(EMPTY_PROMOCION);
+  const [noticiaForm, setNoticiaForm] = useState(EMPTY_NOTICIA);
+  const [resetForm, setResetForm] = useState({ userId: '', newPassword: '' });
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  // ─── Carga de datos ─────────────────────────────────────────────────────────
+
+  const loadEmpresas = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await API.getEmpresas();
+      setEmpresas(data);
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error cargando empresas'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  const loadActivaciones = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await API.getActivaciones();
+      setActivaciones(data);
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error cargando activaciones'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  const loadPromociones = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await API.getPromociones();
+      setPromociones(data);
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error cargando promociones'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  const loadNoticias = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await API.getNoticias();
+      setNoticias(data);
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error cargando noticias'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  const loadUsuarios = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await API.getUsuarios({ limit: 100 });
+      setUsuarios(data.data || data);
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error cargando usuarios'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    if (tab === 'empresas') loadEmpresas();
+    else if (tab === 'historial') loadActivaciones();
+    else if (tab === 'promociones') loadPromociones();
+    else if (tab === 'noticias') loadNoticias();
+    else if (tab === 'usuarios') loadUsuarios();
+  }, [tab, loadEmpresas, loadActivaciones, loadPromociones, loadNoticias, loadUsuarios]);
+
+  // ─── Acciones de Empresas ───────────────────────────────────────────────────
+
+  const openActivarModal = (u) => {
+    setModalType('activar');
+    setModalTarget(u);
+    setActivarForm({ plan_type: 'monthly', meses: 1 });
+    setShowModal(true);
+  };
+
+  const handleActivar = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const payload = { plan_type: activarForm.plan_type };
+      if (activarForm.plan_type === 'monthly') payload.meses = activarForm.meses;
+      
+      await API.activarManual(modalTarget.id, payload);
+      showToast(`${modalTarget.nombre} activado como plan ${PLAN_LABEL[activarForm.plan_type]}`, 'success');
+      setShowModal(false);
+      loadEmpresas();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al activar'), 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCambiarEstado = async (u) => {
+    const nuevoEstado = !u.activo;
+    const accion = nuevoEstado ? 'Desbloquear' : 'Bloquear/Suspender';
+    if (!window.confirm(`¿Estás seguro de ${accion} a la empresa ${u.nombre}?`)) return;
+
+    try {
+      await API.cambiarEstadoEmpresa(u.id, nuevoEstado);
+      showToast(`Empresa ${nuevoEstado ? 'desbloqueada' : 'bloqueada'} exitosamente`, 'success');
+      loadEmpresas();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al cambiar estado'), 'error');
+    }
+  };
+
+  const handleEliminarEmpresa = async (u) => {
+    const code = Math.floor(1000 + Math.random() * 9000).toString();
+    const promptAns = window.prompt(
+      `CUIDADO: Esto eliminará permanentemente la empresa ${u.nombre} y TODOS sus datos.\n\nIngresa el código ${code} para confirmar:`
+    );
+    
+    if (promptAns !== code) {
+      if (promptAns !== null) showToast('Código incorrecto. Eliminación cancelada.', 'error');
+      return;
+    }
+
+    try {
+      await API.eliminarEmpresa(u.id);
+      showToast(`Empresa ${u.nombre} eliminada por completo.`, 'success');
+      loadEmpresas();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al eliminar'), 'error');
+    }
+  };
+
+  // ─── Acciones de Promociones ────────────────────────────────────────────────
+
+  const openPromocionModal = (p = null) => {
+    setModalType('promocion');
+    setModalTarget(p);
+    setPromocionForm(p ? { ...p } : EMPTY_PROMOCION);
+    setFieldErrors({});
+    setShowModal(true);
+  };
+
+  const handleSavePromocion = async (e) => {
+    e.preventDefault();
+    
+    const errors = {};
+    const codigoError = ValidationRules.required(promocionForm.codigo, 'El código');
+    if (codigoError) errors.codigo = codigoError;
+    
+    const tituloError = ValidationRules.required(promocionForm.titulo, 'El título');
+    if (tituloError) errors.titulo = tituloError;
+    
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setSaving(true);
+    try {
+      if (modalTarget) {
+        await API.actualizarPromocion(modalTarget.id, promocionForm);
+        showToast('Promoción actualizada exitosamente', 'success');
+      } else {
+        await API.crearPromocion(promocionForm);
+        showToast('Promoción creada exitosamente', 'success');
+      }
+      setShowModal(false);
+      loadPromociones();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al guardar promoción'), 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEliminarPromocion = async (p) => {
+    if (!window.confirm(`¿Eliminar la promoción "${p.titulo}"?`)) return;
+    
+    try {
+      await API.eliminarPromocion(p.id);
+      showToast('Promoción eliminada', 'success');
+      loadPromociones();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al eliminar'), 'error');
+    }
+  };
+
+  // ─── Acciones de Noticias ───────────────────────────────────────────────────
+
+  const openNoticiaModal = (n = null) => {
+    setModalType('noticia');
+    setModalTarget(n);
+    setNoticiaForm(n ? { ...n } : EMPTY_NOTICIA);
+    setFieldErrors({});
+    setShowModal(true);
+  };
+
+  const handleSaveNoticia = async (e) => {
+    e.preventDefault();
+    
+    const errors = {};
+    const tituloError = ValidationRules.required(noticiaForm.titulo, 'El título');
+    if (tituloError) errors.titulo = tituloError;
+    
+    const contenidoError = ValidationRules.required(noticiaForm.contenido, 'El contenido');
+    if (contenidoError) errors.contenido = contenidoError;
+    
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setSaving(true);
+    try {
+      if (modalTarget) {
+        await API.actualizarNoticia(modalTarget.id, noticiaForm);
+        showToast('Noticia actualizada exitosamente', 'success');
+      } else {
+        await API.crearNoticia(noticiaForm);
+        showToast('Noticia creada exitosamente', 'success');
+      }
+      setShowModal(false);
+      loadNoticias();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al guardar noticia'), 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEliminarNoticia = async (n) => {
+    if (!window.confirm(`¿Eliminar la noticia "${n.titulo}"?`)) return;
+    
+    try {
+      await API.eliminarNoticia(n.id);
+      showToast('Noticia eliminada', 'success');
+      loadNoticias();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al eliminar'), 'error');
+    }
+  };
+
+  // ─── Reset de Contraseña ────────────────────────────────────────────────────
+
+  const openResetModal = (u) => {
+    setModalType('reset');
+    setModalTarget(u);
+    setResetForm({ userId: u.id, newPassword: '' });
+    setFieldErrors({});
+    setShowModal(true);
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    
+    const errors = {};
+    const passwordError = ValidationRules.minLength(resetForm.newPassword, 4, 'La contraseña');
+    if (passwordError) errors.newPassword = passwordError;
+    
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setSaving(true);
+    try {
+      await API.resetPassword(resetForm.userId, resetForm.newPassword);
+      showToast(`Contraseña de ${modalTarget.username} actualizada exitosamente`, 'success');
+      setShowModal(false);
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al resetear contraseña'), 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
+
+  const tabStyle = (t) => ({
+    padding: '0.5rem 1rem',
+    borderRadius: '8px',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    transition: 'all 0.15s',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: tab === t ? 'var(--primary)' : 'var(--surface3)',
+    color: tab === t ? '#fff' : 'var(--text-secondary)',
+  });
+
+  const inputStyle = (hasError) => ({
+    border: hasError ? '1px solid #ef4444' : '1px solid var(--border)',
+    borderRadius: '8px',
+    padding: '10px 12px',
+    fontSize: '0.875rem',
+    color: 'var(--text-primary)',
+    outline: 'none',
+    backgroundColor: 'var(--surface)',
+    width: '100%',
+    transition: 'border-color 0.2s',
+  });
+
+  return (
+    <>
+      <Header
+        title="Administración del Sistema"
+        subtitle="Panel exclusivo para Super Administrador"
+        toggleSidebar={toggleSidebar}
+        actions={
+          <Button
+            onClick={() => {
+              if (tab === 'empresas') loadEmpresas();
+              else if (tab === 'historial') loadActivaciones();
+              else if (tab === 'promociones') loadPromociones();
+              else if (tab === 'noticias') loadNoticias();
+              else if (tab === 'usuarios') loadUsuarios();
+            }}
+            variant="secondary"
+            size="sm"
+            icon="mdi:refresh"
+          >
+            Recargar
+          </Button>
+        }
+      />
+
+      <div className="page-body">
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <button style={tabStyle('empresas')} onClick={() => setTab('empresas')}>
+            <Icon icon={domainIcon} className="h-4 w-4" />
+            Empresas
+          </button>
+          <button style={tabStyle('historial')} onClick={() => setTab('historial')}>
+            <Icon icon={historyIcon} className="h-4 w-4" />
+            Historial
+          </button>
+          <button style={tabStyle('promociones')} onClick={() => setTab('promociones')}>
+            <Icon icon={tagIcon} className="h-4 w-4" />
+            Promociones
+          </button>
+          <button style={tabStyle('noticias')} onClick={() => setTab('noticias')}>
+            <Icon icon={newsIcon} className="h-4 w-4" />
+            Noticias
+          </button>
+          <button style={tabStyle('usuarios')} onClick={() => setTab('usuarios')}>
+            <Icon icon={keyIcon} className="h-4 w-4" />
+            Usuarios
+          </button>
+        </div>
+
+        {/* ─── TAB: EMPRESAS ─── */}
+        {tab === 'empresas' && (
+          <div className="card">
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Empresa</th>
+                    <th>Acceso</th>
+                    <th>Suscripción</th>
+                    <th>Plan</th>
+                    <th>Vence</th>
+                    <th style={{ minWidth: '200px' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={6} className="empty-state">Cargando empresas...</td></tr>
+                  ) : empresas.length === 0 ? (
+                    <tr><td colSpan={6} className="empty-state">No hay empresas registradas</td></tr>
+                  ) : empresas.map(u => {
+                    const sub = SUB_BADGE[u.subscriptionStatus] || { cls: '', label: u.subscriptionStatus };
+                    return (
+                      <tr key={u.id} style={{ opacity: u.activo ? 1 : 0.6 }}>
+                        <td>
+                          <div style={{ fontWeight: 600 }}>{u.nombre}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>@{u.username}</div>
+                        </td>
+                        <td>
+                          <span className={`badge ${u.activo ? 'badge-success' : 'badge-danger'}`}>
+                            {u.activo ? 'ACTIVO' : 'BLOQUEADO'}
+                          </span>
+                        </td>
+                        <td><span className={`badge ${sub.cls}`}>{sub.label}</span></td>
+                        <td style={{ fontSize: '0.85rem' }}>
+                          {u.planType ? PLAN_LABEL[u.planType] || u.planType : '—'}
+                        </td>
+                        <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                          {u.currentPeriodEnd ? Utils.formatDate(u.currentPeriodEnd) : '—'}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <button onClick={() => openActivarModal(u)} className="btn btn-primary btn-sm" title="Activar/Renovar">
+                              <Icon icon={calendarIcon} className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => handleCambiarEstado(u)} className="btn btn-sm" style={{ background: u.activo ? 'var(--surface3)' : 'var(--primary)', color: u.activo ? 'var(--text-secondary)' : '#fff' }} title={u.activo ? 'Bloquear' : 'Desbloquear'}>
+                              <Icon icon={u.activo ? blockIcon : unblockIcon} className="h-4 w-4" />
+                            </button>
+                            <button onClick={() => handleEliminarEmpresa(u)} className="btn btn-sm" style={{ background: '#fee2e2', color: '#dc2626' }} title="Eliminar">
+                              <Icon icon={deleteForeverIcon} className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ─── TAB: HISTORIAL ─── */}
+        {tab === 'historial' && (
+          <div className="card">
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Plan</th>
+                    <th>Método Pago</th>
+                    <th>Referencia</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={6} className="empty-state">Cargando historial...</td></tr>
+                  ) : activaciones.length === 0 ? (
+                    <tr><td colSpan={6} className="empty-state">No hay activaciones registradas</td></tr>
+                  ) : activaciones.map(a => (
+                    <tr key={a.id}>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{a.usuario?.nombre || '—'}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>@{a.usuario?.username}</div>
+                      </td>
+                      <td>
+                        <span className={`badge ${a.plan === 'lifetime' ? 'badge-info' : 'badge-warning'}`}>
+                          {PLAN_LABEL[a.plan] || a.plan}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        {a.metodoPago?.replace('_', ' ')}
+                      </td>
+                      <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {a.referencia || '—'}
+                      </td>
+                      <td>
+                        <span className={`badge ${ESTADO_BADGE[a.estado] || ''}`}>{a.estado}</span>
+                      </td>
+                      <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        {Utils.formatDate(a.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ─── TAB: PROMOCIONES ─── */}
+        {tab === 'promociones' && (
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>Gestión de Promociones</h3>
+              <Button onClick={() => openPromocionModal()} variant="primary" size="sm" icon="mdi:plus">
+                Nueva Promoción
+              </Button>
+            </div>
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Título</th>
+                    <th>Descuento</th>
+                    <th>Días Extra</th>
+                    <th>Usos</th>
+                    <th>Estado</th>
+                    <th style={{ minWidth: '120px' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={7} className="empty-state">Cargando promociones...</td></tr>
+                  ) : promociones.length === 0 ? (
+                    <tr><td colSpan={7} className="empty-state">No hay promociones creadas</td></tr>
+                  ) : promociones.map(p => (
+                    <tr key={p.id} style={{ opacity: p.activo ? 1 : 0.6 }}>
+                      <td>
+                        <code style={{ background: 'var(--surface3)', padding: '2px 6px', borderRadius: '4px', fontSize: '0.8rem' }}>
+                          {p.codigo}
+                        </code>
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{p.titulo}</td>
+                      <td>{p.descuentoPorc ? `${p.descuentoPorc}%` : '—'}</td>
+                      <td>{p.diasExtraTrial || 0}</td>
+                      <td>{p.usosMaximos || '∞'}</td>
+                      <td>
+                        <span className={`badge ${p.activo ? 'badge-success' : 'badge-danger'}`}>
+                          {p.activo ? 'ACTIVA' : 'INACTIVA'}
+                        </span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button onClick={() => openPromocionModal(p)} className="btn btn-sm" style={{ background: 'var(--surface3)' }} title="Editar">
+                            <Icon icon={editIcon} className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => handleEliminarPromocion(p)} className="btn btn-sm" style={{ background: '#fee2e2', color: '#dc2626' }} title="Eliminar">
+                            <Icon icon={deleteIcon} className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ─── TAB: NOTICIAS ─── */}
+        {tab === 'noticias' && (
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>Gestión de Noticias</h3>
+              <Button onClick={() => openNoticiaModal()} variant="primary" size="sm" icon="mdi:plus">
+                Nueva Noticia
+              </Button>
+            </div>
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Título</th>
+                    <th>Categoría</th>
+                    <th>Destacado</th>
+                    <th>Publicado</th>
+                    <th>Fecha</th>
+                    <th style={{ minWidth: '120px' }}>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={6} className="empty-state">Cargando noticias...</td></tr>
+                  ) : noticias.length === 0 ? (
+                    <tr><td colSpan={6} className="empty-state">No hay noticias creadas</td></tr>
+                  ) : noticias.map(n => (
+                    <tr key={n.id} style={{ opacity: n.publicado ? 1 : 0.6 }}>
+                      <td style={{ fontWeight: 600 }}>{n.titulo}</td>
+                      <td>
+                        <span className="badge badge-info">{n.categoria}</span>
+                      </td>
+                      <td>
+                        {n.destacado && <Icon icon={checkIcon} className="h-4 w-4" style={{ color: 'var(--success)' }} />}
+                      </td>
+                      <td>
+                        <span className={`badge ${n.publicado ? 'badge-success' : 'badge-warning'}`}>
+                          {n.publicado ? 'SÍ' : 'NO'}
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        {Utils.formatDate(n.createdAt)}
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button onClick={() => openNoticiaModal(n)} className="btn btn-sm" style={{ background: 'var(--surface3)' }} title="Editar">
+                            <Icon icon={editIcon} className="h-4 w-4" />
+                          </button>
+                          <button onClick={() => handleEliminarNoticia(n)} className="btn btn-sm" style={{ background: '#fee2e2', color: '#dc2626' }} title="Eliminar">
+                            <Icon icon={deleteIcon} className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* ─── TAB: USUARIOS ─── */}
+        {tab === 'usuarios' && (
+          <div className="card">
+            <div style={{ marginBottom: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1rem' }}>Reset de Contraseñas</h3>
+              <p style={{ margin: '0.25rem 0 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                Selecciona un usuario para resetear su contraseña. Esto invalidará todas sus sesiones activas.
+              </p>
+            </div>
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Usuario</th>
+                    <th>Nombre</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th style={{ minWidth: '100px' }}>Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <tr><td colSpan={5} className="empty-state">Cargando usuarios...</td></tr>
+                  ) : usuarios.length === 0 ? (
+                    <tr><td colSpan={5} className="empty-state">No hay usuarios registrados</td></tr>
+                  ) : usuarios.map(u => (
+                    <tr key={u.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Icon icon={accountIcon} className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
+                          <span style={{ fontWeight: 600 }}>@{u.username}</span>
+                        </div>
+                      </td>
+                      <td>{u.nombre || '—'}</td>
+                      <td>
+                        <span className="badge badge-info">{u.rol}</span>
+                      </td>
+                      <td>
+                        <span className={`badge ${u.activo ? 'badge-success' : 'badge-danger'}`}>
+                          {u.activo ? 'ACTIVO' : 'INACTIVO'}
+                        </span>
+                      </td>
+                      <td>
+                        <button onClick={() => openResetModal(u)} className="btn btn-sm" style={{ background: 'var(--surface3)' }} title="Resetear contraseña">
+                          <Icon icon={keyIcon} className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ─── MODALES ─── */}
+      {showModal && (
+        <div className="modal-overlay open" onClick={() => setShowModal(false)}>
+          <div className="modal" style={{ maxWidth: '500px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                {modalType === 'activar' && 'Activar / Renovar Plan'}
+                {modalType === 'promocion' && (modalTarget ? 'Editar Promoción' : 'Nueva Promoción')}
+                {modalType === 'noticia' && (modalTarget ? 'Editar Noticia' : 'Nueva Noticia')}
+                {modalType === 'reset' && 'Resetear Contraseña'}
+              </h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setShowModal(false)}>
+                <Icon icon={closeIcon} className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Activar */}
+            {modalType === 'activar' && modalTarget && (
+              <form onSubmit={handleActivar}>
+                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ padding: '0.75rem', background: 'var(--surface3)', borderRadius: '8px' }}>
+                    <div style={{ fontWeight: 700 }}>{modalTarget.nombre}</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>@{modalTarget.username}</div>
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Tipo de Plan</label>
+                    <select className="form-control" value={activarForm.plan_type} onChange={e => setActivarForm(f => ({ ...f, plan_type: e.target.value }))}>
+                      <option value="monthly">Mensual</option>
+                      <option value="lifetime">Vitalicio</option>
+                    </select>
+                  </div>
+
+                  {activarForm.plan_type === 'monthly' && (
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Meses</label>
+                      <input type="number" className="form-control" value={activarForm.meses} onChange={e => setActivarForm(f => ({ ...f, meses: parseInt(e.target.value) || 1 }))} min="1" max="12" />
+                    </div>
+                  )}
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                    {saving ? 'Activando...' : 'Confirmar'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Modal Promoción */}
+            {modalType === 'promocion' && (
+              <form onSubmit={handleSavePromocion}>
+                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Código *</label>
+                    <input style={inputStyle(fieldErrors.codigo)} value={promocionForm.codigo} onChange={e => setPromocionForm(f => ({ ...f, codigo: e.target.value }))} placeholder="Ej: VERANO2026" />
+                    <FieldError message={fieldErrors.codigo} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Título *</label>
+                    <input style={inputStyle(fieldErrors.titulo)} value={promocionForm.titulo} onChange={e => setPromocionForm(f => ({ ...f, titulo: e.target.value }))} placeholder="Ej: Promoción de Verano" />
+                    <FieldError message={fieldErrors.titulo} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Descripción</label>
+                    <textarea style={inputStyle(false)} rows={2} value={promocionForm.descripcion} onChange={e => setPromocionForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Descripción de la promoción..." />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Descuento (%)</label>
+                      <input type="number" style={inputStyle(false)} value={promocionForm.descuentoPorc} onChange={e => setPromocionForm(f => ({ ...f, descuentoPorc: e.target.value }))} placeholder="Ej: 10" />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Días Extra Trial</label>
+                      <input type="number" style={inputStyle(false)} value={promocionForm.diasExtraTrial} onChange={e => setPromocionForm(f => ({ ...f, diasExtraTrial: parseInt(e.target.value) || 0 }))} />
+                    </div>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Usos Máximos</label>
+                      <input type="number" style={inputStyle(false)} value={promocionForm.usosMaximos} onChange={e => setPromocionForm(f => ({ ...f, usosMaximos: parseInt(e.target.value) || 100 }))} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Fecha Fin</label>
+                      <input type="date" style={inputStyle(false)} value={promocionForm.fechaFin} onChange={e => setPromocionForm(f => ({ ...f, fechaFin: e.target.value }))} />
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                    {saving ? 'Guardando...' : modalTarget ? 'Actualizar' : 'Crear'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Modal Noticia */}
+            {modalType === 'noticia' && (
+              <form onSubmit={handleSaveNoticia}>
+                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Título *</label>
+                    <input style={inputStyle(fieldErrors.titulo)} value={noticiaForm.titulo} onChange={e => setNoticiaForm(f => ({ ...f, titulo: e.target.value }))} placeholder="Título de la noticia" />
+                    <FieldError message={fieldErrors.titulo} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Subtítulo</label>
+                    <input style={inputStyle(false)} value={noticiaForm.subtitulo} onChange={e => setNoticiaForm(f => ({ ...f, subtitulo: e.target.value }))} placeholder="Subtítulo (opcional)" />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Contenido *</label>
+                    <textarea style={inputStyle(fieldErrors.contenido)} rows={4} value={noticiaForm.contenido} onChange={e => setNoticiaForm(f => ({ ...f, contenido: e.target.value }))} placeholder="Contenido de la noticia..." />
+                    <FieldError message={fieldErrors.contenido} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>URL de Imagen</label>
+                    <input style={inputStyle(false)} value={noticiaForm.imagenUrl} onChange={e => setNoticiaForm(f => ({ ...f, imagenUrl: e.target.value }))} placeholder="https://ejemplo.com/imagen.jpg" />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Categoría</label>
+                      <input style={inputStyle(false)} value={noticiaForm.categoria} onChange={e => setNoticiaForm(f => ({ ...f, categoria: e.target.value }))} placeholder="Ej: Anuncio" />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '1rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        <input type="checkbox" checked={noticiaForm.destacado} onChange={e => setNoticiaForm(f => ({ ...f, destacado: e.target.checked }))} />
+                        Destacado
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                        <input type="checkbox" checked={noticiaForm.publicado} onChange={e => setNoticiaForm(f => ({ ...f, publicado: e.target.checked }))} />
+                        Publicado
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                    {saving ? 'Guardando...' : modalTarget ? 'Actualizar' : 'Crear'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {/* Modal Reset Password */}
+            {modalType === 'reset' && modalTarget && (
+              <form onSubmit={handleResetPassword}>
+                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ padding: '0.75rem', background: 'var(--surface3)', borderRadius: '8px' }}>
+                    <div style={{ fontWeight: 700 }}>@{modalTarget.username}</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{modalTarget.nombre}</div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Nueva Contraseña *</label>
+                    <input type="password" style={inputStyle(fieldErrors.newPassword)} value={resetForm.newPassword} onChange={e => setResetForm(f => ({ ...f, newPassword: e.target.value }))} placeholder="Mínimo 4 caracteres" />
+                    <FieldError message={fieldErrors.newPassword} />
+                  </div>
+                  <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', fontSize: '0.8rem', color: '#ef4444' }}>
+                    <Icon icon={alertCircleIcon} className="h-4 w-4" style={{ display: 'inline', marginRight: '4px' }} />
+                    Esto invalidará todas las sesiones activas del usuario.
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                  <button type="submit" className="btn btn-primary" disabled={saving}>
+                    {saving ? 'Reseteando...' : 'Resetear'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
