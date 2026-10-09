@@ -3,10 +3,12 @@ const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
 const prisma  = require('./db/prisma');
+const { tsFrag, monthTrunc } = require('./utils/sql');
 
 const clientesRouter   = require('./routes/clientes');
 const productosRouter  = require('./routes/productos');
 const facturasRouter   = require('./routes/facturas');
+const facturasPruebasRouter = require('./routes/facturasPruebas');
 const pagosRouter      = require('./routes/pagos');
 const configRouter     = require('./routes/config');
 const backupRouter     = require('./routes/backup');
@@ -156,6 +158,7 @@ app.use('/api', subscriptionGuard);  // Verifica suscripción activa/trial
 app.use('/api/clientes',     clientesRouter);
 app.use('/api/productos',    productosRouter);
 app.use('/api/facturas',     facturasRouter);
+app.use('/api/facturas-pruebas', facturasPruebasRouter);
 app.use('/api/pagos',        pagosRouter);
 app.use('/api/config',       configRouter);
 app.use('/api/backup',       backupRouter);
@@ -193,7 +196,7 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
       prisma.$queryRaw`
         SELECT
           SUM(CASE
-            WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+            WHEN p."monedaPago" = 'VES' AND f."tasaCambio" > 0
             THEN p."monto" / f."tasaCambio"
             ELSE p."monto"
           END) AS total_usd
@@ -251,19 +254,19 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
       // 6. Ingresos últimos 6 meses - agregación en BD
       prisma.$queryRaw`
         SELECT
-          DATE_TRUNC('month', p."fechaPago") AS mes,
+          ${monthTrunc('p."fechaPago"')} AS mes,
           SUM(CASE
-            WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+            WHEN p."monedaPago" = 'VES' AND f."tasaCambio" > 0
             THEN p."monto" / f."tasaCambio"
             ELSE p."monto"
           END) AS total_usd
         FROM pagos p
         INNER JOIN facturas f ON f."id" = p."facturaId"
-        WHERE p."fechaPago" >= ${new Date(hoy.getFullYear(), hoy.getMonth() - 5, 1).toISOString()}::timestamp
+        WHERE p."fechaPago" >= ${tsFrag(new Date(hoy.getFullYear(), hoy.getMonth() - 5, 1))}
           AND (f."usuarioId" = ${empresaId} OR f."usuarioId" IN (
             SELECT id FROM usuarios WHERE "empresaId" = ${empresaId}
           ))
-        GROUP BY DATE_TRUNC('month', p."fechaPago")
+        GROUP BY ${monthTrunc('p."fechaPago"')}
         ORDER BY mes ASC
       `,
     ]);
@@ -319,4 +322,3 @@ app.listen(PORT, () => {
 });
 
 module.exports = { app, prisma };
-

@@ -32,4 +32,9 @@ if (process.env.NODE_ENV !== 'production') {
   global.__prisma = prisma;
 }
 
+// Namespace Prisma coherente con el cliente activo (sqlite o postgres)
 module.exports = prisma;
+module.exports.Prisma = isSqlite
+  ? require('../../src/generated/prisma-sqlite').Prisma
+  : require('@prisma/client').Prisma;
+module.exports.IS_SQLITE = isSqlite;

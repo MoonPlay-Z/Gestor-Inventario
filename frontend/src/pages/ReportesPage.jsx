@@ -235,7 +235,7 @@ export function ReportesPage() {
   const cajaChartData = caja?.desglose ? {
     labels: caja.desglose.map(d => d.metodoLabel),
     datasets: [{
-      data: caja.desglose.map(d => parseFloat(d.total)),
+      data: caja.desglose.map(d => parseFloat(d.totalUSD)),
       backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'],
       borderWidth: 0,
     }],
@@ -495,8 +495,8 @@ export function ReportesPage() {
       <div className="page-body">
         {/* Filtros */}
         <div className="card" style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end' }}>
-            <div>
+          <div className="report-filters">
+            <div className="form-group report-filter-field">
               <label className="form-label">Periodicidad</label>
               <select
                 className="form-select"
@@ -510,7 +510,7 @@ export function ReportesPage() {
               </select>
             </div>
 
-            <div>
+            <div className="form-group report-filter-field">
               <label className="form-label">Fecha</label>
               <input
                 type={periodo === 'anual' ? 'number' : periodo === 'mensual' ? 'month' : 'date'}
@@ -520,7 +520,7 @@ export function ReportesPage() {
               />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '8px' }}>
+            <div className="report-filter-compare">
               <input
                 type="checkbox"
                 id="comparar"
@@ -699,7 +699,12 @@ export function ReportesPage() {
                               titleColor: isDark ? '#e8eaf6' : '#1a1d2e',
                               bodyColor: isDark ? '#9099c4' : '#4b5280',
                               callbacks: {
-                                label: (context) => `${context.label}: ${Utils.formatMoney(context.parsed, currencySymbol)}`
+                                label: (context) => {
+                                  const pago = caja?.desglose?.[context.dataIndex];
+                                  if (!pago) return `${context.label}: ${Utils.formatMoney(context.parsed, currencySymbol)}`;
+                                  const simbolo = pago.moneda === 'VES' ? 'Bs.' : '$';
+                                  return `${context.label}: ${Utils.formatMoney(pago.total, simbolo)} (equiv. ${Utils.formatMoney(pago.totalUSD, '$')})`;
+                                }
                               }
                             }
                           }

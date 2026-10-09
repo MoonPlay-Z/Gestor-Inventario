@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import { Button } from './Button';
 import { Utils } from '../../services/api';
@@ -8,8 +8,11 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
   
   if (!factura) return null;
   const isCotizacion = type === 'cotizacion';
+  const isNotaEntrega = type === 'nota-entrega';
   const numero = isCotizacion ? factura.numero : factura.numeroFactura;
-  const tasaBcv = Number(config?.moneda?.tasaDolar || 1);
+  const tasaBcv = Number(factura?.tasaCambio) > 1
+    ? Number(factura.tasaCambio)
+    : Number(config?.moneda?.tasaDolar || 1);
 
   const sanitizeFilenamePart = (value) => {
     return String(value || '')
@@ -31,7 +34,8 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
       factura.referenciaTransaccion ||
       'sin-referencia'
     );
-    return `Factura_${cliente}_${fecha}_${referencia}`;
+    const tipo = isNotaEntrega ? 'Nota_de_entrega' : isCotizacion ? 'Cotizacion' : 'Factura';
+    return `${tipo}_${cliente}_${fecha}_${referencia}`;
   };
 
   const handlePrint = () => {
@@ -67,14 +71,17 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
     return totales;
   };
 
-  const totalesIVA = calcularTotalesPorAliquota();
-  const subtotalUSD = Number(factura.subtotal || 0);
-  const impuestoTotalUSD = Number(factura.impuestoTotal || 0);
-  const totalUSD = Number(factura.total || 0);
+  const totalesIVA = useMemo(calcularTotalesPorAliquota, [factura]);
+  // factura.total viene en la moneda de la factura; normalizar a USD antes de convertir
+  const esVES = factura?.moneda === 'VES';
+  const subtotalUSD = esVES && tasaBcv > 0 ? Number(factura.subtotal || 0) / tasaBcv : Number(factura.subtotal || 0);
+  const impuestoTotalUSD = esVES && tasaBcv > 0 ? Number(factura.impuestoTotal || 0) / tasaBcv : Number(factura.impuestoTotal || 0);
+  const totalUSD = esVES && tasaBcv > 0 ? Number(factura.total || 0) / tasaBcv : Number(factura.total || 0);
 
-  // Convertir valores según la moneda seleccionada
+  // Convertir valores según la moneda seleccionada (convertir espera USD)
+  const normalizarUSD = (v) => esVES && tasaBcv > 0 ? Number(v || 0) / tasaBcv : Number(v || 0);
   const convertir = (valorUSD) => {
-    return monedaImpresion === 'VES' ? valorUSD * tasaBcv : valorUSD;
+    return monedaImpresion === 'VES' ? Number(valorUSD || 0) * tasaBcv : Number(valorUSD || 0);
   };
 
   const subtotal = convertir(subtotalUSD);
@@ -112,7 +119,7 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
       <div className="modal receipt-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px', width: '100%' }}>
         <div className="modal-header no-print">
           <h3 className="modal-title">
-            {isCotizacion ? 'Cotización' : 'Factura'} #{numero?.toString().padStart(5, '0')}
+            {isCotizacion ? 'Cotización' : isNotaEntrega ? 'Nota de entrega' : 'Factura'} #{numero?.toString().padStart(5, '0')}
           </h3>
           <Button variant="ghost" size="icon" onClick={onClose} icon="mdi:close" />
         </div>
@@ -131,10 +138,15 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
           {/* ── IDENTIFICACIÓN DEL DOCUMENTO ── */}
           <div style={{ textAlign: 'center', marginBottom: '10px', fontSize: '11px' }}>
             <div style={{ fontSize: '14px', fontWeight: 'bold', letterSpacing: '1px' }}>
-              {isCotizacion ? 'PRESUPUESTO' : 'FACTURA'}
+              {isCotizacion ? 'PRESUPUESTO' : isNotaEntrega ? 'NOTA DE ENTREGA' : 'FACTURA'}
             </div>
             <div>NRO: {numero?.toString().padStart(8, '0')}</div>
-            {!isCotizacion && <div>NRO CONTROL: 00-{numero?.toString().padStart(8, '0')}</div>}
+            {!isCotizacion && !isNotaEntrega && <div>NRO CONTROL: 00-{numero?.toString().padStart(8, '0')}</div>}
+            {isNotaEntrega && (
+              <div style={{ marginTop: '4px', fontWeight: 'bold' }}>
+                DOCUMENTO NO VÁLIDO COMO FACTURA FISCAL
+              </div>
+            )}
             <div>
               FECHA: {new Date(factura.fechaEmision || new Date()).toLocaleDateString('es-VE')} 
               HORA: {new Date(factura.fechaEmision || new Date()).toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' })}
@@ -187,10 +199,10 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
                       </span>
                     </td>
                     <td style={{ padding: '4px 2px', textAlign: 'right', verticalAlign: 'top' }}>
-                      {formatValue(Number(item.precioUnitarioHistorico || 0))}
+                      {formatValue(convertir(normalizarUSD(Number(item.precioUnitarioHistorico || 0))))}
                     </td>
                     <td style={{ padding: '4px 2px', textAlign: 'right', verticalAlign: 'top' }}>
-                      {formatValue(Number(item.totalLinea || 0))}
+                      {formatValue(convertir(normalizarUSD(Number(item.totalLinea || 0))))}
                     </td>
                   </tr>
                 );
@@ -211,7 +223,7 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
             {totalesIVA.E.base > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>BASE EXENTA (E):</span>
-                <span>{simboloMoneda} {formatValue(totalesIVA.E.base)}</span>
+                <span>{simboloMoneda} {formatValue(convertir(normalizarUSD(totalesIVA.E.base)))}</span>
               </div>
             )}
             
@@ -220,11 +232,11 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>BASE IMPONIBLE (G) 16%:</span>
-                  <span>{simboloMoneda} {formatValue(totalesIVA.G.base)}</span>
+                  <span>{simboloMoneda} {formatValue(convertir(normalizarUSD(totalesIVA.G.base)))}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>IVA 16%:</span>
-                  <span>{simboloMoneda} {formatValue(totalesIVA.G.iva)}</span>
+                  <span>{simboloMoneda} {formatValue(convertir(normalizarUSD(totalesIVA.G.iva)))}</span>
                 </div>
               </>
             )}
@@ -234,11 +246,11 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
               <>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>BASE IMPONIBLE (R) 8%:</span>
-                  <span>{simboloMoneda} {formatValue(totalesIVA.R.base)}</span>
+                  <span>{simboloMoneda} {formatValue(convertir(normalizarUSD(totalesIVA.R.base)))}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>IVA 8%:</span>
-                  <span>{simboloMoneda} {formatValue(totalesIVA.R.iva)}</span>
+                  <span>{simboloMoneda} {formatValue(convertir(normalizarUSD(totalesIVA.R.iva)))}</span>
                 </div>
               </>
             )}
@@ -270,6 +282,8 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
                      pago.metodoPago === 'MOBILE_PAYMENT' ? 'PAGO MOVIL' :
                      pago.metodoPago === 'CREDIT_CARD' ? 'PUNTO DE VENTA' :
                      pago.metodoPago === 'BANK_TRANSFER' ? 'TRANSFERENCIA' : pago.metodoPago}
+                    {pago.monedaPago && ` (${pago.monedaPago === 'VES' ? 'Bs.' : 'USD'})`}
+                    {pago.monto !== undefined && ` - ${pago.monedaPago === 'VES' ? 'Bs.' : '$'} ${formatValue(Number(pago.monto))}`}
                     {pago.referenciaTransaccion && ` - Ref: ${pago.referenciaTransaccion}`}
                   </div>
                 ))}
@@ -286,7 +300,7 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
 
           {/* ── PIE DE PÁGINA ── */}
           <div style={{ marginTop: '20px', textAlign: 'center', fontSize: '9px', color: '#333', borderTop: '1px solid #000', paddingTop: '10px' }}>
-            <div>Requisitos Estructurales (SENIAT)</div>
+            {!isNotaEntrega && <div>Requisitos Estructurales (SENIAT)</div>}
             <div style={{ marginTop: '5px', fontWeight: 'bold' }}>
               {isCotizacion ? 'Precios sujetos a cambio sin previo aviso.' : 'GRACIAS POR SU COMPRA'}
             </div>
@@ -312,7 +326,7 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <Button variant="ghost" onClick={onClose}>Cerrar</Button>
-            {!isCotizacion && (
+            {!isCotizacion && !isNotaEntrega && (
               <Button
                 variant="secondary"
                 icon="mdi:receipt"

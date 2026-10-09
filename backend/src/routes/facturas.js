@@ -3,7 +3,10 @@ const router  = express.Router();
 const prisma = require('../db/prisma');
 const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
+const { invalidarCacheVentas } = require('../services/reportesService');
 const { requireRole } = require('../middleware/auth');
+const { obtenerSiguienteNumeroFactura } = require('../utils/numeracionFacturas');
+const { MONEDAS_PAGO, convertirMontoMoneda, normalizarPagoAFactura } = require('../utils/paymentCurrency');
 
 // SUPER_ADMIN no genera facturas
 router.use(requireRole('EMPRESA', 'CAJA'));
@@ -21,7 +24,7 @@ const facturaTenantFilter = (empresaId) => ({
 // GET /api/facturas
 router.get('/', async (req, res, next) => {
   try {
-    const { estado, estados, clienteId, usuarioId, q, page = 1, limit = 25, vencidas } = req.query;
+    const { estado, estados, clienteId, usuarioId, q, page = 1, limit = 25, vencidas, desde, hasta } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const hoy  = new Date();
 
@@ -45,6 +48,16 @@ router.get('/', async (req, res, next) => {
     if (vencidas === 'true') {
       where.estado            = { in: ['PENDING', 'PARTIALLY_PAID'] };
       where.fechaVencimiento  = { lt: hoy.toISOString() };
+    }
+    if (desde || hasta) {
+      const d = desde ? new Date(desde) : null;
+      const h = hasta ? new Date(hasta) : null;
+      if ((desde && isNaN(d)) || (hasta && isNaN(h))) {
+        return res.status(400).json({ error: 'Parámetros de fecha inválidos', message: 'desde/hasta deben ser fechas ISO válidas' });
+      }
+      where.fechaEmision = {};
+      if (d) where.fechaEmision.gte = d;
+      if (h) where.fechaEmision.lte = h;
     }
     if (q) {
       where.AND = [
@@ -75,20 +88,16 @@ router.get('/', async (req, res, next) => {
     ]);
 
     const facturaIds = facturas.map(f => f.id);
-    const pagosAgregados = facturaIds.length > 0
-      ? await prisma.pago.groupBy({
-          by: ['facturaId'],
+    const pagos = facturaIds.length > 0
+      ? await prisma.pago.findMany({
           where: { facturaId: { in: facturaIds } },
-          _sum: { monto: true },
-        }).catch(() => [])
+          select: { facturaId: true, monto: true, monedaPago: true, factura: { select: { moneda: true, tasaCambio: true } } },
+        })
       : [];
-
-    // Crear mapa de totales pagados por factura
     const pagosMap = new Map();
-    if (Array.isArray(pagosAgregados)) {
-      for (const row of pagosAgregados) {
-        pagosMap.set(row.facturaId, new Decimal(row.total_pagado || 0));
-      }
+    for (const pago of pagos) {
+      const pagado = pagosMap.get(pago.facturaId) || new Decimal(0);
+      pagosMap.set(pago.facturaId, pagado.add(normalizarPagoAFactura(pago, pago.factura)));
     }
 
     // Agregar campos derivados (estaVencida y saldoPendiente)
@@ -145,6 +154,7 @@ router.get('/:id', async (req, res, next) => {
             id: true,
             productoId: true,
             descripcionHistorica: true,
+            unidadMedida: true,
             cantidad: true,
             precioUnitarioHistorico: true,
             tasaImpuestoAplicada: true,
@@ -158,6 +168,7 @@ router.get('/:id', async (req, res, next) => {
           select: {
             id: true,
             monto: true,
+            monedaPago: true,
             metodoPago: true,
             referenciaTransaccion: true,
             fechaPago: true,
@@ -170,7 +181,7 @@ router.get('/:id', async (req, res, next) => {
 
     // Calcular balance pendiente
     const totalPagado = factura.pagos.reduce(
-      (acc, p) => acc.add(new Decimal(p.monto.toString())),
+      (acc, p) => acc.add(normalizarPagoAFactura(p, factura)),
       new Decimal(0)
     );
     const balancePendiente = new Decimal(factura.total.toString()).sub(totalPagado);
@@ -188,11 +199,28 @@ router.get('/:id', async (req, res, next) => {
 // POST /api/facturas — Emisión de factura (transacción atómica)
 router.post('/', async (req, res, next) => {
   try {
-    const { clienteId, items, fechaVencimiento, observaciones, metodoPago, referenciaTransaccion, cuotas, moneda = 'USD', tasaCambio = 1 } = req.body;
+    const {
+      clienteId, items, fechaVencimiento, observaciones, metodoPago,
+      referenciaTransaccion, cuotas, moneda = 'USD', tasaCambio,
+      monedaPago = 'USD',
+    } = req.body;
     const empresaId = req.user?.empresaId || req.user?.id;
     const empresaRefId = getEmpresaRefId(req);
 
-    const tasaFacturacion = new Decimal(tasaCambio);
+    // Una factura en VES sin tasa de cambio explícita quedaría normalizada incorrectamente a USD
+    if (moneda === 'VES' && (tasaCambio === undefined || tasaCambio === null || tasaCambio === '')) {
+      throw createValidationError('La tasa de cambio es obligatoria para facturas en VES', { tasaCambio: 'Ingrese la tasa' });
+    }
+    const tasaFacturacion = new Decimal(tasaCambio ?? 1);
+    if (!tasaFacturacion.isFinite() || tasaFacturacion.lte(0)) {
+      throw createValidationError('La tasa de cambio debe ser mayor a cero');
+    }
+    if (!['USD', 'VES'].includes(moneda)) {
+      throw createValidationError('La moneda de la factura debe ser USD o VES');
+    }
+    if (metodoPago === 'CASH' && !MONEDAS_PAGO.includes(monedaPago)) {
+      throw createValidationError('La moneda del efectivo debe ser USD o VES');
+    }
 
     // ── Validaciones básicas ──────────────────────────────────────────────────
     if (!clienteId) throw createValidationError('El cliente es obligatorio', { clienteId: 'Seleccione un cliente' });
@@ -229,7 +257,13 @@ router.post('/', async (req, res, next) => {
     // Validar existencia y stock
     for (const item of items) {
       if (!item.productoId) throw createValidationError('Todos los ítems deben tener un producto');
-      if (!item.cantidad || parseInt(item.cantidad) <= 0) {
+      const cantidadNumerica = Number(item.cantidad);
+      if (
+        (typeof item.cantidad !== 'number' && typeof item.cantidad !== 'string') ||
+        (typeof item.cantidad === 'string' && !item.cantidad.trim()) ||
+        !Number.isFinite(cantidadNumerica) ||
+        cantidadNumerica <= 0
+      ) {
         throw createValidationError(`La cantidad debe ser mayor a 0 para todos los ítems`);
       }
 
@@ -277,7 +311,7 @@ router.post('/', async (req, res, next) => {
         cantidadParaCalculo = new Decimal(item.cantidad);
       }
       
-      const precio = precioBase.mul(tasaFacturacion);
+      const precio = moneda === 'VES' ? precioBase.mul(tasaFacturacion) : precioBase;
       const tasa = new Decimal(producto.tasaImpuesto.toString()).div(100);
 
       const subtotalLinea = precio.mul(cantidadParaCalculo);
@@ -287,15 +321,18 @@ router.post('/', async (req, res, next) => {
       return {
         productoId:              producto.id,
         descripcionHistorica:    producto.nombre,
-        cantidad:                parseFloat(item.cantidad),
-        unidadMedida:            producto.esVentaPorPeso ? (unidadPeso === 'g' ? 'GRAMO' : 'KILOGRAMO') : producto.unidadMedida,
+        // Siempre se registra en la unidad base: kg para venta por peso
+        cantidad:                producto.esVentaPorPeso
+          ? (unidadPeso === 'g' ? new Decimal(item.cantidad).div(1000).toNumber() : new Decimal(item.cantidad).toNumber())
+          : parseFloat(item.cantidad),
+        unidadMedida:            producto.esVentaPorPeso ? 'KILOGRAMO' : producto.unidadMedida,
         precioUnitarioHistorico: precio.toFixed(2),
         tasaImpuestoAplicada:    producto.tasaImpuesto.toString(),
         subtotalLinea:           subtotalLinea.toFixed(2),
         impuestoLinea:           impuestoLinea.toFixed(2),
         totalLinea:              totalLinea.toFixed(2),
         _productoId:             producto.id,
-        _cantidad:               producto.esVentaPorPeso 
+        _cantidad:               producto.esVentaPorPeso
           ? (unidadPeso === 'g' ? parseFloat(item.cantidad) / 1000 : parseFloat(item.cantidad))
           : parseFloat(item.cantidad),
       };
@@ -307,11 +344,7 @@ router.post('/', async (req, res, next) => {
 
     // ── Transacción atómica ───────────────────────────────────────────────────
     const factura = await prisma.$transaction(async (tx) => {
-      const ultimaFactura = await tx.factura.findFirst({
-        orderBy: { numeroFactura: 'desc' },
-        select: { numeroFactura: true },
-      });
-      const numeroFactura = (ultimaFactura?.numeroFactura || 0) + 1;
+      const numeroFactura = await obtenerSiguienteNumeroFactura(tx);
 
       // 1. Crear factura con ítems
       let estadoInicial = 'PENDING';
@@ -360,6 +393,7 @@ router.post('/', async (req, res, next) => {
               id: true,
               productoId: true,
               descripcionHistorica: true,
+              unidadMedida: true,
               cantidad: true,
               precioUnitarioHistorico: true,
               tasaImpuestoAplicada: true,
@@ -372,6 +406,7 @@ router.post('/', async (req, res, next) => {
             select: {
               id: true,
               monto: true,
+              monedaPago: true,
               metodoPago: true,
               fechaPago: true,
             },
@@ -381,15 +416,32 @@ router.post('/', async (req, res, next) => {
 
       // 2. Crear el registro de pago inmediato si aplica (CONTADO)
       if (metodoPago) {
-        await tx.pago.create({
+        const monedaRecibida = metodoPago === 'CASH' ? monedaPago : moneda;
+        const montoRecibido = convertirMontoMoneda(
+          totalFactura,
+          moneda,
+          monedaRecibida,
+          tasaFacturacion
+        );
+        const pagoCreado = await tx.pago.create({
           data: {
             facturaId: nuevaFactura.id,
-            monto: totalFactura.toFixed(2),
+            monto: montoRecibido.toDecimalPlaces(2).toFixed(2),
+            monedaPago: monedaRecibida,
             metodoPago,
             referenciaTransaccion: metodoPago === 'CASH' ? null : referenciaTransaccion,
             notas: 'Pago de contado al momento de emisión',
-          }
+          },
+          select: {
+            id: true,
+            monto: true,
+            monedaPago: true,
+            metodoPago: true,
+            referenciaTransaccion: true,
+            fechaPago: true,
+          },
         });
+        nuevaFactura.pagos = [pagoCreado];
       }
 
       // 3. Decrementar stock de cada producto (con verificación atómica dentro de la transacción)
@@ -398,9 +450,9 @@ router.post('/', async (req, res, next) => {
           where: {
             id: item._productoId,
             empresaId,
-            stockActual: { gte: item._cantidad }, // Solo decrementa si hay stock suficiente
+            stockActual: { gte: Number(item._cantidad) }, // Solo decrementa si hay stock suficiente
           },
-          data:  { stockActual: { decrement: item._cantidad } },
+          data:  { stockActual: { decrement: Number(item._cantidad) } },
         });
         if (updated.count === 0) {
           // Verificar si el producto existe o si no hay stock
@@ -409,9 +461,9 @@ router.post('/', async (req, res, next) => {
             select: { nombre: true, stockActual: true },
           });
           if (!producto) {
-            throw new Error('No se pudo actualizar el stock del producto porque no pertenece a tu empresa');
+            throw createBusinessError('No se pudo actualizar el stock del producto porque no pertenece a tu empresa');
           }
-          throw new Error(
+          throw createBusinessError(
             `Stock insuficiente para "${producto.nombre}": disponible ${producto.stockActual}, solicitado ${item._cantidad}`
           );
         }
@@ -424,6 +476,8 @@ router.post('/', async (req, res, next) => {
     const montoCuota = esFinanciada
       ? totalFactura.div(cuotasTotales).toDecimalPlaces(2).toFixed(2)
       : null;
+
+    invalidarCacheVentas();
 
     res.status(201).json({
       ...factura,
@@ -521,6 +575,7 @@ router.patch('/:id/anular', async (req, res, next) => {
               id: true,
               productoId: true,
               descripcionHistorica: true,
+              unidadMedida: true,
               cantidad: true,
               precioUnitarioHistorico: true,
               tasaImpuestoAplicada: true,
@@ -537,7 +592,7 @@ router.patch('/:id/anular', async (req, res, next) => {
         if (item.productoId) {
           const updated = await tx.producto.updateMany({
             where: { id: item.productoId, empresaId },
-            data: { stockActual: { increment: item.cantidad } },
+            data: { stockActual: { increment: Number(item.cantidad) } },
           });
           if (updated.count === 0) {
             throw new Error('No se pudo restaurar el stock del producto porque no pertenece a tu empresa');
@@ -548,6 +603,7 @@ router.patch('/:id/anular', async (req, res, next) => {
       return updated;
     });
 
+    invalidarCacheVentas();
     res.json(anulada);
   } catch (err) { next(err); }
 });

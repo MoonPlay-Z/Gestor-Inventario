@@ -83,6 +83,8 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
           <NavSection label="Administración" isCollapsed={false}>
             <NavItem to="/admin" icon={dashboardIcon} label="Panel de Administración"
               roles={ROLE_GROUPS.SUPER_ADMIN_ONLY} onClick={closeMobile} isCollapsed={false} />
+            {import.meta.env.DEV && <NavItem to="/pruebas/facturas" icon={clipboardIcon} label="Pruebas de facturas"
+              roles={ROLE_GROUPS.SUPER_ADMIN_ONLY} onClick={closeMobile} isCollapsed={false} />}
           </NavSection>
         ) : (
           <>
@@ -100,6 +102,8 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
                 roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false} />
               <NavItem to="/ventas" icon={clipboardIcon} label="Historial Ventas"
                 roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false} />
+              {import.meta.env.DEV && <NavItem to="/pruebas/facturas" icon={clipboardIcon} label="Pruebas de facturas"
+                roles={ROLE_GROUPS.ADMIN_ONLY} onClick={closeMobile} isCollapsed={false} />}
               <NavItem to="/pagos" icon={cashMultipleIcon} label="Cuentas por Cobrar"
                 roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false} />
               <NavItem to="/caja" icon={cashRegIcon} label="Cierre de Caja"

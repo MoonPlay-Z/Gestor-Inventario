@@ -80,7 +80,13 @@ export function CashRegisterReport({ cierre, preview, onClose, config }) {
             <div style={{ fontWeight: 700, fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '1px solid #ddd', paddingBottom: '4px', marginBottom: '6px' }}>
               Ingresos por Método de Pago
             </div>
-            {row('Efectivo (USD)', efectivo)}
+            {preview?.efectivoRecibido && (
+              <>
+                {row('Efectivo recibido en USD', preview.efectivoRecibido.USD)}
+                {row('Efectivo recibido en Bs.', preview.efectivoRecibido.VES, false, '#555')}
+              </>
+            )}
+            {row('Efectivo (equivalente USD)', efectivo)}
             {row('Pago Móvil', pagoMovil)}
             {row('Punto de Venta', punto)}
             {row('Transferencia Bancaria', transferencia)}

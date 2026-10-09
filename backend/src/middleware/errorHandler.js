@@ -27,6 +27,14 @@ function errorHandler(err, req, res, next) {
     });
   }
 
+  // Base de datos inalcanzable o sin inicializar
+  if (err.code === 'P1001' || err.code === 'P1003' || /Can't reach database server/i.test(err.message || '')) {
+    return res.status(503).json({
+      error: 'Base de datos no disponible',
+      message: 'No se pudo conectar con la base de datos. Verifica que el servidor esté activo.',
+    });
+  }
+
   // Errores de validación personalizados
   if (err.type === 'VALIDATION_ERROR') {
     return res.status(422).json({

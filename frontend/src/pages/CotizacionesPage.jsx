@@ -203,7 +203,7 @@ export function CotizacionesPage() {
     try {
       const payload = {
         clienteId: selectedClienteId,
-        validezDias: parseInt(validezDias),
+        validezDias: parseInt(validezDias) || 15,
         items: cart.map(item => ({
           productoId: item.productoId,
           cantidad: item.cantidad,

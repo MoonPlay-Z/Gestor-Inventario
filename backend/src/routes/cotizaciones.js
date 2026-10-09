@@ -4,6 +4,7 @@ const Decimal = require('decimal.js').Decimal;
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
 const { paginate, paginatedResponse } = require('../utils/pagination');
+const { obtenerSiguienteNumeroFactura } = require('../utils/numeracionFacturas');
 
 const router = express.Router();
 
@@ -20,11 +21,11 @@ router.get('/', async (req, res, next) => {
     const { q, estado } = req.query;
     const { skip, take, page, limit } = paginate(req.query, { limit: 25 });
     const empresaId = getEmpresaId(req);
-    const where = { usuario: { empresaId } };
+    const where = { OR: [{ usuarioId: empresaId }, { usuario: { empresaId } }] };
     if (estado) where.estado = estado;
     if (q) {
       where.AND = [
-        { usuario: { empresaId } },
+        { OR: [{ usuarioId: empresaId }, { usuario: { empresaId } }] },
         {
           OR: [
             { cliente: { razonSocial: { contains: q, mode: 'insensitive' } } },
@@ -72,7 +73,7 @@ router.get('/:id', async (req, res, next) => {
     const { id } = req.params;
     const empresaId = getEmpresaId(req);
     const cotizacion = await prisma.cotizacion.findFirst({
-      where: { id, usuario: { empresaId } },
+      where: { id, OR: [{ usuarioId: empresaId }, { usuario: { empresaId } }] },
       select: {
         id: true,
         numero: true,
@@ -208,7 +209,7 @@ router.post('/:id/convert', async (req, res, next) => {
     const empresaId = getEmpresaId(req);
     const empresaRefId = getEmpresaRefId(req);
     const cotizacion = await prisma.cotizacion.findFirst({
-      where: { id, usuario: { empresaId } },
+      where: { id, OR: [{ usuarioId: empresaId }, { usuario: { empresaId } }] },
       select: {
         id: true,
         numero: true,
@@ -264,13 +265,10 @@ router.post('/:id/convert', async (req, res, next) => {
 
     // Crear la factura dentro de una transacción atómica
     const factura = await prisma.$transaction(async (tx) => {
-      const ultimaFactura = await tx.factura.findFirst({
-        orderBy: { numeroFactura: 'desc' },
-        select: { numeroFactura: true },
-      });
+      const numeroFactura = await obtenerSiguienteNumeroFactura(tx);
       const nuevaFactura = await tx.factura.create({
         data: {
-          numeroFactura: (ultimaFactura?.numeroFactura || 0) + 1,
+          numeroFactura,
           clienteId: cotizacion.clienteId,
           usuarioId: req.user?.id || null,
           empresaId: empresaRefId,
@@ -331,6 +329,7 @@ router.post('/:id/convert', async (req, res, next) => {
           data: {
             facturaId: nuevaFactura.id,
             monto: cotizacion.total,
+            monedaPago: cotizacion.moneda,
             metodoPago,
             referenciaTransaccion: metodoPago === 'CASH' ? null : referenciaTransaccion,
             notas: 'Pago recibido al convertir cotización en venta'
@@ -343,7 +342,7 @@ router.post('/:id/convert', async (req, res, next) => {
         if (item.productoId) {
           await tx.producto.update({
             where: { id: item.productoId },
-            data: { stockActual: { decrement: item.cantidad } }
+            data: { stockActual: { decrement: Number(item.cantidad) } }
           });
         }
       }

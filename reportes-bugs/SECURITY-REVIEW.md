@@ -1,4 +1,4 @@
-# Security Review
+# Security Review: Concurrent Payment Race Condition
 
 **Date:** 2026-10-06  
 **Scope:** Static review of invoice and payment flows, including the recently added payment-currency handling.  

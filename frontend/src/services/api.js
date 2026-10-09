@@ -67,7 +67,7 @@ export async function request(endpoint, options = {}) {
 
   if (response.status === 204) return null;
 
-  if (response.status === 401) {
+  if (response.status === 401 && endpoint !== '/auth/login') {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     window.dispatchEvent(new Event('auth:unauthorized'));
@@ -140,7 +140,7 @@ export const API = {
   crearProducto: (data) => request('/productos', { method: 'POST', body: data }),
   actualizarProducto: (id, data) => request(`/productos/${id}`, { method: 'PUT', body: data }),
   eliminarProducto: (id) => request(`/productos/${id}`, { method: 'DELETE' }),
-  ajustarStock: (id, cantidad, operacion) => request(`/productos/${id}/stock`, { method: 'PATCH', body: { cantidad, operacion } }),
+  ajustarStock: (id, cantidad, operacion, unidadMedida) => request(`/productos/${id}/stock`, { method: 'PATCH', body: { cantidad, operacion, unidadMedida } }),
 
   // Facturas
   getFacturas: (params = {}) => {
@@ -150,6 +150,8 @@ export const API = {
   getFactura: (id) => request(`/facturas/${id}`),
   emitirFactura: (data) => request('/facturas', { method: 'POST', body: data }),
   anularFactura: (id) => request(`/facturas/${id}/anular`, { method: 'PATCH' }),
+  getFacturaPruebas: (codigo) => request(`/facturas-pruebas?codigo=${encodeURIComponent(codigo)}`),
+  actualizarFacturaPruebas: (id, data) => request(`/facturas-pruebas/${id}`, { method: 'PUT', body: data }),
 
   // Cotizaciones
   getCotizaciones: (params = {}) => {
@@ -167,7 +169,7 @@ export const API = {
   // Caja
   getCajaActual: () => request('/caja/status'),
   abrirCaja: (montoInicial, observaciones) => request('/caja/open', { method: 'POST', body: { montoInicial, observaciones } }),
-  cerrarCaja: (montoFinal, observaciones) => request('/caja/close', { method: 'POST', body: { montoFinal, observaciones } }),
+  cerrarCaja: (montoFinal, observaciones, arqueoDetalle) => request('/caja/close', { method: 'POST', body: { montoFinal, observaciones, arqueoDetalle } }),
   getHistorialCaja: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
     return request(`/caja${qs ? `?${qs}` : ''}`);
@@ -273,6 +275,14 @@ export const Utils = {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('es-VE', {
       year: 'numeric', month: '2-digit', day: '2-digit'
+    });
+  },
+
+  formatDateTime: (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toLocaleString('es-VE', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
     });
   },
 

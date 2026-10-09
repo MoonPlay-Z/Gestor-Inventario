@@ -7,6 +7,16 @@ export default defineConfig({
     react(),
     basicSsl(), // ← Habilita HTTPS automático (cert autofirmado) para acceso a cámara desde móvil
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom', 'react-router-dom'],
+          iconify: ['@iconify/react'],
+        },
+      },
+    },
+  },
   css: {
     modules: {
       localsConvention: 'camelCaseOnly',

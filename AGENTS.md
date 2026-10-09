@@ -13,9 +13,12 @@ npm run prisma:generate  # generate Prisma client (PostgreSQL)
 npm run prisma:migrate   # run migrations
 npm run prisma:seed      # seed 600 products
 npm run prisma:studio    # Prisma Studio
+BASE_URL=http://localhost:3001 node scripts/validar-flujos.js  # API flow validation
 ```
 
 Backend-only scripts (run inside `backend/`): `npm run setup` (install + generate + migrate + seed), `npm run db:reset` (destructive: drops all data + reseeds).
+
+Install gotchas: the root has **no workspaces** — `npm install` at the root only installs root deps. Backend and frontend each need their own `npm install` (or use `backend/`'s `npm run setup`). `validar-flujos.js` requires a running backend with a seeded demo user; configure `API_USER`, `API_PASS`, and `BASE_URL` in the environment.
 
 ## Database: PostgreSQL & SQLite
 
@@ -72,11 +75,13 @@ Uses `decimal.js` for all monetary math. Invoices support dual currency (`moneda
 
 ## Frontend dev server
 
-`vite.config.js` enables HTTPS with a self-signed cert (required for camera/barcode on mobile) and proxies `/api` → `http://localhost:3001`. The frontend calls the API at `/api` by default (override with `VITE_API_URL`).
+`vite.config.js` enables HTTPS with a self-signed cert via `@vitejs/plugin-basic-ssl` (required for camera/barcode on mobile), `host: true` (LAN access), and proxies `/api` → `http://localhost:3001`. The frontend calls the API at `/api` by default (override with `VITE_API_URL`).
+
+CSS Modules: `localsConvention: 'camelCaseOnly'` and scoped names `[name]__[local]___[hash:base64:5]` — import styles as `styles` and use camelCase keys. Production build splits manual chunks `react` and `iconify`.
 
 ## Electron mode
 
-When `ELECTRON_ENV=true`, `electron-start.js` loads `.env.electron` (git-ignored) for packaged desktop builds. Electron spawns the backend as a child process.
+When `ELECTRON_ENV=true`, `backend/src/electron-start.js` loads `.env.electron` (git-ignored) and then starts `app.js`. Electron's `electron/main.js` spawns the backend as a child process and injects `DATABASE_URL`/`PORT` — `.env.electron` must NOT override those two.
 
 ## Deployment
 
@@ -88,57 +93,21 @@ When `ELECTRON_ENV=true`, `electron-start.js` loads `.env.electron` (git-ignored
 
 There is no test suite, linter, formatter, or CI configuration. Do not look for them. Verify changes manually against the running app.
 
-## Performance optimizations
+## Conventions
 
-- **Pagination**: All list endpoints support `page` and `limit` query params. Use `backend/src/utils/pagination.js` (`paginate()` + `paginatedResponse()`) for consistency.
-- **Dashboard**: Uses parallel `$queryRaw` aggregations instead of loading full datasets into memory. All 6 data points run concurrently via `Promise.all`.
-- **Indexes**: Migration `20260929000000_add_performance_indexes` adds composite indexes on `facturas`, `pagos`, `productos`, `clientes`, `cotizaciones`, `usuarios`, and `cierres_caja`.
-- **N+1 prevention**: Use `$queryRaw` with `GROUP BY` for aggregations (pagos por factura, totales por estado) instead of loading related records into memory.
-- **Transactions**: Critical multi-table operations (factura creation, payment registration, cotización conversion) use `prisma.$transaction` for atomicity.
+- **Pagination**: list endpoints take `page`/`limit`; use `backend/src/utils/pagination.js` (`paginate()` + `paginatedResponse()`).
+- **Aggregations**: use `$queryRaw` with `GROUP BY` and `Promise.all` (see dashboard route) instead of loading full tables; wrap multi-table writes (factura creation, pagos, cotización conversion) in `prisma.$transaction`.
 
-## Error handling system
+## Error handling
 
-### Frontend components
-- `FieldError` — per-field validation errors with icon and styling
-- `FormError` — general form errors with dismiss option
-- `ToastContext` — improved toast system with duration by type (error: 8s, warning: 6s, success: 5s)
+- Backend: `backend/src/middleware/errorHandler.js` maps Prisma codes (P2002, P2025, P2003) to friendly messages; error shape `{ error, message, code?, fields?, details? }`.
+- Frontend: `frontend/src/utils/validation.js` (`ValidationRules`, `validateForm()`, `getErrorMessage()`); field/form messages via `FieldError`/`FormError` in `frontend/src/components/ui/`.
 
-### Validation utilities
-- `frontend/src/utils/validation.js` — reusable validation rules (`ValidationRules`) and contextual error messages (`getErrorMessage`)
-- Password strength indicator with 5 levels
-- Form validation with `validateForm()` helper
+## Rate limiting & misc
 
-### Backend error handling
-- `backend/src/middleware/errorHandler.js` — centralized error handler
-- Prisma error codes mapped to user-friendly messages (P2002, P2025, P2003)
-- Custom error types: `VALIDATION_ERROR`, `BUSINESS_ERROR`
-- Error response format: `{ error, message, code?, fields?, details? }`
-
-## UI components
-
-Located in `frontend/src/components/ui/`:
-- `Button` — reusable button with variants
-- `FieldError` / `FieldSuccess` — field-level validation messages
-- `FormError` / `FormSuccess` — form-level messages
-- `RoleGuard` / `useRole` — role-based access control
-- `NavItem` / `NavSection` — navigation components
-- `ReceiptModal` — receipt display modal
-- `CashRegisterReport` — cash register report component
-
-## Legal & compliance pages
-
-- `/politica-cookies` — Cookie policy
-- `/politica-privacidad` — Privacy policy
-- `/terminos` — Terms and conditions
-- Cookie consent banner with granular preferences
-- Registration requires explicit acceptance of terms and privacy policy
-
-## Blog
-
-- `/blog` — Blog listing page
-- `/blog/:slug` — Individual blog articles
-- 8 SEO-optimized articles for keywords like "control de inventario", "facturación", "sistema POS"
+- `backend/src/middleware/rateLimiter.js` exists — check it before adding public endpoints.
+- `serialport` is a backend dependency (fiscal printer hardware); it may need native build tools on install.
 
 ## Env vars
 
-Required: `DATABASE_URL`, `JWT_SECRET`. Optional: `PORT` (default 3001), `EMPRESA_NOMBRE`, `EMPRESA_RIF`, `EMPRESA_DIRECCION`, `EMPRESA_TELEFONO`, `EMPRESA_EMAIL`, `MONEDA_SIMBOLO`, `MONEDA_CODIGO`, `B2B_API_KEY`, `ALLOWED_ORIGINS`, `DB_PROVIDER`, `NODE_ENV`.
+Required: `DATABASE_URL`, `JWT_SECRET` (app exits if missing). Optional: `PORT` (default 3001), `EMPRESA_NOMBRE`, `EMPRESA_RIF`, `EMPRESA_DIRECCION`, `EMPRESA_TELEFONO`, `EMPRESA_EMAIL`, `MONEDA_SIMBOLO`, `MONEDA_CODIGO`, `B2B_API_KEY`, `ALLOWED_ORIGINS`, `DB_PROVIDER`, `NODE_ENV`, `ELECTRON_ENV`.

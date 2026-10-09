@@ -119,6 +119,56 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.EmpresaScalarFieldEnum = {
+  id: 'id',
+  nombre: 'nombre',
+  rif: 'rif',
+  direccion: 'direccion',
+  telefono: 'telefono',
+  activo: 'activo',
+  subscriptionStatus: 'subscriptionStatus',
+  planType: 'planType',
+  trialStartsAt: 'trialStartsAt',
+  trialEndsAt: 'trialEndsAt',
+  currentPeriodEnd: 'currentPeriodEnd',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.RolScalarFieldEnum = {
+  id: 'id',
+  empresaId: 'empresaId',
+  nombre: 'nombre',
+  descripcion: 'descripcion',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.PermisoScalarFieldEnum = {
+  id: 'id',
+  modulo: 'modulo',
+  accion: 'accion',
+  descripcion: 'descripcion'
+};
+
+exports.Prisma.RolPermisoScalarFieldEnum = {
+  rolId: 'rolId',
+  permisoId: 'permisoId'
+};
+
+exports.Prisma.AuditLogScalarFieldEnum = {
+  id: 'id',
+  empresaId: 'empresaId',
+  usuarioId: 'usuarioId',
+  accion: 'accion',
+  entidad: 'entidad',
+  entidadId: 'entidadId',
+  datosAnteriores: 'datosAnteriores',
+  datosNuevos: 'datosNuevos',
+  ipAddress: 'ipAddress',
+  userAgent: 'userAgent',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.ClienteScalarFieldEnum = {
   id: 'id',
   razonSocial: 'razonSocial',
@@ -136,8 +186,13 @@ exports.Prisma.ProductoScalarFieldEnum = {
   sku: 'sku',
   nombre: 'nombre',
   descripcion: 'descripcion',
+  imagenUrl: 'imagenUrl',
+  unidadMedida: 'unidadMedida',
   stockActual: 'stockActual',
   stockMinimo: 'stockMinimo',
+  esVentaPorPeso: 'esVentaPorPeso',
+  precioPorKilo: 'precioPorKilo',
+  toleranciaPeso: 'toleranciaPeso',
   precioVenta: 'precioVenta',
   costoCompra: 'costoCompra',
   tasaImpuesto: 'tasaImpuesto',
@@ -153,6 +208,7 @@ exports.Prisma.FacturaScalarFieldEnum = {
   numeroFactura: 'numeroFactura',
   clienteId: 'clienteId',
   usuarioId: 'usuarioId',
+  empresaId: 'empresaId',
   fechaEmision: 'fechaEmision',
   fechaVencimiento: 'fechaVencimiento',
   subtotal: 'subtotal',
@@ -175,6 +231,8 @@ exports.Prisma.ItemFacturaScalarFieldEnum = {
   productoId: 'productoId',
   descripcionHistorica: 'descripcionHistorica',
   cantidad: 'cantidad',
+  unidadMedida: 'unidadMedida',
+  pesoReal: 'pesoReal',
   precioUnitarioHistorico: 'precioUnitarioHistorico',
   tasaImpuestoAplicada: 'tasaImpuestoAplicada',
   subtotalLinea: 'subtotalLinea',
@@ -187,6 +245,7 @@ exports.Prisma.PagoScalarFieldEnum = {
   id: 'id',
   facturaId: 'facturaId',
   monto: 'monto',
+  monedaPago: 'monedaPago',
   metodoPago: 'metodoPago',
   referenciaTransaccion: 'referenciaTransaccion',
   fechaPago: 'fechaPago',
@@ -203,6 +262,7 @@ exports.Prisma.CorrelativoScalarFieldEnum = {
 exports.Prisma.CierreCajaScalarFieldEnum = {
   id: 'id',
   usuarioId: 'usuarioId',
+  empresaId: 'empresaId',
   fechaApertura: 'fechaApertura',
   fechaCierre: 'fechaCierre',
   montoInicial: 'montoInicial',
@@ -211,6 +271,7 @@ exports.Prisma.CierreCajaScalarFieldEnum = {
   ingresosBanco: 'ingresosBanco',
   estado: 'estado',
   observaciones: 'observaciones',
+  arqueoDetalle: 'arqueoDetalle',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -220,6 +281,7 @@ exports.Prisma.CotizacionScalarFieldEnum = {
   numero: 'numero',
   clienteId: 'clienteId',
   usuarioId: 'usuarioId',
+  empresaId: 'empresaId',
   fechaEmision: 'fechaEmision',
   fechaValidez: 'fechaValidez',
   subtotal: 'subtotal',
@@ -244,14 +306,24 @@ exports.Prisma.UsuarioScalarFieldEnum = {
   username: 'username',
   passwordHash: 'passwordHash',
   nombre: 'nombre',
+  email: 'email',
   rol: 'rol',
+  rolId: 'rolId',
   activo: 'activo',
   empresaId: 'empresaId',
+  empresaRefId: 'empresaRefId',
   subscriptionStatus: 'subscriptionStatus',
   planType: 'planType',
   trialStartsAt: 'trialStartsAt',
   trialEndsAt: 'trialEndsAt',
   currentPeriodEnd: 'currentPeriodEnd',
+  mfaEnabled: 'mfaEnabled',
+  mfaSecret: 'mfaSecret',
+  sessionVersion: 'sessionVersion',
+  sudoModeExpiresAt: 'sudoModeExpiresAt',
+  lastLoginIp: 'lastLoginIp',
+  lastLoginAt: 'lastLoginAt',
+  deletedAt: 'deletedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -263,6 +335,35 @@ exports.Prisma.SolicitudActivacionScalarFieldEnum = {
   metodoPago: 'metodoPago',
   referencia: 'referencia',
   estado: 'estado',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.NoticiaScalarFieldEnum = {
+  id: 'id',
+  titulo: 'titulo',
+  subtitulo: 'subtitulo',
+  contenido: 'contenido',
+  imagenUrl: 'imagenUrl',
+  categoria: 'categoria',
+  destacado: 'destacado',
+  publicado: 'publicado',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.PromocionScalarFieldEnum = {
+  id: 'id',
+  codigo: 'codigo',
+  titulo: 'titulo',
+  descripcion: 'descripcion',
+  descuentoPorc: 'descuentoPorc',
+  diasExtraTrial: 'diasExtraTrial',
+  planDestino: 'planDestino',
+  usosMaximos: 'usosMaximos',
+  usosActuales: 'usosActuales',
+  fechaFin: 'fechaFin',
+  activo: 'activo',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -279,6 +380,11 @@ exports.Prisma.NullsOrder = {
 
 
 exports.Prisma.ModelName = {
+  Empresa: 'Empresa',
+  Rol: 'Rol',
+  Permiso: 'Permiso',
+  RolPermiso: 'RolPermiso',
+  AuditLog: 'AuditLog',
   Cliente: 'Cliente',
   Producto: 'Producto',
   Factura: 'Factura',
@@ -289,7 +395,9 @@ exports.Prisma.ModelName = {
   Cotizacion: 'Cotizacion',
   ItemCotizacion: 'ItemCotizacion',
   Usuario: 'Usuario',
-  SolicitudActivacion: 'SolicitudActivacion'
+  SolicitudActivacion: 'SolicitudActivacion',
+  Noticia: 'Noticia',
+  Promocion: 'Promocion'
 };
 
 /**

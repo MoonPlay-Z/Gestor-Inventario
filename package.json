@@ -23,6 +23,7 @@
     "concurrently": "^8.2.2"
   },
   "dependencies": {
-    "openai": "^6.49.0"
+    "openai": "^6.49.0",
+    "opencode-omniroute-auth": "^1.2.2"
   }
 }
