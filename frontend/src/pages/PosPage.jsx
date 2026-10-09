@@ -31,7 +31,8 @@ export function PosPage() {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [cart, setCart] = useState([]);
-  const [metodoPago, setMetodoPago] = useState('EFECTIVO');
+  const [tipoDocumento, setTipoDocumento] = useState('factura');
+  const [metodoPago, setMetodoPago] = useState('EFECTIVO_USD');
   const [referencia, setReferencia] = useState('');
   const [cuotas, setCuotas] = useState(1);
   const [loadingEmitir, setLoadingEmitir] = useState(false);
@@ -43,6 +44,7 @@ export function PosPage() {
 
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastFactura, setLastFactura] = useState(null);
+  const [tipoUltimoDocumento, setTipoUltimoDocumento] = useState('factura');
 
   const loadInitialData = async () => {
     try {
@@ -128,7 +130,7 @@ export function PosPage() {
       return [...prev, {
         productoId: product.id,
         nombre: product.nombre,
-        precioUnitario: parseFloat(product.precioVenta),
+        precioUnitario: parseFloat(product.esVentaPorPeso ? product.precioPorKilo : product.precioVenta),
         cantidad: 1,
         stockMax: stockActual,
         unidadMedida: product.unidadMedida || 'UNIDAD',
@@ -216,9 +218,11 @@ export function PosPage() {
     }
 
     setLoadingEmitir(true);
+    const tipoDocumentoEmitido = tipoDocumento;
     try {
       const paymentMethodMap = {
-        'EFECTIVO': 'CASH',
+        'EFECTIVO_USD': 'CASH',
+        'EFECTIVO_VES': 'CASH',
         'PAGO_MOVIL': 'MOBILE_PAYMENT',
         'PUNTO': 'CREDIT_CARD',
         'TRANSFERENCIA': 'BANK_TRANSFER'
@@ -226,6 +230,9 @@ export function PosPage() {
 
       const payload = {
         clienteId: selectedClienteId,
+        moneda: 'USD',
+        tasaCambio: tasaDolar,
+        monedaPago: metodoPago === 'EFECTIVO_VES' ? 'VES' : 'USD',
         items: cart.map(item => ({
           productoId: item.productoId,
           cantidad: item.cantidad,
@@ -234,17 +241,24 @@ export function PosPage() {
         metodoPago: metodoPago ? paymentMethodMap[metodoPago] : null,
         referenciaTransaccion: referencia || null,
         fechaVencimiento: new Date().toISOString(),
-        cuotas: parseInt(cuotas),
+        cuotas: parseInt(cuotas) || 1,
       };
 
       const res = await API.emitirFactura(payload);
-      showToast(`🎉 ¡Factura #${res.numeroFactura || ''} emitida con éxito!`, 'success');
+      showToast(
+        tipoDocumentoEmitido === 'nota-entrega'
+          ? 'Nota de entrega generada con éxito'
+          : `🎉 ¡Factura #${res.numeroFactura || ''} emitida con éxito!`,
+        'success'
+      );
       setCart([]);
       setReferencia('');
       setCuotas(1);
+      setTipoDocumento('factura');
       
       // Mostrar el recibo
       setLastFactura(res);
+      setTipoUltimoDocumento(tipoDocumentoEmitido);
       setShowReceipt(true);
       // Recargar productos para refrescar el stock actualizado
       const prodRes = await API.getProductos({ limite: 100 });
@@ -388,10 +402,10 @@ export function PosPage() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', minWidth: '140px' }}>
                         <div style={{ fontWeight: 700, color: 'var(--accent)', fontSize: '1rem' }}>
-                          {Utils.formatMoney(p.precioVenta, '$')}
+                            {Utils.formatMoney(p.esVentaPorPeso ? p.precioPorKilo : p.precioVenta, '$')}
                         </div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                          {Utils.formatMoney(Number((Number(p.precioVenta || 0) * tasaDolar).toFixed(2)), 'Bs.')}
+                            {Utils.formatMoney(Number((Number(p.esVentaPorPeso ? p.precioPorKilo : p.precioVenta || 0) * tasaDolar).toFixed(2)), 'Bs.')}
                         </div>
                         {p.esVentaPorPeso && p.precioPorKilo && (
                           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
@@ -582,6 +596,24 @@ export function PosPage() {
 
             <form onSubmit={handleEmitirFactura} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div className="form-group">
+                <label className="form-label" htmlFor="tipo-documento-venta">Documento para el cliente</label>
+                <select
+                  id="tipo-documento-venta"
+                  className="form-control"
+                  value={tipoDocumento}
+                  onChange={e => setTipoDocumento(e.target.value)}
+                >
+                  <option value="factura">Factura</option>
+                  <option value="nota-entrega">Nota de entrega</option>
+                </select>
+                {tipoDocumento === 'nota-entrega' && (
+                  <small style={{ display: 'block', marginTop: '6px', color: 'var(--text-secondary)' }}>
+                    La venta y el pago se guardarán; el comprobante impreso no será una factura fiscal.
+                  </small>
+                )}
+              </div>
+
+              <div className="form-group">
                 <label className="form-label">Método de Pago</label>
                 <select
                   className="form-control"
@@ -591,7 +623,8 @@ export function PosPage() {
                     if (e.target.value !== '') setCuotas(1); // Si paga al contado, cuotas = 1
                   }}
                 >
-                  <option value="EFECTIVO">EFECTIVO (USD / VES)</option>
+                  <option value="EFECTIVO_USD">Efectivo en USD</option>
+                  <option value="EFECTIVO_VES">Efectivo en Bs.</option>
                   <option value="PAGO_MOVIL">Pago Móvil</option>
                   <option value="PUNTO">Punto de Venta</option>
                   <option value="TRANSFERENCIA">Transferencia Bancaria</option>
@@ -615,7 +648,7 @@ export function PosPage() {
                 </div>
               )}
 
-              {metodoPago && metodoPago !== 'EFECTIVO' && (
+              {metodoPago && !['EFECTIVO_USD', 'EFECTIVO_VES'].includes(metodoPago) && (
                 <div className="form-group">
                   <label className="form-label">Número de Referencia</label>
                   <input
@@ -697,6 +730,7 @@ export function PosPage() {
           factura={lastFactura}
           config={config}
           onClose={() => setShowReceipt(false)}
+          type={tipoUltimoDocumento}
         />
       )}
     </>

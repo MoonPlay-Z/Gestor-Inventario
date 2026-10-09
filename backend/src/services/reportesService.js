@@ -11,7 +11,9 @@
  */
 
 const prisma = require('../db/prisma');
-const { Prisma } = require('@prisma/client');
+const { Prisma } = require('../db/prisma');
+const IS_SQLITE = !!require('../db/prisma').IS_SQLITE;
+const { tsFrag } = require('../utils/sql');
 const Decimal = require('decimal.js').Decimal;
 const { getFechasPeriodo, calcularComparacion } = require('../utils/reportesHelpers');
 
@@ -82,11 +84,15 @@ const FORMATOS_FECHA = {
  */
 function validarParametros(periodo, fecha) {
   if (!PERIODOS_VALIDOS.includes(periodo)) {
-    throw new Error(`Periodo no válido: ${periodo}. Valores permitidos: ${PERIODOS_VALIDOS.join(', ')}`);
+    const err = new Error(`Periodo no válido: ${periodo}. Valores permitidos: ${PERIODOS_VALIDOS.join(', ')}`);
+    err.status = 400;
+    throw err;
   }
 
   if (fecha && !FORMATOS_FECHA[periodo].test(fecha)) {
-    throw new Error(`Formato de fecha inválido para período ${periodo}. Formato esperado: ${FORMATOS_FECHA[periodo]}`);
+    const err = new Error(`Formato de fecha inválido para período ${periodo}. Formato esperado: ${FORMATOS_FECHA[periodo]}`);
+    err.status = 400;
+    throw err;
   }
 }
 
@@ -201,8 +207,8 @@ async function getVentasReporte(req) {
         ${normalizarUSD('f."impuestoTotal"', 'impuestos_usd')},
         ${normalizarUSD('f."subtotal"', 'subtotal_usd')}
       FROM facturas f
-      WHERE f."fechaEmision" >= ${inicio}::timestamp
-        AND f."fechaEmision" <= ${fin}::timestamp
+      WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+        AND f."fechaEmision" <= ${tsFrag(fin)}
         AND f."estado" != 'VOIDED'
         ${buildTenantSql(tenantFilter)}
     `,
@@ -222,8 +228,8 @@ async function getVentasReporte(req) {
           END
         ), 0) AS total_usd
       FROM facturas f
-      WHERE f."fechaEmision" >= ${inicioAnterior}::timestamp
-        AND f."fechaEmision" <= ${finAnterior}::timestamp
+      WHERE f."fechaEmision" >= ${tsFrag(inicioAnterior)}
+        AND f."fechaEmision" <= ${tsFrag(finAnterior)}
         AND f."estado" != 'VOIDED'
         ${buildTenantSql(tenantFilter)}
     `;
@@ -298,26 +304,34 @@ function buildTenantSql(tenantFilter) {
 async function getAgrupacionVentas(periodo, inicio, fin, tenantFilter) {
   let groupBy, selectExpr;
 
+  // Expresiones de agrupación por período (PostgreSQL vs SQLite)
+  const trunc = (unit) => IS_SQLITE
+    ? (unit === 'hour' ? `strftime('%Y-%m-%dT%H:00:00', f."fechaEmision"/1000, 'unixepoch')`
+      : unit === 'day' ? `strftime('%Y-%m-%d', f."fechaEmision"/1000, 'unixepoch')`
+      : unit === 'week' ? `strftime('%Y-W%W', f."fechaEmision"/1000, 'unixepoch')`
+      : `strftime('%Y-%m', f."fechaEmision"/1000, 'unixepoch')`)
+    : `DATE_TRUNC('${unit}', f."fechaEmision")`;
+
   switch (periodo) {
     case 'diario':
-      selectExpr = `DATE_TRUNC('hour', f."fechaEmision")`;
-      groupBy = `DATE_TRUNC('hour', f."fechaEmision")`;
+      selectExpr = trunc('hour');
+      groupBy = trunc('hour');
       break;
     case 'semanal':
-      selectExpr = `DATE_TRUNC('day', f."fechaEmision")`;
-      groupBy = `DATE_TRUNC('day', f."fechaEmision")`;
+      selectExpr = trunc('day');
+      groupBy = trunc('day');
       break;
     case 'mensual':
-      selectExpr = `DATE_TRUNC('week', f."fechaEmision")`;
-      groupBy = `DATE_TRUNC('week', f."fechaEmision")`;
+      selectExpr = trunc('week');
+      groupBy = trunc('week');
       break;
     case 'anual':
-      selectExpr = `DATE_TRUNC('month', f."fechaEmision")`;
-      groupBy = `DATE_TRUNC('month', f."fechaEmision")`;
+      selectExpr = trunc('month');
+      groupBy = trunc('month');
       break;
     default:
-      selectExpr = `DATE_TRUNC('day', f."fechaEmision")`;
-      groupBy = `DATE_TRUNC('day', f."fechaEmision")`;
+      selectExpr = trunc('day');
+      groupBy = trunc('day');
   }
 
   const whereClause = buildTenantSql(tenantFilter);
@@ -334,8 +348,8 @@ async function getAgrupacionVentas(periodo, inicio, fin, tenantFilter) {
       ), 0) AS total_usd,
       COUNT(*) AS cantidad
     FROM facturas f
-    WHERE f."fechaEmision" >= ${inicio}::timestamp
-      AND f."fechaEmision" <= ${fin}::timestamp
+    WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+      AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
       ${whereClause}
     GROUP BY ${Prisma.raw(groupBy)}
@@ -371,8 +385,8 @@ async function getGananciasReporte(req) {
         END
       ), 0) AS total_usd
     FROM facturas f
-    WHERE f."fechaEmision" >= ${inicio}::timestamp
-      AND f."fechaEmision" <= ${fin}::timestamp
+    WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+      AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
       ${whereClause}
   `;
@@ -386,8 +400,8 @@ async function getGananciasReporte(req) {
     FROM items_factura if
     INNER JOIN productos p ON p.id = if."productoId"
     INNER JOIN facturas f ON f.id = if."facturaId"
-    WHERE f."fechaEmision" >= ${inicio}::timestamp
-      AND f."fechaEmision" <= ${fin}::timestamp
+    WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+      AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
       ${whereClause}
   `;
@@ -412,8 +426,8 @@ async function getGananciasReporte(req) {
           END
         ), 0) AS total_usd
       FROM facturas f
-      WHERE f."fechaEmision" >= ${inicioAnterior}::timestamp
-        AND f."fechaEmision" <= ${finAnterior}::timestamp
+      WHERE f."fechaEmision" >= ${tsFrag(inicioAnterior)}
+        AND f."fechaEmision" <= ${tsFrag(finAnterior)}
         AND f."estado" != 'VOIDED'
         ${whereClause}
     `;
@@ -426,8 +440,8 @@ async function getGananciasReporte(req) {
       FROM items_factura if
       INNER JOIN productos p ON p.id = if."productoId"
       INNER JOIN facturas f ON f.id = if."facturaId"
-      WHERE f."fechaEmision" >= ${inicioAnterior}::timestamp
-        AND f."fechaEmision" <= ${finAnterior}::timestamp
+      WHERE f."fechaEmision" >= ${tsFrag(inicioAnterior)}
+        AND f."fechaEmision" <= ${tsFrag(finAnterior)}
         AND f."estado" != 'VOIDED'
         ${whereClause}
     `;
@@ -555,8 +569,8 @@ async function getProductosTop(req) {
     FROM items_factura if
     INNER JOIN productos p ON p.id = if."productoId"
     INNER JOIN facturas f ON f.id = if."facturaId"
-    WHERE f."fechaEmision" >= ${inicio}::timestamp
-      AND f."fechaEmision" <= ${fin}::timestamp
+    WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+      AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
       ${whereClause}
     GROUP BY p.id, p.nombre, p.sku
@@ -598,8 +612,8 @@ async function getClientesTop(req) {
       ), 0) AS total_compras_usd
     FROM facturas f
     INNER JOIN clientes c ON c.id = f."clienteId"
-    WHERE f."fechaEmision" >= ${inicio}::timestamp
-      AND f."fechaEmision" <= ${fin}::timestamp
+    WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+      AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
       ${whereClause}
     GROUP BY c.id, c."razonSocial", c."rifCedula"
@@ -629,9 +643,11 @@ async function getCajaReporte(req) {
   const pagos = await prisma.$queryRaw`
     SELECT
       p."metodoPago" AS metodo,
+      p."monedaPago" AS moneda,
+      COALESCE(SUM(p."monto"), 0) AS total_recibido,
       COALESCE(SUM(
         CASE
-          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+          WHEN p."monedaPago" = 'VES' AND f."tasaCambio" > 0
           THEN p."monto" / f."tasaCambio"
           ELSE p."monto"
         END
@@ -639,11 +655,11 @@ async function getCajaReporte(req) {
       COUNT(*) AS cantidad
     FROM pagos p
     INNER JOIN facturas f ON f.id = p."facturaId"
-    WHERE p."fechaPago" >= ${inicio}::timestamp
-      AND p."fechaPago" <= ${fin}::timestamp
+    WHERE p."fechaPago" >= ${tsFrag(inicio)}
+      AND p."fechaPago" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
       ${whereClause}
-    GROUP BY p."metodoPago"
+    GROUP BY p."metodoPago", p."monedaPago"
     ORDER BY total_usd DESC
   `;
 
@@ -657,8 +673,10 @@ async function getCajaReporte(req) {
     periodo,
     desglose: pagos.map(p => ({
       metodo: p.metodo,
-      metodoLabel: getMetodoLabel(p.metodo),
-      total: Number(p.total_usd || 0).toFixed(2),
+      moneda: p.moneda,
+      metodoLabel: getMetodoLabel(p.metodo, p.moneda),
+      total: Number(p.total_recibido || 0).toFixed(2),
+      totalUSD: Number(p.total_usd || 0).toFixed(2),
       cantidad: Number(p.cantidad),
     })),
     totalGeneral: totales.total.toFixed(2),
@@ -666,7 +684,7 @@ async function getCajaReporte(req) {
   };
 }
 
-function getMetodoLabel(metodo) {
+function getMetodoLabel(metodo, moneda) {
   const labels = {
     CASH: 'Efectivo',
     BANK_TRANSFER: 'Transferencia',
@@ -674,7 +692,8 @@ function getMetodoLabel(metodo) {
     MOBILE_PAYMENT: 'Pago Móvil',
     PAGO_MOVIL: 'Pago Móvil',
   };
-  return labels[metodo] || metodo;
+  const label = labels[metodo] || metodo;
+  return moneda ? `${label} (${moneda === 'VES' ? 'Bs.' : 'USD'})` : label;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -705,8 +724,8 @@ async function getImpuestosReporte(req) {
         END
       ), 0) AS base_imponible
     FROM facturas f
-    WHERE f."fechaEmision" >= ${inicio}::timestamp
-      AND f."fechaEmision" <= ${fin}::timestamp
+    WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+      AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
       ${whereClause}
   `;
@@ -722,7 +741,14 @@ async function getImpuestosReporte(req) {
   };
 }
 
+function invalidarCacheVentas() {
+  for (const key of cache.keys()) {
+    if (key.startsWith('reporte:ventas:')) cache.delete(key);
+  }
+}
+
 module.exports = {
+  invalidarCacheVentas,
   getVentasReporte,
   getGananciasReporte,
   getInversionReporte,

@@ -5,6 +5,7 @@ const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
 const { paginate, paginatedResponse } = require('../utils/pagination');
+const { MONEDAS_PAGO, convertirMontoMoneda, normalizarPagoAFactura } = require('../utils/paymentCurrency');
 
 // SUPER_ADMIN no gestiona pagos
 router.use(requireRole('EMPRESA', 'CAJA'));
@@ -59,7 +60,7 @@ router.get('/', async (req, res, next) => {
 // POST /api/pagos — Registrar pago (transacción atómica)
 router.post('/', async (req, res, next) => {
   try {
-    const { facturaId, monto, metodoPago, referenciaTransaccion, fechaPago, notas } = req.body;
+    const { facturaId, monto, metodoPago, monedaPago, referenciaTransaccion, fechaPago, notas } = req.body;
 
     // ── Validaciones ──────────────────────────────────────────────────────────
     if (!facturaId)   throw createValidationError('El ID de factura es obligatorio', { facturaId: 'Campo requerido' });
@@ -69,7 +70,10 @@ router.post('/', async (req, res, next) => {
     }
 
     const montoPago = new Decimal(monto ?? 0);
-    if (montoPago.lte(0)) throw createValidationError('El monto del pago debe ser mayor a 0', { monto: 'Debe ser positivo' });
+    if (!montoPago.isFinite() || montoPago.lte(0)) throw createValidationError('El monto del pago debe ser mayor a 0', { monto: 'Debe ser positivo' });
+    if (monedaPago !== undefined && !MONEDAS_PAGO.includes(monedaPago)) {
+      throw createValidationError('La moneda del pago debe ser USD o VES', { monedaPago: 'Moneda inválida' });
+    }
 
     // Si el método NO es CASH, la referencia es obligatoria
     if (metodoPago !== 'CASH' && !referenciaTransaccion?.trim()) {
@@ -95,21 +99,28 @@ router.post('/', async (req, res, next) => {
       throw createBusinessError('La factura ya está completamente pagada');
     }
 
+    const monedaDelPago = monedaPago || factura.moneda || 'USD';
     const totalPagado = factura.pagos.reduce(
-      (acc, p) => acc.add(new Decimal(p.monto.toString())),
+      (acc, p) => acc.add(normalizarPagoAFactura(p, factura)),
       new Decimal(0)
     );
     const totalFactura     = new Decimal(factura.total.toString());
     const balancePendiente = totalFactura.sub(totalPagado);
+    const montoEnMonedaFactura = convertirMontoMoneda(
+      montoPago,
+      monedaDelPago,
+      factura.moneda || 'USD',
+      factura.tasaCambio
+    );
 
-    if (montoPago.gt(balancePendiente)) {
+    if (montoEnMonedaFactura.gt(balancePendiente)) {
       throw createBusinessError(
-        `El monto (${montoPago.toFixed(2)}) excede el balance pendiente (${balancePendiente.toFixed(2)})`
+        `El monto (${montoPago.toFixed(2)} ${monedaDelPago}) excede el balance pendiente (${balancePendiente.toFixed(2)} ${factura.moneda || 'USD'})`
       );
     }
 
     // ── Determinar nuevo estado de factura ────────────────────────────────────
-    const nuevoTotalPagado = totalPagado.add(montoPago);
+    const nuevoTotalPagado = totalPagado.add(montoEnMonedaFactura);
     let nuevoEstado;
     if (nuevoTotalPagado.gte(totalFactura)) {
       nuevoEstado = 'PAID';
@@ -123,6 +134,7 @@ router.post('/', async (req, res, next) => {
         data: {
           facturaId,
           monto:                 montoPago.toFixed(2),
+          monedaPago:            monedaDelPago,
           metodoPago,
           referenciaTransaccion: referenciaTransaccion?.trim() || null,
           fechaPago:             fechaPago ? new Date(fechaPago).toISOString() : new Date().toISOString(),
@@ -158,6 +170,7 @@ router.post('/', async (req, res, next) => {
             select: {
               id: true,
               monto: true,
+              monedaPago: true,
               metodoPago: true,
               fechaPago: true,
             },
@@ -170,7 +183,7 @@ router.post('/', async (req, res, next) => {
 
     // Calcular totales para la respuesta
     const totalPagadoFinal = facturaActualizada.pagos.reduce(
-      (acc, p) => acc.add(new Decimal(p.monto.toString())),
+      (acc, p) => acc.add(normalizarPagoAFactura(p, facturaActualizada)),
       new Decimal(0)
     );
     const balanceFinal = totalFactura.sub(totalPagadoFinal);
@@ -199,6 +212,7 @@ router.delete('/:id', async (req, res, next) => {
         id: true,
         facturaId: true,
         monto: true,
+        monedaPago: true,
         metodoPago: true,
         referenciaTransaccion: true,
         fechaPago: true,
@@ -216,6 +230,7 @@ router.delete('/:id', async (req, res, next) => {
               select: {
                 id: true,
                 monto: true,
+                monedaPago: true,
                 metodoPago: true,
                 fechaPago: true,
               },
@@ -236,7 +251,7 @@ router.delete('/:id', async (req, res, next) => {
       // Recalcular estado
       const otrosPagos = factura.pagos.filter(p => p.id !== req.params.id);
       const totalOtros = otrosPagos.reduce(
-        (acc, p) => acc.add(new Decimal(p.monto.toString())),
+        (acc, p) => acc.add(normalizarPagoAFactura(p, factura)),
         new Decimal(0)
       );
       const totalFactura = new Decimal(factura.total.toString());

@@ -12,6 +12,7 @@ import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { Button } from '../components/ui';
 import { CashRegisterReport } from '../components/ui/CashRegisterReport';
+import { CierreTurnoModal } from '../components/ui/CierreTurnoModal';
 
 export function CajaPage() {
   const { toggleSidebar } = useOutletContext();
@@ -64,7 +65,12 @@ export function CajaPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await API.abrirCaja(parseFloat(montoInicial || 0), observaciones);
+      const monto = parseFloat(montoInicial || 0);
+      if (isNaN(monto) || monto < 0) {
+        showToast('Monto inicial inválido', 'error');
+        return;
+      }
+      await API.abrirCaja(monto, observaciones);
       showToast('🎉 Caja abierta con éxito', 'success');
       setModalAbrir(false);
       setObservaciones('');
@@ -93,11 +99,10 @@ export function CajaPage() {
     }
   };
 
-  const handleCerrarSubmit = async (e) => {
-    e.preventDefault();
+  const handleCerrarSubmit = async (montoFinalArg, observacionesArg, arqueoDetalle) => {
     setSubmitting(true);
     try {
-      const cajaCerrada = await API.cerrarCaja(parseFloat(montoFinal || 0), observaciones);
+      const cajaCerrada = await API.cerrarCaja(montoFinalArg, observacionesArg, arqueoDetalle);
       showToast('🎉 Caja cerrada con éxito', 'success');
       setModalCerrar(false);
       setMontoFinal('');
@@ -187,13 +192,13 @@ export function CajaPage() {
         )}
 
         {/* ── Historial de Cierres ── */}
-        <div className="card">
-          <div className="card-header">
-            <h3 className="card-title">Historial de Cierres de Caja</h3>
+        <div className="card cash-history-card">
+          <div className="card-header flex flex-wrap items-center justify-between gap-4 mb-4">
+            <h3 className="card-title m-0">Historial de Cierres de Caja</h3>
             <Button variant="secondary" size="sm" icon="mdi:refresh" onClick={loadData}>Recargar</Button>
           </div>
           <div className="table-wrapper">
-            <table>
+            <table className="cash-history-table">
               <thead>
                 <tr>
                   <th>Usuario</th>
@@ -294,105 +299,24 @@ export function CajaPage() {
           </div>
         )}
 
-        {/* ── Modal Cerrar: Cuadre en Tiempo Real ── */}
+        {/* ── Modal Cerrar: Cuadre de Caja ── */}
         {modalCerrar && (
-          <div className="modal-overlay open">
-            <div className="modal modal-md">
-              <div className="modal-header">
-                <h3 className="modal-title">Cerrar Turno — Cuadre de Caja</h3>
-                <button className="modal-close" onClick={() => setModalCerrar(false)}><Icon icon={closeIcon} className="h-4 w-4" /></button>
+          previewLoading ? (
+            <div className="modal-overlay open">
+              <div className="modal modal-md">
+                <div className="modal-body" style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)' }}>
+                  Calculando totales del turno...
+                </div>
               </div>
-              <form onSubmit={handleCerrarSubmit}>
-                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  {previewLoading ? (
-                    <div style={{ textAlign: 'center', padding: '24px', color: 'var(--text-secondary)' }}>
-                      Calculando totales del turno...
-                    </div>
-                  ) : preview ? (
-                    <>
-                      {/* Resumen del turno */}
-                      <div style={{ background: 'var(--bg-secondary)', padding: '14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', fontSize: '13px' }}>
-                        <div style={{ fontWeight: 700, marginBottom: '10px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                          Ingresos del Turno
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span>💵 Efectivo</span>
-                          <strong>{Utils.formatMoney(preview.desglose?.efectivo || 0)}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span>📱 Pago Móvil</span>
-                          <strong>{Utils.formatMoney(preview.desglose?.pagoMovil || 0)}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span>💳 Punto</span>
-                          <strong>{Utils.formatMoney(preview.desglose?.punto || 0)}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span>🏦 Transferencia</span>
-                          <strong>{Utils.formatMoney(preview.desglose?.transferencia || 0)}</strong>
-                        </div>
-                        <div style={{ borderTop: '1px solid var(--border)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
-                          <span style={{ fontWeight: 700 }}>Total Ingresos</span>
-                          <strong style={{ color: 'var(--accent)', fontSize: '15px' }}>{Utils.formatMoney(preview.totalIngresosUSD)}</strong>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          <span>Transacciones del turno</span>
-                          <span><strong>{preview.totalTransacciones}</strong></span>
-                        </div>
-                      </div>
-
-                      {/* Esperado en caja */}
-                      <div style={{ background: 'var(--bg-secondary)', padding: '12px 14px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', fontSize: '13px', display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Monto Esperado en Caja Física</span>
-                        <strong style={{ fontSize: '15px' }}>{Utils.formatMoney(preview.montoEsperadoCajaUSD)}</strong>
-                      </div>
-                    </>
-                  ) : null}
-
-                  {/* Ingreso del cajero */}
-                  <div className="form-group">
-                    <label className="form-label">Monto Contado Físicamente (USD)</label>
-                    <input
-                      type="number" step="0.01" className="form-control"
-                      value={montoFinal} onChange={e => setMontoFinal(e.target.value)} required
-                    />
-                  </div>
-
-                  {/* Diferencia en tiempo real */}
-                  {montoFinal !== '' && preview && (
-                    <div style={{
-                      padding: '12px 16px',
-                      borderRadius: 'var(--radius-md)',
-                      background: diferencia >= 0 ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)',
-                      border: `1px solid ${diferencia >= 0 ? 'var(--success)' : 'var(--danger)'}`,
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      fontWeight: 700
-                    }}>
-                      <span style={{ color: diferencia >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                        {diferencia >= 0 ? '✓ Sobrante' : '✗ Faltante'}
-                      </span>
-                      <span style={{ color: diferencia >= 0 ? 'var(--success)' : 'var(--danger)', fontSize: '18px' }}>
-                        {diferencia >= 0 ? '+' : ''}{Utils.formatMoney(Math.abs(diferencia))}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="form-group">
-                    <label className="form-label">Observaciones / Descuadres</label>
-                    <textarea className="form-control" rows={2} value={observaciones} onChange={e => setObservaciones(e.target.value)} />
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="button" className="btn btn-ghost" onClick={() => setModalCerrar(false)}>Cancelar</button>
-                  <button type="submit" className="btn btn-danger" disabled={submitting}>
-                    {submitting ? 'Cerrando...' : 'Confirmar Cierre de Turno'}
-                  </button>
-                </div>
-              </form>
             </div>
-          </div>
+          ) : preview ? (
+            <CierreTurnoModal
+              preview={preview}
+              submitting={submitting}
+              onCancel={() => { setModalCerrar(false); setPreview(null); }}
+              onConfirm={handleCerrarSubmit}
+            />
+          ) : null
         )}
       </div>
 

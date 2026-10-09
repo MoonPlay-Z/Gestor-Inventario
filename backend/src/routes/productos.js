@@ -5,6 +5,13 @@ const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
 const { getSystemConfig } = require('./config');
+const { aUnidadBase } = require('../utils/unidades');
+
+const UNIDADES_VALIDAS = [
+  'UNIDAD', 'KILOGRAMO', 'GRAMO', 'LITRO', 'MILILITRO',
+  'METRO', 'CENTIMETRO', 'BULTO', 'PAQUETE', 'CAJA',
+  'SACO', 'BOTELLA', 'LATA', 'DOCENA', 'MEDIA_DOCENA',
+];
 
 // SUPER_ADMIN no gestiona inventario
 router.use(requireRole('EMPRESA', 'CAJA', 'INVENTARIO'));
@@ -253,11 +260,7 @@ router.post('/', async (req, res, next) => {
     if (smin.lt(0))      throw createValidationError('El stock mínimo no puede ser negativo', { stockMinimo: 'No puede ser negativo' });
 
     // ── VALIDACIONES DE UNIDAD DE MEDIDA ──
-    const unidadesValidas = ['UNIDAD', 'KILOGRAMO', 'GRAMO', 'LITRO', 'MILILITRO', 
-                             'METRO', 'CENTIMETRO', 'BULTO', 'PAQUETE', 'CAJA', 
-                             'SACO', 'BOTELLA', 'LATA', 'DOCENA', 'MEDIA_DOCENA'];
-    
-    if (!unidadesValidas.includes(unidadMedida)) {
+    if (!UNIDADES_VALIDAS.includes(unidadMedida)) {
       throw createValidationError('Unidad de medida inválida', { 
         unidadMedida: 'Debe ser una unidad válida' 
       });
@@ -332,7 +335,11 @@ router.post('/', async (req, res, next) => {
 // PUT /api/productos/:id
 router.put('/:id', async (req, res, next) => {
   try {
-    const { sku, nombre, descripcion, imagenUrl, stockActual, stockMinimo, precioVenta, costoCompra, tasaImpuesto, activo, categoria } = req.body;
+    const {
+      sku, nombre, descripcion, imagenUrl, stockActual, stockMinimo,
+      precioVenta, costoCompra, tasaImpuesto, activo, categoria,
+      unidadMedida, esVentaPorPeso, precioPorKilo, toleranciaPeso,
+    } = req.body;
 
     if (!sku?.trim())    throw createValidationError('El SKU es obligatorio');
     if (!nombre?.trim()) throw createValidationError('El nombre es obligatorio');
@@ -340,13 +347,40 @@ router.put('/:id', async (req, res, next) => {
     const precio = new Decimal(precioVenta ?? 0);
     const costo  = new Decimal(costoCompra ?? 0);
     const tasa   = new Decimal(tasaImpuesto ?? 16);
-    const stock  = parseInt(stockActual ?? 0);
-    const smin   = parseInt(stockMinimo ?? 5);
+    const stock  = new Decimal(stockActual ?? 0);
+    const smin   = new Decimal(stockMinimo ?? 5);
 
     if (precio.lte(0))   throw createValidationError('El precio debe ser mayor a 0');
     if (costo.lt(0))     throw createValidationError('El costo no puede ser negativo');
     if (tasa.lt(0) || tasa.gt(100)) throw createValidationError('La tasa de impuesto debe estar entre 0 y 100');
-    if (stock < 0)       throw createValidationError('El stock no puede ser negativo');
+    if (stock.lt(0) || smin.lt(0))       throw createValidationError('El stock no puede ser negativo');
+
+    if (unidadMedida !== undefined && !UNIDADES_VALIDAS.includes(unidadMedida)) {
+      throw createValidationError('Unidad de medida inválida', {
+        unidadMedida: 'Debe ser una unidad válida',
+      });
+    }
+    if (esVentaPorPeso && !['KILOGRAMO', 'GRAMO'].includes(unidadMedida)) {
+      throw createValidationError('La venta por peso solo permite unidades de peso', {
+        unidadMedida: 'Debe ser KILOGRAMO o GRAMO',
+      });
+    }
+    if (esVentaPorPeso) {
+      const precioKilo = new Decimal(precioPorKilo ?? 0);
+      if (!precioKilo.isFinite() || precioKilo.lte(0)) {
+        throw createValidationError('El precio por kilo debe ser mayor a 0 para venta por peso', {
+          precioPorKilo: 'Debe ser positivo',
+        });
+      }
+    }
+    if (toleranciaPeso !== undefined && toleranciaPeso !== null && toleranciaPeso !== '') {
+      const tolerancia = new Decimal(toleranciaPeso);
+      if (!tolerancia.isFinite() || tolerancia.lt(0) || tolerancia.gt(100)) {
+        throw createValidationError('La tolerancia de peso debe estar entre 0 y 100', {
+          toleranciaPeso: 'Rango inválido',
+        });
+      }
+    }
 
     const empresaId = req.user.empresaId || req.user.id;
     const producto = await prisma.producto.updateMany({
@@ -356,13 +390,23 @@ router.put('/:id', async (req, res, next) => {
         nombre: nombre.trim(),
         descripcion: descripcion?.trim() || null,
         imagenUrl: imagenUrl?.trim() || null,
-        stockActual: stock,
-        stockMinimo: smin,
+        stockActual: stock.toFixed(4),
+        stockMinimo: smin.toFixed(4),
         precioVenta: precio.toFixed(2),
         costoCompra: costo.toFixed(2),
         tasaImpuesto: tasa.toFixed(2),
         categoria: categoria?.trim() || 'General',
         activo: activo !== undefined ? Boolean(activo) : undefined,
+        unidadMedida,
+        esVentaPorPeso: esVentaPorPeso !== undefined ? Boolean(esVentaPorPeso) : undefined,
+        precioPorKilo: esVentaPorPeso === undefined && precioPorKilo === undefined
+          ? undefined
+          : esVentaPorPeso ? new Decimal(precioPorKilo).toFixed(2) : null,
+        toleranciaPeso: esVentaPorPeso === undefined && toleranciaPeso === undefined
+          ? undefined
+          : toleranciaPeso === undefined || toleranciaPeso === null || toleranciaPeso === ''
+            ? null
+            : new Decimal(toleranciaPeso).toFixed(2),
       },
     });
     if (producto.count === 0) {
@@ -375,24 +419,32 @@ router.put('/:id', async (req, res, next) => {
 // PATCH /api/productos/:id/stock — Ajuste manual de stock
 router.patch('/:id/stock', async (req, res, next) => {
   try {
-    const { cantidad, operacion = 'set' } = req.body;
-    const qty = parseInt(cantidad);
+    const { cantidad, operacion = 'set', unidadMedida } = req.body;
+    const qty = new Decimal(cantidad);
 
-    if (isNaN(qty)) throw createValidationError('La cantidad debe ser un número entero');
+    if (!qty.isFinite() || qty.lt(0)) throw createValidationError('La cantidad debe ser un número válido no negativo');
 
     const empresaId = req.user.empresaId || req.user.id;
     const producto = await prisma.producto.findFirstOrThrow({ where: { id: req.params.id, empresaId } });
 
-    let nuevoStock;
-    if (operacion === 'add')      nuevoStock = producto.stockActual + qty;
-    else if (operacion === 'sub') nuevoStock = producto.stockActual - qty;
-    else                          nuevoStock = qty; // 'set'
+    // Normalizar a la unidad base del producto (kg para venta por peso)
+    let qtyBase;
+    try {
+      qtyBase = aUnidadBase(qty, unidadMedida || producto.unidadMedida, producto);
+    } catch (e) {
+      throw createValidationError(e.message);
+    }
 
-    if (nuevoStock < 0) throw createBusinessError('El stock resultante no puede ser negativo');
+    let nuevoStock;
+    if (operacion === 'add')      nuevoStock = new Decimal(producto.stockActual.toString()).plus(qtyBase);
+    else if (operacion === 'sub') nuevoStock = new Decimal(producto.stockActual.toString()).minus(qtyBase);
+    else                          nuevoStock = qtyBase; // 'set'
+
+    if (nuevoStock.lt(0)) throw createBusinessError('El stock resultante no puede ser negativo');
 
     const actualizado = await prisma.producto.updateMany({
       where: { id: req.params.id, empresaId },
-      data: { stockActual: nuevoStock },
+      data: { stockActual: nuevoStock.toFixed(4) },
     });
     if (actualizado.count === 0) {
       throw createBusinessError('Producto no encontrado o no pertenece a tu empresa');

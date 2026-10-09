@@ -1,3 +1,6 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider      = "prisma-client-js"
   output        = "../src/generated/prisma-sqlite"
@@ -9,19 +12,111 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODELOS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Empresa {
+  id                 String    @id @default(uuid())
+  nombre             String
+  rif                String    @unique
+  direccion          String?
+  telefono           String?
+  activo             Boolean   @default(true)
+  subscriptionStatus String    @default("trialing")
+  planType           String?
+  trialStartsAt      DateTime?
+  trialEndsAt        DateTime?
+  currentPeriodEnd   DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  usuarios     Usuario[]    @relation("EmpresaUsuarios")
+  roles        Rol[]
+  facturas     Factura[]
+  cierresCaja  CierreCaja[]
+  cotizaciones Cotizacion[]
+  auditLogs    AuditLog[]
+
+  @@map("empresas")
+}
+
+model Rol {
+  id          String   @id @default(uuid())
+  empresaId   String?
+  empresa     Empresa? @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  nombre      String
+  descripcion String?
+  createdAt   DateTime @default(now())
+
+  usuarios Usuario[]
+  permisos RolPermiso[]
+
+  @@map("roles")
+}
+
+model Permiso {
+  id          String  @id @default(uuid())
+  modulo      String
+  accion      String
+  descripcion String?
+
+  roles RolPermiso[]
+
+  @@unique([modulo, accion])
+  @@map("permisos")
+}
+
+model RolPermiso {
+  rolId     String
+  permisoId String
+  rol       Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso   Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@id([rolId, permisoId])
+  @@map("roles_permisos")
+}
+
+model AuditLog {
+  id              String   @id @default(uuid())
+  empresaId       String?
+  empresa         Empresa? @relation(fields: [empresaId], references: [id], onDelete: SetNull)
+  usuarioId       String?
+  usuario         Usuario? @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  accion          String
+  entidad         String
+  entidadId       String?
+  datosAnteriores String?
+  datosNuevos     String?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime @default(now())
+
+  @@index([empresaId])
+  @@index([usuarioId])
+  @@index([accion])
+  @@map("audit_logs")
+}
+
 model Cliente {
-  id          String    @id @default(uuid())
+  id          String   @id @default(uuid())
   razonSocial String
   rifCedula   String
   direccion   String?
   telefono    String?
   correo      String?
   empresaId   String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  empresa     Usuario?  @relation("EmpresaClientes", fields: [empresaId], references: [id], onDelete: Cascade)
-  facturas    Factura[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  empresa      Usuario?     @relation("EmpresaClientes", fields: [empresaId], references: [id], onDelete: Cascade)
+  facturas     Factura[]
   cotizaciones Cotizacion[]
+
   @@unique([empresaId, rifCedula])
   @@index([empresaId])
   @@index([razonSocial])
@@ -30,22 +125,36 @@ model Cliente {
 }
 
 model Producto {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   sku         String
   nombre      String
   descripcion String?
-  stockActual Int      @default(0)
-  stockMinimo Int      @default(5)
-  precioVenta Float
-  costoCompra Float    @default(0)
-  tasaImpuesto Float   @default(16)
-  categoria   String   @default("General")
-  activo      Boolean  @default(true)
-  empresaId   String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  empresa     Usuario  @relation("EmpresaProductos", fields: [empresaId], references: [id])
+  imagenUrl   String?
+
+  // ── Unidad de medida ──
+  unidadMedida String @default("UNIDAD")
+
+  // ── Stock decimal (permite fracciones) ──
+  stockActual Float @default(0)
+  stockMinimo Float @default(5)
+
+  // ── Venta por peso (verduras, hortalizas) ──
+  esVentaPorPeso Boolean @default(false)
+  precioPorKilo  Float?
+  toleranciaPeso Float?
+
+  precioVenta  Float
+  costoCompra  Float    @default(0.00)
+  tasaImpuesto Float    @default(16.00)
+  categoria    String   @default("General")
+  activo       Boolean  @default(true)
+  empresaId    String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  empresa      Usuario       @relation("EmpresaProductos", fields: [empresaId], references: [id])
   itemsFactura ItemFactura[]
+
   @@unique([empresaId, sku])
   @@index([empresaId])
   @@index([nombre])
@@ -54,49 +163,57 @@ model Producto {
 }
 
 model Factura {
-  id              String   @id @default(uuid())
-  numeroFactura   Int      @unique
-  clienteId       String
-  cliente         Cliente  @relation(fields: [clienteId], references: [id])
-  usuarioId       String?
-  usuario         Usuario? @relation(fields: [usuarioId], references: [id])
-  fechaEmision    DateTime @default(now())
+  id               String   @id @default(uuid())
+  numeroFactura    Int      @unique
+  clienteId        String
+  cliente          Cliente  @relation(fields: [clienteId], references: [id])
+  usuarioId        String?
+  usuario          Usuario? @relation(fields: [usuarioId], references: [id])
+  empresaId        String?
+  empresa          Empresa? @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  fechaEmision     DateTime @default(now())
   fechaVencimiento DateTime
-  subtotal        Float
-  impuestoTotal   Float
-  total           Float
-  estado          String   @default("PENDING")
-  moneda          String   @default("USD")
-  tasaCambio      Float    @default(1)
-  cuotasTotales   Int      @default(1)
-  observaciones   String?
-  anuladoPor      String?
-  motivoAnulacion String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  items           ItemFactura[]
-  pagos           Pago[]
+  subtotal         Float
+  impuestoTotal    Float
+  total            Float
+  estado           String   @default("PENDING")
+  moneda           String   @default("USD")
+  tasaCambio       Float    @default(1.0)
+  cuotasTotales    Int      @default(1)
+  observaciones    String?
+  anuladoPor       String?
+  motivoAnulacion  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  items ItemFactura[]
+  pagos Pago[]
+
   @@index([fechaEmision])
   @@index([usuarioId])
   @@index([clienteId])
   @@index([estado])
+  @@index([empresaId])
   @@map("facturas")
 }
 
 model ItemFactura {
-  id                      String   @id @default(uuid())
+  id                      String    @id @default(uuid())
   facturaId               String
-  factura                 Factura  @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  factura                 Factura   @relation(fields: [facturaId], references: [id], onDelete: Cascade)
   productoId              String?
   producto                Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
   descripcionHistorica    String
-  cantidad                Int
+  cantidad                Float
+  unidadMedida            String    @default("UNIDAD")
+  pesoReal                Float?
   precioUnitarioHistorico Float
   tasaImpuestoAplicada    Float
   subtotalLinea           Float
   impuestoLinea           Float
   totalLinea              Float
-  createdAt               DateTime @default(now())
+  createdAt               DateTime  @default(now())
+
   @@index([facturaId])
   @@map("items_factura")
 }
@@ -106,11 +223,13 @@ model Pago {
   facturaId             String
   factura               Factura  @relation(fields: [facturaId], references: [id])
   monto                 Float
+  monedaPago            String   @default("USD")
   metodoPago            String
   referenciaTransaccion String?
   fechaPago             DateTime @default(now())
   notas                 String?
   createdAt             DateTime @default(now())
+
   @@index([facturaId])
   @@index([fechaPago])
   @@map("pagos")
@@ -120,52 +239,63 @@ model Correlativo {
   id     Int    @id @default(autoincrement())
   nombre String @unique
   valor  Int    @default(0)
+
   @@map("correlativos")
 }
 
 model CierreCaja {
-  id              String   @id @default(uuid())
-  usuarioId       String?
-  usuario         Usuario? @relation(fields: [usuarioId], references: [id])
-  fechaApertura   DateTime @default(now())
-  fechaCierre     DateTime?
-  montoInicial    Float
-  montoFinal      Float?
-  ingresosEfectivo Float   @default(0)
-  ingresosBanco   Float    @default(0)
-  estado          String   @default("OPEN")
-  observaciones   String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id               String    @id @default(uuid())
+  usuarioId        String?
+  usuario          Usuario?  @relation(fields: [usuarioId], references: [id])
+  empresaId        String?
+  empresa          Empresa?  @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  fechaApertura    DateTime  @default(now())
+  fechaCierre      DateTime?
+  montoInicial     Float
+  montoFinal       Float?
+  ingresosEfectivo Float     @default(0.00)
+  ingresosBanco    Float     @default(0.00)
+  estado           String    @default("OPEN")
+  observaciones    String?
+  arqueoDetalle    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
   @@index([usuarioId])
+  @@index([empresaId])
   @@index([estado])
   @@index([fechaApertura])
   @@map("cierres_caja")
 }
 
 model Cotizacion {
-  id              String   @id @default(uuid())
-  numero          Int      @unique
-  clienteId       String
-  cliente         Cliente  @relation(fields: [clienteId], references: [id])
-  usuarioId       String?
-  usuario         Usuario? @relation(fields: [usuarioId], references: [id])
-  fechaEmision    DateTime @default(now())
-  fechaValidez    DateTime
-  subtotal        Float
-  impuestoTotal   Float
-  total           Float
-  moneda          String   @default("USD")
-  estado          String   @default("PENDING")
-  items           ItemCotizacion[]
+  id            String   @id @default(uuid())
+  numero        Int      @unique
+  clienteId     String
+  cliente       Cliente  @relation(fields: [clienteId], references: [id])
+  usuarioId     String?
+  usuario       Usuario? @relation(fields: [usuarioId], references: [id])
+  empresaId     String?
+  empresa       Empresa? @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  fechaEmision  DateTime @default(now())
+  fechaValidez  DateTime
+  subtotal      Float
+  impuestoTotal Float
+  total         Float
+  moneda        String   @default("USD")
+  estado        String   @default("PENDING")
+
+  items ItemCotizacion[]
+
   @@index([clienteId])
   @@index([usuarioId])
+  @@index([empresaId])
   @@index([estado])
   @@map("cotizaciones")
 }
 
 model ItemCotizacion {
-  id             String   @id @default(uuid())
+  id             String     @id @default(uuid())
   cotizacionId   String
   cotizacion     Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
   productoId     String?
@@ -173,33 +303,51 @@ model ItemCotizacion {
   cantidad       Int
   precioUnitario Float
   totalLinea     Float
+
   @@index([cotizacionId])
   @@map("items_cotizacion")
 }
 
 model Usuario {
-  id                    String    @id @default(uuid())
-  username              String    @unique
-  passwordHash          String
-  nombre                String    @default("")
-  rol                   String    @default("CAJA")
-  activo                Boolean   @default(true)
-  empresaId             String?
-  subscriptionStatus    String    @default("trialing")
-  planType              String?
-  trialStartsAt         DateTime?
-  trialEndsAt           DateTime?
-  currentPeriodEnd      DateTime?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
-  empresa               Usuario?  @relation("EmpresaSubusuarios", fields: [empresaId], references: [id])
-  subUsuarios           Usuario[] @relation("EmpresaSubusuarios")
-  productos             Producto[] @relation("EmpresaProductos")
-  clientes              Cliente[]  @relation("EmpresaClientes")
+  id                 String    @id @default(uuid())
+  username           String    @unique
+  passwordHash       String
+  nombre             String    @default("")
+  email              String?
+  rol                String    @default("CAJA")
+  rolId              String?
+  rolDinamico        Rol?      @relation(fields: [rolId], references: [id], onDelete: SetNull)
+  activo             Boolean   @default(true)
+  empresaId          String?
+  empresaRefId       String?
+  empresaRef         Empresa?  @relation("EmpresaUsuarios", fields: [empresaRefId], references: [id], onDelete: SetNull)
+  // ── Suscripción SaaS ──
+  subscriptionStatus String    @default("trialing")
+  planType           String?
+  trialStartsAt      DateTime?
+  trialEndsAt        DateTime?
+  currentPeriodEnd   DateTime?
+  // ── Seguridad Avanzada ──
+  mfaEnabled         Boolean   @default(false)
+  mfaSecret          String?
+  sessionVersion     Int       @default(1)
+  sudoModeExpiresAt  DateTime?
+  lastLoginIp        String?
+  lastLoginAt        DateTime?
+  deletedAt          DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  empresa               Usuario?              @relation("EmpresaSubusuarios", fields: [empresaId], references: [id])
+  subUsuarios           Usuario[]             @relation("EmpresaSubusuarios")
+  productos             Producto[]            @relation("EmpresaProductos")
+  clientes              Cliente[]             @relation("EmpresaClientes")
   facturas              Factura[]
   cierresCaja           CierreCaja[]
   cotizaciones          Cotizacion[]
   solicitudesActivacion SolicitudActivacion[]
+  auditLogs             AuditLog[]
+
   @@map("usuarios")
 }
 
@@ -213,7 +361,41 @@ model SolicitudActivacion {
   estado     String   @default("PENDIENTE")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
   @@index([usuarioId])
   @@index([estado])
   @@map("solicitudes_activacion")
+}
+
+model Noticia {
+  id        String   @id @default(uuid())
+  titulo    String
+  subtitulo String?
+  contenido String
+  imagenUrl String?
+  categoria String   @default("Anuncio")
+  destacado Boolean  @default(false)
+  publicado Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("noticias")
+}
+
+model Promocion {
+  id             String    @id @default(uuid())
+  codigo         String    @unique
+  titulo         String
+  descripcion    String?
+  descuentoPorc  Float?
+  diasExtraTrial Int       @default(0)
+  planDestino    String?
+  usosMaximos    Int       @default(100)
+  usosActuales   Int       @default(0)
+  fechaFin       DateTime?
+  activo         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("promociones")
 }

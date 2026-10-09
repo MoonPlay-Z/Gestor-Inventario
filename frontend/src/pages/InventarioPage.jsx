@@ -54,7 +54,7 @@ export function InventarioPage() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [showStockModal, setShowStockModal] = useState(false);
   const [stockTarget, setStockTarget] = useState(null);
-  const [stockForm, setStockForm] = useState({ cantidad: '', operacion: 'set' });
+  const [stockForm, setStockForm] = useState({ cantidad: '', operacion: 'set', unidadMedida: '' });
   const [metricas, setMetricas] = useState(null);
   const [skuTocado, setSkuTocado] = useState(false);
   const debounceRef = useRef(null);
@@ -81,19 +81,19 @@ export function InventarioPage() {
       setTotal(data.total || 0);
       
       // Auto-actualizar categorías disponibles
-      const nuevasCategorias = new Set(categorias);
-      (data.data || []).forEach(p => {
-        if (p.categoria && !nuevasCategorias.has(p.categoria)) {
-          nuevasCategorias.add(p.categoria);
-        }
+      setCategorias(prev => {
+        const nuevas = new Set(prev);
+        (data.data || []).forEach(p => {
+          if (p.categoria && !nuevas.has(p.categoria)) nuevas.add(p.categoria);
+        });
+        return Array.from(nuevas).sort();
       });
-      setCategorias(Array.from(nuevasCategorias).sort());
     } catch (err) {
       showToast('Error al cargar productos: ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
-  }, [categorias]);
+  }, []);
 
   useEffect(() => { 
     loadProductos(search, page, soloStockBajo, categoriaFiltro); 
@@ -128,6 +128,10 @@ export function InventarioPage() {
       categoria: p.categoria || 'General', precioVenta: p.precioVenta,
       costoCompra: p.costoCompra, tasaImpuesto: p.tasaImpuesto,
       stockActual: p.stockActual, stockMinimo: p.stockMinimo, activo: p.activo,
+      unidadMedida: p.unidadMedida || 'UNIDAD',
+      esVentaPorPeso: p.esVentaPorPeso || false,
+      precioPorKilo: p.precioPorKilo ?? '',
+      toleranciaPeso: p.toleranciaPeso ?? '',
     });
     setShowModal(true);
   };
@@ -158,8 +162,18 @@ export function InventarioPage() {
     setSaving(true);
     setFieldErrors({});
     try {
+      // Preparar datos para enviar (manejar campos de venta por peso)
+      const datosProducto = { ...form };
+      if (!form.esVentaPorPeso) {
+        datosProducto.precioPorKilo = null;
+        datosProducto.toleranciaPeso = null;
+      } else {
+        datosProducto.precioPorKilo = form.precioPorKilo ? parseFloat(form.precioPorKilo) : null;
+        datosProducto.toleranciaPeso = form.toleranciaPeso ? parseFloat(form.toleranciaPeso) : null;
+      }
+
       if (editTarget) {
-        await API.actualizarProducto(editTarget.id, form);
+        await API.actualizarProducto(editTarget.id, datosProducto);
         showToast('Producto actualizado exitosamente', 'success');
       } else {
         // Si el SKU no fue modificado manualmente, obtener el siguiente automáticamente
@@ -172,19 +186,7 @@ export function InventarioPage() {
             // Si falla, usar el SKU del formulario
           }
         }
-        // Preparar datos para enviar (manejar campos de venta por peso)
-        const datosProducto = { ...form, sku: skuFinal };
-        
-        // Si no es venta por peso, enviar null para estos campos
-        if (!form.esVentaPorPeso) {
-          datosProducto.precioPorKilo = null;
-          datosProducto.toleranciaPeso = null;
-        } else {
-          // Si es venta por peso, asegurar que los valores sean números
-          datosProducto.precioPorKilo = form.precioPorKilo ? parseFloat(form.precioPorKilo) : null;
-          datosProducto.toleranciaPeso = form.toleranciaPeso ? parseFloat(form.toleranciaPeso) : null;
-        }
-        
+        datosProducto.sku = skuFinal;
         await API.crearProducto(datosProducto);
         showToast('Producto creado exitosamente', 'success');
       }
@@ -202,7 +204,7 @@ export function InventarioPage() {
     try {
       await API.eliminarProducto(p.id);
       showToast('Producto desactivado', 'success');
-      loadProductos(search, page, soloStockBajo);
+      loadProductos(search, page, soloStockBajo, categoriaFiltro);
     } catch (err) { showToast(err.message, 'error'); }
   };
 
@@ -210,10 +212,15 @@ export function InventarioPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await API.ajustarStock(stockTarget.id, parseInt(stockForm.cantidad), stockForm.operacion);
+      const cantidad = parseFloat(stockForm.cantidad);
+      if (isNaN(cantidad) || cantidad < 0) {
+        showToast('Cantidad inválida', 'error');
+        return;
+      }
+      await API.ajustarStock(stockTarget.id, cantidad, stockForm.operacion, stockForm.unidadMedida);
       showToast('Stock ajustado', 'success');
       setShowStockModal(false);
-      loadProductos(search, page, soloStockBajo);
+      loadProductos(search, page, soloStockBajo, categoriaFiltro);
     } catch (err) { showToast(err.message, 'error'); }
     finally { setSaving(false); }
   };
@@ -340,7 +347,7 @@ export function InventarioPage() {
                     <td>{p.activo ? <span className="badge badge-success">Activo</span> : <span className="badge badge-danger">Inactivo</span>}</td>
                     <td>
                       <div style={{ display: 'flex', gap: '4px' }}>
-                        <button onClick={() => { setStockTarget(p); setStockForm({ cantidad: '', operacion: 'set' }); setShowStockModal(true); }}
+                        <button onClick={() => { setStockTarget(p); setStockForm({ cantidad: '', operacion: 'set', unidadMedida: p.esVentaPorPeso ? 'KILOGRAMO' : p.unidadMedida }); setShowStockModal(true); }}
                           className="btn btn-ghost btn-sm" title="Ajustar stock">
                           <Icon icon="mdi:package-variant-plus" className="h-4 w-4" />
                         </button>
@@ -591,7 +598,7 @@ export function InventarioPage() {
               <div className="modal-body">
                 <p style={{ marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                   <strong style={{ color: 'var(--text-primary)' }}>{stockTarget.nombre}</strong><br />
-                  Stock actual: <strong style={{ color: 'var(--accent)' }}>{stockTarget.stockActual} uds</strong>
+                  Stock actual: <strong style={{ color: 'var(--accent)' }}>{stockTarget.stockActual} {stockTarget.esVentaPorPeso ? 'kg' : 'uds'}</strong>
                 </p>
                 <div className="form-group">
                   <label className="form-label">Operación</label>
@@ -604,9 +611,20 @@ export function InventarioPage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Cantidad</label>
-                  <input type="number" min="0" className="form-control" value={stockForm.cantidad}
+                  <input type="number" min="0" step="0.001" className="form-control" value={stockForm.cantidad}
                     onChange={e => setStockForm(f => ({ ...f, cantidad: e.target.value }))} required autoFocus />
                 </div>
+                {stockTarget.esVentaPorPeso && (
+                  <div className="form-group">
+                    <label className="form-label">Unidad ingresada</label>
+                    <select className="form-control" value={stockForm.unidadMedida || 'KILOGRAMO'}
+                      onChange={e => setStockForm(f => ({ ...f, unidadMedida: e.target.value }))}>
+                      <option value="KILOGRAMO">Kilogramos</option>
+                      <option value="GRAMO">Gramos</option>
+                    </select>
+                    <small style={{ color: 'var(--text-muted)' }}>El stock se guarda siempre en kg.</small>
+                  </div>
+                )}
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowStockModal(false)}>Cancelar</button>

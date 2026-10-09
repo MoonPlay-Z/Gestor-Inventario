@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../db/prisma');
-const { Prisma } = require('@prisma/client');
+const { Prisma } = require('../db/prisma');
+const { tsFrag } = require('../utils/sql');
 const Decimal = require('decimal.js').Decimal;
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
@@ -52,6 +53,7 @@ router.get('/status', async (req, res, next) => {
         ingresosBanco: true,
         estado: true,
         observaciones: true,
+        arqueoDetalle: true,
         createdAt: true,
         updatedAt: true,
         usuario: { select: { id: true, username: true, nombre: true, rol: true } },
@@ -147,6 +149,7 @@ router.get('/preview', async (req, res, next) => {
         ingresosBanco: true,
         estado: true,
         observaciones: true,
+        arqueoDetalle: true,
         createdAt: true,
         updatedAt: true,
         usuario: { select: { id: true, username: true, nombre: true } },
@@ -165,39 +168,71 @@ router.get('/preview', async (req, res, next) => {
     const pagosAgregados = await prisma.$queryRaw`
       SELECT
         p."metodoPago" AS metodo,
-        SUM(CASE
-          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+        p."monedaPago" AS moneda,
+        CAST(SUM(CASE
+          WHEN p."monedaPago" = 'VES' AND f."tasaCambio" > 0
           THEN p."monto" / f."tasaCambio"
           ELSE p."monto"
-        END) AS total_usd,
-        COUNT(*) AS cantidad
+        END) AS TEXT) AS total_usd,
+        CAST(SUM(CASE WHEN p."monedaPago" = 'VES' THEN p."monto" ELSE 0 END) AS TEXT) AS total_ves,
+        CAST(SUM(CASE WHEN p."monedaPago" = 'USD' THEN p."monto" ELSE 0 END) AS TEXT) AS total_usd_orig,
+        COUNT(*) AS cantidad,
+        COUNT(p."referenciaTransaccion") AS con_referencia
       FROM pagos p
       INNER JOIN facturas f ON f."id" = p."facturaId"
-      WHERE p."fechaPago" >= ${fechaApertura}::timestamp
+      WHERE p."fechaPago" >= ${tsFrag(fechaApertura)}
         AND f."estado" != 'VOIDED'
         ${usuarioFilter}
-      GROUP BY p."metodoPago"
+      GROUP BY p."metodoPago", p."monedaPago"
     `;
 
     let efectivoUSD = new Decimal(0);
     let pagoMovilUSD = new Decimal(0);
     let puntoUSD = new Decimal(0);
     let transferenciaUSD = new Decimal(0);
+    let efectivoVES = new Decimal(0);
+    let pagoMovilVES = new Decimal(0);
+    let puntoVES = new Decimal(0);
+    let transferenciaVES = new Decimal(0);
+    let efectivoUSDRecibido = new Decimal(0);
+    let efectivoVESRecibido = new Decimal(0);
     let totalTransacciones = 0;
+    let totalConReferencia = 0;
 
     for (const row of pagosAgregados) {
       const monto = new Decimal(row.total_usd || 0);
+      const montoVES = new Decimal(row.total_ves || 0);
       totalTransacciones += Number(row.cantidad);
+      totalConReferencia += Number(row.con_referencia || 0);
+      const esVES = row.moneda === 'VES';
 
       switch (row.metodo) {
-        case 'CASH':           efectivoUSD   = efectivoUSD.add(monto);    break;
-        case 'MOBILE_PAYMENT': pagoMovilUSD  = pagoMovilUSD.add(monto);   break;
-        case 'CREDIT_CARD':    puntoUSD      = puntoUSD.add(monto);       break;
-        case 'BANK_TRANSFER':  transferenciaUSD = transferenciaUSD.add(monto); break;
-        case 'PAGO_MOVIL':     pagoMovilUSD  = pagoMovilUSD.add(monto);   break;
-        default:               efectivoUSD   = efectivoUSD.add(monto);
+        case 'CASH':
+          efectivoUSD = efectivoUSD.add(monto);
+          efectivoVES = efectivoVES.add(montoVES);
+          efectivoUSDRecibido = efectivoUSDRecibido.add(new Decimal(row.total_usd_orig || 0));
+          efectivoVESRecibido = efectivoVESRecibido.add(montoVES);
+          break;
+        case 'MOBILE_PAYMENT': pagoMovilUSD  = pagoMovilUSD.add(monto);  esVES ? pagoMovilVES = pagoMovilVES.add(montoVES) : null;  break;
+        case 'CREDIT_CARD':    puntoUSD      = puntoUSD.add(monto);      esVES ? puntoVES = puntoVES.add(montoVES) : null;      break;
+        case 'BANK_TRANSFER':  transferenciaUSD = transferenciaUSD.add(monto); esVES ? transferenciaVES = transferenciaVES.add(montoVES) : null; break;
+        case 'PAGO_MOVIL':     pagoMovilUSD  = pagoMovilUSD.add(monto);  esVES ? pagoMovilVES = pagoMovilVES.add(montoVES) : null;  break;
+        default:               efectivoUSD   = efectivoUSD.add(monto);   esVES ? efectivoVES = efectivoVES.add(montoVES) : null;
       }
     }
+
+    // Tasa BCV vigente del turno (última factura no anulada desde la apertura)
+    const ultimasFacturas = await prisma.factura.findMany({
+      where: {
+        fechaEmision: { gte: new Date(fechaApertura).toISOString() },
+        ...(cajaAbierta.usuarioId ? { usuarioId: cajaAbierta.usuarioId } : {}),
+      },
+      orderBy: { fechaEmision: 'desc' },
+      take: 10,
+      select: { estado: true, tasaCambio: true },
+    });
+    const ultimaFactura = ultimasFacturas.find(f => f.estado !== 'VOIDED' && Number(f.tasaCambio) > 0) || null;
+    const tasaCambio = ultimaFactura ? Number(ultimaFactura.tasaCambio) : null;
 
     const ingresosBancoUSD = pagoMovilUSD.add(puntoUSD).add(transferenciaUSD);
     const ingresosEfectivoUSD = efectivoUSD;
@@ -217,7 +252,21 @@ router.get('/preview', async (req, res, next) => {
       ingresosBancoUSD: ingresosBancoUSD.toFixed(2),
       totalIngresosUSD: ingresosEfectivoUSD.add(ingresosBancoUSD).toFixed(2),
       montoEsperadoCajaUSD: montoEsperadoEfectivo.toFixed(2),
-      totalTransacciones
+      totalTransacciones,
+      tasaCambio,
+      desgloseVES: {
+        efectivo:     efectivoVES.toFixed(2),
+        pagoMovil:    pagoMovilVES.toFixed(2),
+        punto:        puntoVES.toFixed(2),
+        transferencia: transferenciaVES.toFixed(2),
+      },
+      efectivoRecibido: {
+        USD: efectivoUSDRecibido.toFixed(2),
+        VES: efectivoVESRecibido.toFixed(2),
+      },
+      verificados: {
+        totalConReferencia,
+      },
     });
   } catch (err) {
     next(err);
@@ -227,8 +276,17 @@ router.get('/preview', async (req, res, next) => {
 // 4. Cerrar Caja
 router.post('/close', async (req, res, next) => {
   try {
-    const { montoFinal, observaciones, usuarioId } = req.body;
+    const { montoFinal, observaciones, usuarioId, arqueoDetalle } = req.body;
     const userId = req.user?.id;
+
+    let arqueoDetalleStr = null;
+    if (arqueoDetalle !== undefined && arqueoDetalle !== null) {
+      try {
+        arqueoDetalleStr = typeof arqueoDetalle === 'string' ? arqueoDetalle : JSON.stringify(arqueoDetalle);
+      } catch {
+        throw createValidationError('arqueoDetalle debe ser un objeto JSON válido');
+      }
+    }
 
     let montoFinalNum;
     if (montoFinal !== undefined && montoFinal !== '') {
@@ -264,17 +322,17 @@ router.post('/close', async (req, res, next) => {
       const pagosAgregados = await tx.$queryRaw`
         SELECT
           p."metodoPago" AS metodo,
-          SUM(CASE
-            WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+          CAST(SUM(CASE
+            WHEN p."monedaPago" = 'VES' AND f."tasaCambio" > 0
             THEN p."monto" / f."tasaCambio"
             ELSE p."monto"
-          END) AS total_usd
+          END) AS TEXT) AS total_usd
         FROM pagos p
         INNER JOIN facturas f ON f."id" = p."facturaId"
-        WHERE p."fechaPago" >= ${fechaApertura}::timestamp
+        WHERE p."fechaPago" >= ${tsFrag(fechaApertura)}
           AND f."estado" != 'VOIDED'
           ${usuarioFilter}
-        GROUP BY p."metodoPago"
+        GROUP BY p."metodoPago", p."monedaPago"
       `;
 
       let ingresosEfectivoUSD = new Decimal(0);
@@ -301,7 +359,8 @@ router.post('/close', async (req, res, next) => {
           ingresosEfectivo: ingresosEfectivoUSD.toFixed(2),
           ingresosBanco: ingresosBancoUSD.toFixed(2),
           estado: 'CLOSED',
-          observaciones: observaciones ? `${cajaAbierta.observaciones ? cajaAbierta.observaciones + '\n' : ''}${observaciones}` : cajaAbierta.observaciones
+          observaciones: observaciones ? `${cajaAbierta.observaciones ? cajaAbierta.observaciones + '\n' : ''}${observaciones}` : cajaAbierta.observaciones,
+          ...(arqueoDetalleStr ? { arqueoDetalle: arqueoDetalleStr } : {}),
         },
         select: {
           id: true,
@@ -315,6 +374,7 @@ router.post('/close', async (req, res, next) => {
           ingresosBanco: true,
           estado: true,
           observaciones: true,
+        arqueoDetalle: true,
           createdAt: true,
           updatedAt: true,
           usuario: { select: { id: true, username: true, nombre: true } },
@@ -376,6 +436,7 @@ router.get('/', async (req, res, next) => {
           ingresosBanco: true,
           estado: true,
           observaciones: true,
+        arqueoDetalle: true,
           createdAt: true,
           updatedAt: true,
           usuario: { select: { id: true, username: true, nombre: true, rol: true, empresaId: true, empresaRefId: true } },

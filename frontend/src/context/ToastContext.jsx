@@ -35,10 +35,10 @@ export function ToastProvider({ children }) {
 
   const getToastStyles = (type) => {
     const base = {
-      success: { bg: 'rgba(34, 197, 94, 0.15)', border: 'rgba(34, 197, 94, 0.3)', color: '#22c55e', icon: checkboxMarkedCircleIcon },
-      error: { bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.3)', color: '#ef4444', icon: closeCircleIcon },
-      warning: { bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.3)', color: '#f59e0b', icon: alertCircleIcon },
-      info: { bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.3)', color: '#3b82f6', icon: informationIcon }
+      success: { bg: '#15803d', border: '#15803d', color: '#ffffff', icon: checkboxMarkedCircleIcon },
+      error: { bg: '#b91c1c', border: '#b91c1c', color: '#ffffff', icon: closeCircleIcon },
+      warning: { bg: '#b45309', border: '#b45309', color: '#ffffff', icon: alertCircleIcon },
+      info: { bg: '#1d4ed8', border: '#1d4ed8', color: '#ffffff', icon: informationIcon }
     };
     return base[type] || base.success;
   };
@@ -48,14 +48,14 @@ export function ToastProvider({ children }) {
       {children}
       <div style={{
         position: 'fixed',
-        top: '20px',
+        bottom: '20px',
         right: '20px',
         zIndex: 99999,
         display: 'flex',
         flexDirection: 'column',
         gap: '10px',
         maxWidth: '400px',
-        width: '100%'
+        width: 'calc(100% - 40px)'
       }}>
         {toasts.map(t => {
           const styles = getToastStyles(t.type);
@@ -75,7 +75,7 @@ export function ToastProvider({ children }) {
                 width: '28px',
                 height: '28px',
                 borderRadius: '50%',
-                backgroundColor: styles.bg,
+                backgroundColor: 'rgba(255, 255, 255, 0.16)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

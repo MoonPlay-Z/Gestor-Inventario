@@ -65,7 +65,9 @@ export function LoginPage() {
         return;
       }
       
-      const errorMessage = getErrorMessage(err, 'Usuario o contraseña incorrectos. Verifica tus credenciales.');
+      const errorMessage = err.status === 401 && err.message
+        ? err.message
+        : getErrorMessage(err, 'Usuario o contraseña incorrectos. Verifica tus credenciales.');
       setFormError(errorMessage);
     } finally {
       setLoading(false);

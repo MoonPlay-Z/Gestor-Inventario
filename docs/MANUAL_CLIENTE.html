@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<title>Manual de Cliente — POS y Gestor de Inventario</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; @bottom-center { content: counter(page) " / " counter(pages); font-size: 9pt; color: #888; } }
+  body { font-family: 'Segoe UI', Arial, sans-serif; color: #1f2937; line-height: 1.45; font-size: 10.5pt; }
+  h1 { color: #1e3a8a; border-bottom: 3px solid #1e3a8a; padding-bottom: 4px; font-size: 22pt; margin-top: 26px; page-break-after: avoid; }
+  h2 { color: #1e40af; font-size: 14pt; margin-top: 20px; page-break-after: avoid; }
+  h3 { color: #1d4ed8; font-size: 12pt; page-break-after: avoid; }
+  ul li, ol li { margin-bottom: 4px; }
+  .portada { text-align: center; padding-top: 120px; }
+  .portada h1 { font-size: 30pt; border: none; }
+  .portada p { color: #4b5563; font-size: 13pt; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 9.5pt; }
+  th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }
+  th { background: #e0e7ff; color: #1e3a8a; }
+  .nota { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 8px 12px; margin: 12px 0; border-radius: 4px; }
+  .warn { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 8px 12px; margin: 12px 0; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="portada">
+  <h1>Manual de Cliente</h1>
+  <p><strong>POS y Gestor de Inventario</strong><br/>Guía rápida para dueños y cajeros — Versión 1.0</p>
+</div>
+
+<h1>1. Introducción</h1>
+<p>POS y Gestor de Inventario es una herramienta web para procesar ventas, controlar stock, clientes, cotizaciones, caja y reportes desde cualquier navegador moderno (Chrome/Edge/Firefox) en computadora, tablet o móvil.</p>
+<h2>Requisitos</h2>
+<ul>
+  <li>Navegador actualizado con JavaScript habilitado.</li>
+  <li>Conexión a internet o red local (según instalación).</li>
+  <li>Para escaneo de códigos: cámara del dispositivo (en móvil requiere HTTPS).</li>
+  <li>Impresora fiscal o estándar (opcional) para actas de cierre e impresiones.</li>
+  <li>Tasa de cambio BCV actualizada al crear facturas en VES.</li>
+</ul>
+
+<h1>2. Primeros pasos</h1>
+<h2>Iniciar sesión</h2>
+<ol>
+  <li>Abre la URL del sistema en tu navegador.</li>
+  <li>Ingresa tu usuario y contraseña.</li>
+  <li>Si es tu primera vez, un supervisor te debe crear tu usuario en <em>Usuarios</em>.</li>
+</ol>
+<div class="nota">Guarda tu contraseña. No la compartas entre usuarios; cada persona debe tener su propio usuario.</div>
+
+<h2>Abrir un turno de caja</h2>
+<ol>
+  <li>Ve a <em>Cierre de Caja</em> (o <em>Caja</em>).</li>
+  <li>Pulsa <strong>Abrir Caja</strong> e ingresa el monto base inicial en físico (USD).</li>
+  <li>Confirma. A partir de ahí se registran ventas del turno.</li>
+</ol>
+
+<h2>Cerrar el turno (cuadre)</h2>
+<ol>
+  <li>Pulsa <strong>Cerrar Caja</strong>.</li>
+  <li>Verifica los cobros electrónicos (Pago Móvil, Punto, Transferencia): conteo de lotes/recibos y monto verificado en banco.</li>
+  <li>Realiza el arqueo en gaveta por moneda: USD y VES, con fondo inicial, ventas, vueltos/cambios, retiros y gastos.</li>
+  <li>El sistema muestra el <strong>Monto Esperado Teórico</strong> y compara con el físico contado.</li>
+  <li>Si todo coincide, confirma para bloquear la caja y emitir el acta.</li>
+</ol>
+<div class="warn">Al confirmar el cierre, la caja se bloquea para nuevas facturas. El proceso es irreversible.</div>
+
+<h1>3. Realizar una venta</h1>
+<ol>
+  <li>Abre <em>POS</em> o <em>Facturas</em>.</li>
+  <li>Selecciona el cliente (si no, usa un cliente genérico).</li>
+  <li>Busca el producto por nombre, SKU o escaneando el código de barras (icon cámara en móvil).</li>
+  <li>Agrega al carrito y revisa cantidades y precios.</li>
+  <li>Elige la moneda (USD / VES). Si es VES, ingresa/verifica la tasa de cambio.</li>
+  <li>Selecciona el método de pago:
+    <ul>
+      <li><strong>Efectivo</strong>.</li>
+      <li><strong>Pago Móvil</strong> / <strong>Punto</strong> / <strong>Transferencia</strong>: la referencia es obligatoria.</li>
+    </ul>
+  </li>
+  <li>Confirma la factura e imprime/guarda el comprobante.</li>
+</ol>
+
+<h1>4. Caja</h1>
+<table>
+  <tr><th>Acción</th><th>Qué hace</th></tr>
+  <tr><td>Abrir turno</td><td>Registra el monto base en gaveta.</td></tr>
+  <tr><td>Registrar venta</td><td>Acumula ingresos por método de pago mientras el turno está abierto.</td></tr>
+  <tr><td>Retiro parcial</td><td>Salida de efectivo justificada (registrar en observaciones si aplica).</td></tr>
+  <tr><td>Gasto</td><td>Desembolso autorizado del efectivo del turno.</td></tr>
+  <tr><td>Cerrar turno</td><td>Cuadra físico vs teórico y cierra el turno.</td></tr>
+</table>
+
+<h1>5. Clientes</h1>
+<ol>
+  <li>Ve a <em>Clientes</em> y crea uno con razón social, RIF/Cédula, dirección y contacto.</li>
+  <li>Desde el cliente puedes ver su historial de compras y saldo si aplica.</li>
+</ol>
+
+<h1>6. Inventario y productos</h1>
+<ul>
+  <li><strong>Productos</strong>: SKU, nombre, precio de venta, costo, impuesto, categoría, unidad de medida (unidad/kg/g/l/...).</li>
+  <li><strong>Stock bajo</strong>: la app avisa cuando un producto llega al mínimo.</li>
+  <li><strong>Venta por peso</strong>: mide en kg/g con su tolerancia.</li>
+  <li><strong>Categorías</strong>: organiza para reportes.</li>
+</ul>
+
+<h1>7. Facturas y reportes</h1>
+<ul>
+  <li>Consulta facturas por cliente, fecha o estado (<em>Pendiente</em>, <em>Pagada</em>, <em>Parcial</em>, <em>Anulada</em>).</li>
+  <li>Anula con motivo cuando sea necesario.</li>
+  <li>Reportes de ventas por período, por producto, por caja y exportaciones.</li>
+</ul>
+
+<h1>8. Cotizaciones</h1>
+<ol>
+  <li>Crea una cotización con cliente y productos.</li>
+  <li>Si el cliente acepta, conviértela a factura.</li>
+</ol>
+
+<h1>9. Configuración</h1>
+<ul>
+  <li><strong>Empresa</strong>: nombre, RIF, dirección (aparecen en facturas).</li>
+  <li><strong>Usuarios/roles</strong>: SUPER_ADMIN, EMPRESA, CAJA, INVENTARIO, VISOR.</li>
+  <li><strong>Tasa de cambio</strong>: mantén actualizado el BCV antes de vender en VES.</li>
+</ul>
+
+<h1>10. Preguntas frecuentes</h1>
+<table>
+  <tr><th>Problema</th><th>Solución</th></tr>
+  <tr><td>No puedo abrir caja</td><td>Hay un turno abierto por ese usuario o rol; revisa el estado.</td></tr>
+  <tr><td>No cuadra el efectivo</td><td>Revisa vueltos/cambios, retiros y gastos registrados.</td></tr>
+  <tr><td>Pago electrónico rechazado</td><td>La referencia es obligatoria para Pago Móvil/Punto/Transferencia.</td></tr>
+  <tr><td>No imprime el acta</td><td>Comprueba la impresora por defecto y los permisos del navegador.</td></tr>
+  <tr><td>No lee código de barras</td><td>En móvil abre la app por HTTPS y permite cámara.</td></tr>
+</table>
+
+<h2>Soporte</h2>
+<p>Para errores de sistema o consultas, contacta al administrador de tu empresa o al soporte técnico.</p>
+
+</body>
+</html>

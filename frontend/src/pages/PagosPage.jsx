@@ -16,15 +16,31 @@ export function PagosPage() {
 
   const [modalFactura, setModalFactura] = useState(null);
   const [montoAbono, setMontoAbono] = useState('');
-  const [metodoPago, setMetodoPago] = useState('EFECTIVO');
+  const [metodoPago, setMetodoPago] = useState('EFECTIVO_USD');
+  const [monedaPago, setMonedaPago] = useState('USD');
   const [referencia, setReferencia] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const res = await API.getFacturas();
-      const all = res.data || res.facturas || res || [];
+      const limit = 100;
+      const filtros = { estados: 'PENDING,PARTIALLY_PAID', limit };
+      const primeraPagina = await API.getFacturas({ ...filtros, page: 1 });
+      const all = primeraPagina.data || primeraPagina.facturas || [];
+      const totalPages = Number(primeraPagina.totalPages) || 1;
+
+      for (let inicio = 2; inicio <= totalPages; inicio += 10) {
+        const paginas = Array.from(
+          { length: Math.min(10, totalPages - inicio + 1) },
+          (_, index) => inicio + index
+        );
+        const resultados = await Promise.all(
+          paginas.map(page => API.getFacturas({ ...filtros, page }))
+        );
+        all.push(...resultados.flatMap(resultado => resultado.data || resultado.facturas || []));
+      }
+
       setFacturasPendientes(all.filter(f => f.estado === 'PENDING' || f.estado === 'PARTIALLY_PAID'));
     } catch (err) {
       showToast('Error al cargar cuentas por cobrar: ' + err.message, 'error');
@@ -45,7 +61,8 @@ export function PagosPage() {
     }
 
     const paymentMethodMap = {
-      'EFECTIVO': 'CASH',
+      'EFECTIVO_USD': 'CASH',
+      'EFECTIVO_VES': 'CASH',
       'PAGO_MOVIL': 'MOBILE_PAYMENT',
       'PUNTO': 'CREDIT_CARD',
       'TRANSFERENCIA': 'BANK_TRANSFER'
@@ -57,18 +74,35 @@ export function PagosPage() {
         facturaId: modalFactura.id,
         monto: parseFloat(montoAbono),
         metodoPago: paymentMethodMap[metodoPago],
+        monedaPago,
         referenciaTransaccion: referencia || null
       });
       showToast('🎉 Pago registrado correctamente', 'success');
       setModalFactura(null);
       setMontoAbono('');
       setReferencia('');
+      setMonedaPago('USD');
       loadData();
     } catch (err) {
       showToast('Error registrando pago: ' + err.message, 'error');
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const cambiarMetodoPago = (metodo) => {
+    setMetodoPago(metodo);
+    const facturaMoneda = modalFactura?.moneda || 'USD';
+    const nuevaMoneda = metodo === 'EFECTIVO_VES'
+      ? 'VES'
+      : metodo === 'EFECTIVO_USD' ? 'USD' : facturaMoneda;
+    const saldoFactura = Number(modalFactura?.saldoPendiente ?? modalFactura?.total ?? 0);
+    const tasa = Number(modalFactura?.tasaCambio) || 1;
+    const saldoEnMonedaPago = nuevaMoneda === facturaMoneda
+      ? saldoFactura
+      : nuevaMoneda === 'VES' ? saldoFactura * tasa : saldoFactura / tasa;
+    setMonedaPago(nuevaMoneda);
+    setMontoAbono(saldoEnMonedaPago.toFixed(2));
   };
 
   return (
@@ -131,7 +165,11 @@ export function PagosPage() {
                         <button
                           onClick={() => {
                             setModalFactura(f);
-                            setMontoAbono(f.saldoPendiente !== undefined ? f.saldoPendiente : f.total);
+                            setMetodoPago('EFECTIVO_USD');
+                            setMonedaPago('USD');
+                            const balance = Number(f.saldoPendiente !== undefined ? f.saldoPendiente : f.total);
+                            const rate = Number(f.tasaCambio) || 1;
+                            setMontoAbono((f.moneda === 'VES' ? balance / rate : balance).toFixed(2));
                           }}
                           className="btn btn-primary btn-sm"
                         >
@@ -157,7 +195,7 @@ export function PagosPage() {
               <form onSubmit={handleAbonarSubmit}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div className="form-group">
-                    <label className="form-label">Monto del Abono (USD)</label>
+                    <label className="form-label">Monto recibido ({monedaPago === 'VES' ? 'Bs.' : 'USD'})</label>
                     <input
                       type="number"
                       step="0.01"
@@ -172,15 +210,16 @@ export function PagosPage() {
                     <select
                       className="form-control"
                       value={metodoPago}
-                      onChange={e => setMetodoPago(e.target.value)}
+                      onChange={e => cambiarMetodoPago(e.target.value)}
                     >
-                      <option value="EFECTIVO">Efectivo</option>
+                      <option value="EFECTIVO_USD">Efectivo en USD</option>
+                      <option value="EFECTIVO_VES">Efectivo en Bs.</option>
                       <option value="PAGO_MOVIL">Pago Móvil</option>
                       <option value="PUNTO">Punto de Venta</option>
                       <option value="TRANSFERENCIA">Transferencia</option>
                     </select>
                   </div>
-                  {metodoPago !== 'EFECTIVO' && (
+                  {!['EFECTIVO_USD', 'EFECTIVO_VES'].includes(metodoPago) && (
                     <div className="form-group">
                       <label className="form-label">Referencia</label>
                       <input

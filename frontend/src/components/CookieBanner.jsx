@@ -123,7 +123,7 @@ export function CookieBanner() {
               flexWrap: 'wrap',
               gap: '10px'
             }}>
-              <button
+              <button type="button"
                 onClick={handleRejectAll}
                 style={{
                   backgroundColor: 'transparent',
@@ -138,7 +138,7 @@ export function CookieBanner() {
               >
                 Rechazar
               </button>
-              <button
+              <button type="button"
                 onClick={handleCustomize}
                 style={{
                   backgroundColor: 'transparent',
@@ -153,7 +153,7 @@ export function CookieBanner() {
               >
                 Personalizar
               </button>
-              <button
+              <button type="button"
                 onClick={handleAcceptAll}
                 style={{
                   backgroundColor: '#2563eb',
@@ -399,7 +399,7 @@ export function CookieBanner() {
               gap: '10px',
               flexWrap: 'wrap'
             }}>
-              <button
+              <button type="button"
                 onClick={() => setShowModal(false)}
                 style={{
                   flex: 1,
@@ -415,7 +415,7 @@ export function CookieBanner() {
               >
                 Cancelar
               </button>
-              <button
+              <button type="button"
                 onClick={handleSavePreferences}
                 style={{
                   flex: 1,

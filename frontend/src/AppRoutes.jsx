@@ -32,6 +32,7 @@ import { UsuariosPage }     from './pages/UsuariosPage';
 import { ActivacionesPage } from './pages/ActivacionesPage';
 import { AdminPage }         from './pages/AdminPage';
 import { ReportesPage }       from './pages/ReportesPage';
+import { PruebasFacturasPage } from './pages/PruebasFacturasPage';
 
 export default function AppRoutes() {
   return (
@@ -65,6 +66,11 @@ export default function AppRoutes() {
           <Layout />
         </ProtectedRoute>
       }>
+        {import.meta.env.DEV && <Route path="/pruebas/facturas" element={
+          <ProtectedRoute allowedRoles={ROLE_GROUPS.ADMIN_ONLY}>
+            <PruebasFacturasPage />
+          </ProtectedRoute>
+        } />}
         {/* Acceso: todos los roles */}
         <Route path="/dashboard" element={<DashboardPage />} />
 

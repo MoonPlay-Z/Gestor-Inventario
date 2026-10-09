@@ -45,6 +45,7 @@ export function Button({
   roles,
   className = '',
   disabled,
+  type,
   ...rest
 }) {
   const { user } = useAuth();
@@ -65,6 +66,7 @@ export function Button({
     <Tag
       className={classes}
       disabled={loading || disabled}
+      type={Tag === 'button' ? (type || 'button') : type}
       {...rest}
     >
       {loading ? (
