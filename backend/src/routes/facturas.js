@@ -21,7 +21,7 @@ const facturaTenantFilter = (empresaId) => ({
 // GET /api/facturas
 router.get('/', async (req, res, next) => {
   try {
-    const { estado, clienteId, usuarioId, q, page = 1, limit = 25, vencidas } = req.query;
+    const { estado, estados, clienteId, usuarioId, q, page = 1, limit = 25, vencidas } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const hoy  = new Date();
 
@@ -30,7 +30,16 @@ router.get('/', async (req, res, next) => {
       ? { usuarioId: req.user.id }
       : { ...facturaTenantFilter(empresaId) };
 
-    if (estado)    where.estado    = estado;
+    if (estados) {
+      const estadosFiltro = [...new Set(estados.split(',').map(valor => valor.trim()).filter(Boolean))];
+      const estadosValidos = ['PENDING', 'PAID', 'PARTIALLY_PAID', 'VOIDED'];
+      if (estadosFiltro.length === 0 || estadosFiltro.some(valor => !estadosValidos.includes(valor))) {
+        throw createValidationError('El filtro de estados de factura no es válido');
+      }
+      where.estado = estadosFiltro.length === 1 ? estadosFiltro[0] : { in: estadosFiltro };
+    } else if (estado) {
+      where.estado = estado;
+    }
     if (clienteId) where.clienteId = clienteId;
     if (usuarioId) where.usuarioId = usuarioId;
     if (vencidas === 'true') {
