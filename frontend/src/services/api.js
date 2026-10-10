@@ -123,6 +123,19 @@ export const API = {
     const qs = new URLSearchParams(params).toString();
     return request(`/clientes${qs ? `?${qs}` : ''}`);
   },
+  getAllClientes: async () => {
+    const limit = 100;
+    const firstPage = await API.getClientes({ page: 1, limit });
+    const clientes = firstPage.data || [];
+    const totalPages = Math.ceil((Number(firstPage.total) || clientes.length) / limit);
+
+    for (let page = 2; page <= totalPages; page++) {
+      const response = await API.getClientes({ page, limit });
+      clientes.push(...(response.data || []));
+    }
+
+    return clientes;
+  },
   getCliente: (id) => request(`/clientes/${id}`),
   crearCliente: (data) => request('/clientes', { method: 'POST', body: data }),
   actualizarCliente: (id, data) => request(`/clientes/${id}`, { method: 'PUT', body: data }),
