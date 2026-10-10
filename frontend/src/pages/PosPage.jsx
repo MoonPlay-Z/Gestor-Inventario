@@ -50,16 +50,15 @@ export function PosPage() {
     try {
       const [confRes, cliRes, prodRes, cajaRes] = await Promise.all([
         API.getConfig(),
-        API.getClientes(),
+        API.getAllClientes(),
         API.getProductos({ limite: 100 }),
         API.getCajaActual().catch(() => ({ status: 'CLOSED' }))
       ]);
       setConfig(confRes);
-      const clienteList = cliRes.data || cliRes.clientes || cliRes || [];
-      setClientes(clienteList);
+      setClientes(cliRes);
       setProductos(prodRes.data || []);
-      if (clienteList.length > 0) {
-        setSelectedClienteId(clienteList[0].id);
+      if (cliRes.length > 0) {
+        setSelectedClienteId(cliRes[0].id);
       }
       setCajaStatus(cajaRes?.estado === 'OPEN' ? 'OPEN' : 'CLOSED');
     } catch (err) {
@@ -277,8 +276,7 @@ export function PosPage() {
       const res = await API.crearCliente(newCliente);
       showToast('Cliente creado exitosamente', 'success');
       // Refrescar lista de clientes
-      const cliRes = await API.getClientes();
-      const clienteList = cliRes.data || cliRes.clientes || cliRes || [];
+      const clienteList = await API.getAllClientes();
       setClientes(clienteList);
       // Auto-seleccionar el nuevo cliente
       setSelectedClienteId(res.id);

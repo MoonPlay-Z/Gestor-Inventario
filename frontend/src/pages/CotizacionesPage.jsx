@@ -67,15 +67,14 @@ export function CotizacionesPage() {
     try {
       const [confRes, cliRes, prodRes] = await Promise.all([
         API.getConfig(),
-        API.getClientes(),
+        API.getAllClientes(),
         API.getProductos({ limite: 100 })
       ]);
       setConfig(confRes);
-      const clienteList = cliRes.data || cliRes.clientes || cliRes || [];
-      setClientes(clienteList);
+      setClientes(cliRes);
       setProductos(prodRes.data || []);
-      if (clienteList.length > 0) {
-        setSelectedClienteId(clienteList[0].id);
+      if (cliRes.length > 0) {
+        setSelectedClienteId(cliRes[0].id);
       }
     } catch (err) {
       showToast('Error cargando datos: ' + err.message, 'error');
@@ -231,8 +230,7 @@ export function CotizacionesPage() {
     try {
       const res = await API.crearCliente(newCliente);
       showToast('Cliente creado exitosamente', 'success');
-      const cliRes = await API.getClientes();
-      const clienteList = cliRes.data || cliRes.clientes || cliRes || [];
+      const clienteList = await API.getAllClientes();
       setClientes(clienteList);
       setSelectedClienteId(res.id);
       setShowClienteModal(false);
