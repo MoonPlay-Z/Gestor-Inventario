@@ -7,6 +7,8 @@ const { JWT_SECRET, authMiddleware } = require('../middleware/auth');
 const { createValidationError } = require('../middleware/errorHandler');
 const { loginLimiter, registerLimiter } = require('../middleware/rateLimiter');
 const { METODOS_PAGO_SAAS, enviarNotificacionPago } = require('../config/metodosPago');
+const { getRegistrationMetadata } = require('../utils/registrationMetadata');
+const { resolverEmpresaRefId } = require('../utils/empresaContext');
 
 const router = express.Router();
 
@@ -48,7 +50,11 @@ router.post('/login', loginLimiter, async (req, res, next) => {
 
     // Identificador de empresa consistente: se usa en todo el flujo (token,
     // verificación de suscripción y respuesta) para evitar desincronización.
-    const resolvedEmpresaId = usuario.empresaRefId || usuario.empresaId || null;
+    // OJO: las sub-cuentas (CAJA/INVENTARIO/VISOR) tienen empresaRefId=NULL y su
+    // `empresaId` apunta al Usuario padre, NO a la tabla `empresas`. Sin subir
+    // por la jerarquía el login devolvía `empresa: null` y el frontend se
+    // quedaba sin tasaDolar (conversiones VES→USD erróneas).
+    const resolvedEmpresaId = await resolverEmpresaRefId({ user: usuario });
 
     // Estado de suscripción "vigente" que se usará en la respuesta final.
     // Por defecto es el del propio usuario; si hay Empresa vinculada y la
@@ -139,6 +145,19 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       }
     });
 
+    // Datos de la empresa para configuración en sesión (tasa, moneda)
+    let empresaData = null;
+    if (resolvedEmpresaId) {
+      empresaData = await prisma.empresa.findUnique({
+        where: { id: resolvedEmpresaId },
+        select: {
+          id: true, nombre: true, rif: true, direccion: true,
+          telefono: true, email: true, tasaDolar: true,
+          monedaSimbolo: true, monedaCodigo: true
+        }
+      });
+    }
+
     res.json({
       token,
       usuario: {
@@ -150,7 +169,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         subscriptionStatus: effectiveSubscription.status,
         trialEndsAt: effectiveSubscription.trialEndsAt,
         currentPeriodEnd: effectiveSubscription.currentPeriodEnd
-      }
+      },
+      empresa: empresaData
     });
   } catch (err) {
     next(err);
@@ -180,7 +200,8 @@ router.post('/register-remote', async (req, res, next) => {
       throw createValidationError('La contraseña debe tener al menos 8 caracteres');
     }
 
-    const validRoles = ['SUPER_ADMIN', 'EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'];
+    // SUPER_ADMIN no puede crearse remotamente para evitar escalación de privilegios
+    const validRoles = ['EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'];
     const finalRol = validRoles.includes(rol) ? rol : 'CAJA';
 
     const existingUser = await prisma.usuario.findUnique({ where: { username: cleanUsername } });
@@ -196,7 +217,8 @@ router.post('/register-remote', async (req, res, next) => {
         username: cleanUsername,
         passwordHash,
         nombre: cleanNombre || cleanUsername,
-        rol: finalRol
+        rol: finalRol,
+        ...getRegistrationMetadata(req, req.body),
       }
     });
 
@@ -236,6 +258,7 @@ router.post('/register-client', registerLimiter, async (req, res, next) => {
 
     const nowIso      = now.toISOString();
     const trialEndIso = trialEnd.toISOString();
+    const registrationMetadata = getRegistrationMetadata(req, req.body);
 
     // Se crea primero la Empresa en la tabla 'empresas'
     const nuevaEmpresa = await prisma.empresa.create({
@@ -257,6 +280,7 @@ router.post('/register-client', registerLimiter, async (req, res, next) => {
         rol: 'EMPRESA',
         activo: true,
         empresaRefId: nuevaEmpresa.id,
+        ...registrationMetadata,
         subscriptionStatus: 'trialing',
         trialStartsAt: nowIso,
         trialEndsAt:   trialEndIso,
@@ -297,7 +321,7 @@ router.post('/register-client', registerLimiter, async (req, res, next) => {
 });
 
 // ─── 3. Info del usuario autenticado ─────────────────────────────────────────
-router.get('/me', authMiddleware, async (req, res, next) => {
+router.get('/me', loginLimiter, authMiddleware, async (req, res, next) => {
   try {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'No autorizado' });

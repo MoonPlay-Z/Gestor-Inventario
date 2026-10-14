@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import refreshIcon from '@iconify/icons-mdi/refresh';
 import { useOutletContext } from 'react-router-dom';
@@ -7,10 +7,12 @@ import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { Button } from '../components/ui';
 import { ReceiptModal } from '../components/ui/ReceiptModal';
+import { useAuth } from '../context/AuthContext';
 
 export function VentasPage() {
   const { toggleSidebar } = useOutletContext();
   const { showToast } = useToast();
+  const { user } = useAuth();
   const [facturas, setFacturas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -21,6 +23,8 @@ export function VentasPage() {
   const [anio, setAnio] = useState(new Date().getFullYear());
   const [estadoFiltro, setEstadoFiltro] = useState('');
   const [busqueda, setBusqueda] = useState('');
+  const [busquedaAplicada, setBusquedaAplicada] = useState('');
+  const loadRequestId = useRef(0);
 
   const [config, setConfig] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -54,6 +58,7 @@ export function VentasPage() {
   };
 
   const loadData = async () => {
+    const requestId = ++loadRequestId.current;
     setLoading(true);
     try {
       const { desde, hasta } = calcularRango();
@@ -61,32 +66,65 @@ export function VentasPage() {
       if (desde) params.desde = desde.toISOString();
       if (hasta) params.hasta = hasta.toISOString();
       if (estadoFiltro) params.estado = estadoFiltro;
-      if (busqueda.trim()) params.q = busqueda.trim();
+      if (busquedaAplicada) params.q = busquedaAplicada;
       params.page = page;
       params.limit = limit;
       const [data, conf] = await Promise.all([
         API.getFacturas(params),
         API.getConfig()
       ]);
-      setFacturas(data.data || data.facturas || data || []);
-      setTotal(data.total ?? (data.data || []).length);
+      if (requestId !== loadRequestId.current) return;
+      setFacturas(data.data || []);
+      setTotal(data.total ?? 0);
       setConfig(conf);
     } catch (err) {
-      showToast('Error al cargar ventas: ' + err.message, 'error');
+      if (requestId === loadRequestId.current) {
+        showToast('Error al cargar ventas: ' + err.message, 'error');
+      }
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestId.current) setLoading(false);
     }
+  };
+
+  const aplicarFiltros = () => {
+    setPage(1);
+    setBusquedaAplicada(busqueda.trim());
   };
 
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [periodo, mes, anio, estadoFiltro, page]);
+  }, [periodo, mes, anio, estadoFiltro, page, busquedaAplicada]);
 
   const handleAnular = async (id) => {
-    if (!window.confirm('¿Estás seguro de anular esta factura? Se repondrá el stock de los productos.')) return;
+    const confirmacion = window.prompt(
+      'Esta acción anulará la venta y repondrá el stock.\n\nEscribe "anular" para continuar:'
+    );
+    if (confirmacion === null) return;
+    if (confirmacion.trim() !== 'anular') {
+      showToast('Debes escribir "anular" exactamente. No se anuló la venta.', 'error');
+      return;
+    }
+
+    const motivo = window.prompt('Describe el motivo de la anulación:');
+    if (motivo === null) return;
+    if (!motivo.trim()) {
+      showToast('Debes escribir una descripción del motivo. No se anuló la venta.', 'error');
+      return;
+    }
+
+    let codigoAnulacion;
+    if (user?.rol === 'CAJA') {
+      codigoAnulacion = window.prompt('Ingresa el código de autorización del supervisor:');
+      if (codigoAnulacion === null) return;
+      if (!codigoAnulacion.trim()) {
+        showToast('El código de autorización es obligatorio para anular.', 'error');
+        return;
+      }
+    }
+
     try {
-      await API.anularFactura(id);
+      await API.anularFactura(id, { confirmacion: confirmacion.trim(), motivo: motivo.trim(), codigoAnulacion });
       showToast('Factura anulada con éxito', 'success');
       loadData();
     } catch (err) {
@@ -159,17 +197,17 @@ export function VentasPage() {
               </select>
             </label>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Buscar cliente
+              Buscar cliente, usuario o producto
               <input
                 type="text"
                 className="form-input"
-                placeholder="Nombre o RIF..."
+                placeholder="Cliente, RIF, usuario o producto..."
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') loadData(); }}
+                onKeyDown={e => { if (e.key === 'Enter') aplicarFiltros(); }}
               />
             </label>
-            <button onClick={() => { setPage(1); loadData(); }} className="btn btn-primary btn-sm inline-flex items-center gap-1">
+            <button onClick={aplicarFiltros} className="btn btn-primary btn-sm inline-flex items-center gap-1">
               <Icon icon="mdi:filter" className="h-4 w-4" /> Filtrar
             </button>
           </div>
@@ -186,6 +224,8 @@ export function VentasPage() {
                 <tr>
                   <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>N° Factura</th>
                   <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Cliente</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Usuario</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Productos</th>
                   <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Fecha</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Total USD</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Total Bs.</th>
@@ -196,11 +236,11 @@ export function VentasPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="empty-state" style={{ padding: '32px' }}>Cargando historial...</td>
+                    <td colSpan={9} className="empty-state" style={{ padding: '32px' }}>Cargando historial...</td>
                   </tr>
                 ) : facturas.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="empty-state" style={{ padding: '32px' }}>No hay facturas registradas</td>
+                    <td colSpan={9} className="empty-state" style={{ padding: '32px' }}>No hay facturas registradas</td>
                   </tr>
                 ) : (
                   facturas.map(f => (
@@ -212,6 +252,17 @@ export function VentasPage() {
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
                         <div style={{ fontWeight: 500 }}>{f.cliente?.razonSocial || 'N/A'}</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{f.cliente?.rifCedula}</div>
+                      </td>
+                      <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ fontWeight: 500 }}>{f.usuario?.nombre || '—'}</div>
+                        {f.usuario?.username && (
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>@{f.usuario.username}</div>
+                        )}
+                      </td>
+                      <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', minWidth: '180px' }}>
+                        {(f.items || []).length > 0
+                          ? [...new Set(f.items.map(item => item.descripcionHistorica || item.producto?.nombre).filter(Boolean))].join(', ')
+                          : '—'}
                       </td>
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{Utils.formatDateTime(f.fechaEmision)}</td>
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, textAlign: 'right' }}>

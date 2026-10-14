@@ -1,5 +1,6 @@
 const express = require('express');
 const prisma   = require('../db/prisma');
+const { Decimal } = require('decimal.js');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { getFiscalMachine } = require('../services/fiscalMachine');
 
@@ -89,10 +90,10 @@ router.post('/imprimir/:facturaId', async (req, res) => {
     const result = await fm.imprimirVenta({
       cliente:       factura.cliente,
       items:         factura.items,
-      subtotal:      parseFloat(factura.subtotal),
-      impuesto:      parseFloat(factura.impuestoTotal),
-      total:         parseFloat(factura.total),
-      tasaIva:       parseFloat(factura.tasaIva || 16),
+      subtotal:      new Decimal(factura.subtotal.toString()).toNumber(),
+      impuesto:      new Decimal(factura.impuestoTotal.toString()).toNumber(),
+      total:         new Decimal(factura.total.toString()).toNumber(),
+      tasaIva:       factura.tasaIva ? new Decimal(factura.tasaIva.toString()).toNumber() : 16,
       numeroFactura: factura.numeroFactura,
     });
 

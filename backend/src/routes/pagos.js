@@ -5,7 +5,12 @@ const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
 const { paginate, paginatedResponse } = require('../utils/pagination');
-const { MONEDAS_PAGO, convertirMontoMoneda, normalizarPagoAFactura } = require('../utils/paymentCurrency');
+const { MONEDAS_PAGO, convertirAFactura, normalizarPagoAFactura } = require('../utils/paymentCurrency');
+const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
+
+// Medio centavo de tolerancia: absorber el excedente de redondeo que aparece al
+// convertir un abono en Bs a USD (p. ej. 10 Bs = 0.0116 USD contra 0.01 USD).
+const TOLERANCIA_REDONDEO = new Decimal('0.005');
 
 // SUPER_ADMIN no gestiona pagos
 router.use(requireRole('EMPRESA', 'CAJA'));
@@ -49,6 +54,18 @@ router.get('/', async (req, res, next) => {
               cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
             },
           },
+        },
+        select: {
+          id: true,
+          facturaId: true,
+          monto: true,
+          monedaPago: true,
+          metodoPago: true,
+          referenciaTransaccion: true,
+          fechaPago: true,
+          notas: true,
+          tasaBCV: true,
+          createdAt: true,
         },
       }),
       prisma.pago.count({ where }),
@@ -106,26 +123,37 @@ router.post('/', async (req, res, next) => {
     );
     const totalFactura     = new Decimal(factura.total.toString());
     const balancePendiente = totalFactura.sub(totalPagado);
-    const montoEnMonedaFactura = convertirMontoMoneda(
+    const montoEnMonedaFactura = convertirAFactura(
       montoPago,
       monedaDelPago,
-      factura.moneda || 'USD',
-      factura.tasaCambio
+      factura
     );
 
-    if (montoEnMonedaFactura.gt(balancePendiente)) {
+    if (montoEnMonedaFactura.gt(balancePendiente.plus(TOLERANCIA_REDONDEO))) {
       throw createBusinessError(
         `El monto (${montoPago.toFixed(2)} ${monedaDelPago}) excede el balance pendiente (${balancePendiente.toFixed(2)} ${factura.moneda || 'USD'})`
       );
     }
+    const montoAplicar = montoEnMonedaFactura.gt(balancePendiente) ? balancePendiente : montoEnMonedaFactura;
 
     // ── Determinar nuevo estado de factura ────────────────────────────────────
-    const nuevoTotalPagado = totalPagado.add(montoEnMonedaFactura);
+    const nuevoTotalPagado = totalPagado.add(montoAplicar);
     let nuevoEstado;
     if (nuevoTotalPagado.gte(totalFactura)) {
       nuevoEstado = 'PAID';
     } else {
       nuevoEstado = 'PARTIALLY_PAID';
+    }
+
+    // ── Obtener tasa BCV histórica para la fecha del pago ────────────────────
+    const fechaPagoFinal = fechaPago && !isNaN(new Date(fechaPago).getTime())
+      ? new Date(fechaPago)
+      : new Date();
+    let tasaBCV = null;
+    try {
+      tasaBCV = await tasaBCVPorFecha(fechaPagoFinal);
+    } catch (err) {
+      console.warn('No se pudo obtener tasa BCV:', err.message);
     }
 
     // ── Transacción atómica ───────────────────────────────────────────────────
@@ -137,8 +165,9 @@ router.post('/', async (req, res, next) => {
           monedaPago:            monedaDelPago,
           metodoPago,
           referenciaTransaccion: referenciaTransaccion?.trim() || null,
-          fechaPago:             fechaPago ? new Date(fechaPago).toISOString() : new Date().toISOString(),
+          fechaPago:             fechaPagoFinal.toISOString(),
           notas:                 notas?.trim() || null,
+          tasaBCV:               tasaBCV ? tasaBCV.toFixed(4) : null,
         },
       });
 
@@ -176,6 +205,21 @@ router.post('/', async (req, res, next) => {
             },
           },
         },
+      });
+
+      // Actualizar CuentaPorCobrar
+      await tx.cuentaPorCobrar.update({
+        where: { facturaId },
+        data: {
+          montoCobrado: nuevoTotalPagado.toFixed(2),
+          montoPendiente: totalFactura.sub(nuevoTotalPagado).gt(0)
+            ? totalFactura.sub(nuevoTotalPagado).toFixed(2)
+            : '0.00',
+          estado: nuevoEstado,
+          ultimaGestion: new Date().toISOString()
+        }
+      }).catch(() => {
+        // Si no existe CxC, no es error crítico
       });
 
       return { pago: nuevoPago, facturaActualizada: facturaUpd };
@@ -262,9 +306,53 @@ router.delete('/:id', async (req, res, next) => {
       else                            nuevoEstado = 'PARTIALLY_PAID';
 
       await tx.factura.update({ where: { id: factura.id }, data: { estado: nuevoEstado } });
+
+      // Actualizar CuentaPorCobrar
+      await tx.cuentaPorCobrar.update({
+        where: { facturaId: factura.id },
+        data: {
+          montoCobrado: totalOtros.toFixed(2),
+          montoPendiente: totalFactura.sub(totalOtros).gt(0)
+            ? totalFactura.sub(totalOtros).toFixed(2)
+            : '0.00',
+          estado: nuevoEstado,
+          ultimaGestion: new Date().toISOString()
+        }
+      }).catch(() => {});
     });
 
     res.status(204).send();
+  } catch (err) { next(err); }
+});
+
+// POST /api/pagos/backfill-tasa-bcv — Asignar tasa BCV a pagos históricos
+router.post('/backfill-tasa-bcv', async (req, res, next) => {
+  try {
+    const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
+    const pagosSinTasa = await prisma.pago.findMany({
+      where: { tasaBCV: null },
+      select: { id: true, fechaPago: true },
+      orderBy: { fechaPago: 'asc' },
+    });
+
+    let actualizados = 0;
+    let sinDatos = 0;
+
+    for (const pago of pagosSinTasa) {
+      try {
+        const tasa = await tasaBCVPorFecha(pago.fechaPago);
+        if (!tasa) { sinDatos++; continue; }
+        await prisma.pago.update({
+          where: { id: pago.id },
+          data: { tasaBCV: tasa.toFixed(4) },
+        });
+        actualizados++;
+      } catch (err) {
+        console.error(`Error en pago ${pago.id}:`, err.message);
+      }
+    }
+
+    res.json({ actualizados, sinDatos, total: pagosSinTasa.length });
   } catch (err) { next(err); }
 });
 

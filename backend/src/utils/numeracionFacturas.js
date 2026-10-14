@@ -1,32 +1,16 @@
 const NOMBRE_CORRELATIVO = 'FACTURA';
 
 async function obtenerSiguienteNumeroFactura(tx) {
-  const maxFactura = await tx.factura.aggregate({
-    _max: { numeroFactura: true },
-  });
-  const ultimoNumero = maxFactura._max.numeroFactura || 0;
-
-  await tx.correlativo.upsert({
-    where: { nombre: NOMBRE_CORRELATIVO },
-    create: { nombre: NOMBRE_CORRELATIVO, valor: ultimoNumero },
-    update: { valor: { increment: 0 } },
-  });
-
-  await tx.correlativo.updateMany({
-    where: {
-      nombre: NOMBRE_CORRELATIVO,
-      valor: { lt: ultimoNumero },
-    },
-    data: { valor: ultimoNumero },
-  });
-
-  const actualizado = await tx.correlativo.update({
-    where: { nombre: NOMBRE_CORRELATIVO },
-    data: { valor: { increment: 1 } },
-    select: { valor: true },
-  });
-
-  return actualizado.valor;
+  // Atomic upsert: INSERT ... ON CONFLICT DO UPDATE avoids race conditions
+  // between concurrent transactions reading the same max value.
+  const result = await tx.$queryRaw`
+    INSERT INTO correlativos (nombre, valor)
+    VALUES (${NOMBRE_CORRELATIVO}, 1)
+    ON CONFLICT (nombre) DO UPDATE
+      SET valor = correlativos.valor + 1
+    RETURNING valor;
+  `;
+  return Number(result[0].valor);
 }
 
 module.exports = { obtenerSiguienteNumeroFactura };

@@ -11207,6 +11207,7 @@ export namespace Prisma {
     cantidad: number | null
     pesoReal: number | null
     precioUnitarioHistorico: number | null
+    costoUnitarioHistoricoUSD: number | null
     tasaImpuestoAplicada: number | null
     subtotalLinea: number | null
     impuestoLinea: number | null
@@ -11217,6 +11218,7 @@ export namespace Prisma {
     cantidad: number | null
     pesoReal: number | null
     precioUnitarioHistorico: number | null
+    costoUnitarioHistoricoUSD: number | null
     tasaImpuestoAplicada: number | null
     subtotalLinea: number | null
     impuestoLinea: number | null
@@ -11232,6 +11234,7 @@ export namespace Prisma {
     unidadMedida: string | null
     pesoReal: number | null
     precioUnitarioHistorico: number | null
+    costoUnitarioHistoricoUSD: number | null
     tasaImpuestoAplicada: number | null
     subtotalLinea: number | null
     impuestoLinea: number | null
@@ -11248,6 +11251,7 @@ export namespace Prisma {
     unidadMedida: string | null
     pesoReal: number | null
     precioUnitarioHistorico: number | null
+    costoUnitarioHistoricoUSD: number | null
     tasaImpuestoAplicada: number | null
     subtotalLinea: number | null
     impuestoLinea: number | null
@@ -11264,6 +11268,7 @@ export namespace Prisma {
     unidadMedida: number
     pesoReal: number
     precioUnitarioHistorico: number
+    costoUnitarioHistoricoUSD: number
     tasaImpuestoAplicada: number
     subtotalLinea: number
     impuestoLinea: number
@@ -11277,6 +11282,7 @@ export namespace Prisma {
     cantidad?: true
     pesoReal?: true
     precioUnitarioHistorico?: true
+    costoUnitarioHistoricoUSD?: true
     tasaImpuestoAplicada?: true
     subtotalLinea?: true
     impuestoLinea?: true
@@ -11287,6 +11293,7 @@ export namespace Prisma {
     cantidad?: true
     pesoReal?: true
     precioUnitarioHistorico?: true
+    costoUnitarioHistoricoUSD?: true
     tasaImpuestoAplicada?: true
     subtotalLinea?: true
     impuestoLinea?: true
@@ -11302,6 +11309,7 @@ export namespace Prisma {
     unidadMedida?: true
     pesoReal?: true
     precioUnitarioHistorico?: true
+    costoUnitarioHistoricoUSD?: true
     tasaImpuestoAplicada?: true
     subtotalLinea?: true
     impuestoLinea?: true
@@ -11318,6 +11326,7 @@ export namespace Prisma {
     unidadMedida?: true
     pesoReal?: true
     precioUnitarioHistorico?: true
+    costoUnitarioHistoricoUSD?: true
     tasaImpuestoAplicada?: true
     subtotalLinea?: true
     impuestoLinea?: true
@@ -11334,6 +11343,7 @@ export namespace Prisma {
     unidadMedida?: true
     pesoReal?: true
     precioUnitarioHistorico?: true
+    costoUnitarioHistoricoUSD?: true
     tasaImpuestoAplicada?: true
     subtotalLinea?: true
     impuestoLinea?: true
@@ -11437,6 +11447,7 @@ export namespace Prisma {
     unidadMedida: string
     pesoReal: number | null
     precioUnitarioHistorico: number
+    costoUnitarioHistoricoUSD: number | null
     tasaImpuestoAplicada: number
     subtotalLinea: number
     impuestoLinea: number
@@ -11472,6 +11483,7 @@ export namespace Prisma {
     unidadMedida?: boolean
     pesoReal?: boolean
     precioUnitarioHistorico?: boolean
+    costoUnitarioHistoricoUSD?: boolean
     tasaImpuestoAplicada?: boolean
     subtotalLinea?: boolean
     impuestoLinea?: boolean
@@ -11490,6 +11502,7 @@ export namespace Prisma {
     unidadMedida?: boolean
     pesoReal?: boolean
     precioUnitarioHistorico?: boolean
+    costoUnitarioHistoricoUSD?: boolean
     tasaImpuestoAplicada?: boolean
     subtotalLinea?: boolean
     impuestoLinea?: boolean
@@ -11508,6 +11521,7 @@ export namespace Prisma {
     unidadMedida?: boolean
     pesoReal?: boolean
     precioUnitarioHistorico?: boolean
+    costoUnitarioHistoricoUSD?: boolean
     tasaImpuestoAplicada?: boolean
     subtotalLinea?: boolean
     impuestoLinea?: boolean
@@ -11539,6 +11553,7 @@ export namespace Prisma {
       unidadMedida: string
       pesoReal: number | null
       precioUnitarioHistorico: number
+      costoUnitarioHistoricoUSD: number | null
       tasaImpuestoAplicada: number
       subtotalLinea: number
       impuestoLinea: number
@@ -11947,6 +11962,7 @@ export namespace Prisma {
     readonly unidadMedida: FieldRef<"ItemFactura", 'String'>
     readonly pesoReal: FieldRef<"ItemFactura", 'Float'>
     readonly precioUnitarioHistorico: FieldRef<"ItemFactura", 'Float'>
+    readonly costoUnitarioHistoricoUSD: FieldRef<"ItemFactura", 'Float'>
     readonly tasaImpuestoAplicada: FieldRef<"ItemFactura", 'Float'>
     readonly subtotalLinea: FieldRef<"ItemFactura", 'Float'>
     readonly impuestoLinea: FieldRef<"ItemFactura", 'Float'>
@@ -17461,10 +17477,14 @@ export namespace Prisma {
 
   export type UsuarioAvgAggregateOutputType = {
     sessionVersion: number | null
+    registrationLatitude: number | null
+    registrationLongitude: number | null
   }
 
   export type UsuarioSumAggregateOutputType = {
     sessionVersion: number | null
+    registrationLatitude: number | null
+    registrationLongitude: number | null
   }
 
   export type UsuarioMinAggregateOutputType = {
@@ -17487,6 +17507,9 @@ export namespace Prisma {
     mfaSecret: string | null
     sessionVersion: number | null
     sudoModeExpiresAt: Date | null
+    registrationIp: string | null
+    registrationLatitude: number | null
+    registrationLongitude: number | null
     lastLoginIp: string | null
     lastLoginAt: Date | null
     deletedAt: Date | null
@@ -17514,6 +17537,9 @@ export namespace Prisma {
     mfaSecret: string | null
     sessionVersion: number | null
     sudoModeExpiresAt: Date | null
+    registrationIp: string | null
+    registrationLatitude: number | null
+    registrationLongitude: number | null
     lastLoginIp: string | null
     lastLoginAt: Date | null
     deletedAt: Date | null
@@ -17541,6 +17567,9 @@ export namespace Prisma {
     mfaSecret: number
     sessionVersion: number
     sudoModeExpiresAt: number
+    registrationIp: number
+    registrationLatitude: number
+    registrationLongitude: number
     lastLoginIp: number
     lastLoginAt: number
     deletedAt: number
@@ -17552,10 +17581,14 @@ export namespace Prisma {
 
   export type UsuarioAvgAggregateInputType = {
     sessionVersion?: true
+    registrationLatitude?: true
+    registrationLongitude?: true
   }
 
   export type UsuarioSumAggregateInputType = {
     sessionVersion?: true
+    registrationLatitude?: true
+    registrationLongitude?: true
   }
 
   export type UsuarioMinAggregateInputType = {
@@ -17578,6 +17611,9 @@ export namespace Prisma {
     mfaSecret?: true
     sessionVersion?: true
     sudoModeExpiresAt?: true
+    registrationIp?: true
+    registrationLatitude?: true
+    registrationLongitude?: true
     lastLoginIp?: true
     lastLoginAt?: true
     deletedAt?: true
@@ -17605,6 +17641,9 @@ export namespace Prisma {
     mfaSecret?: true
     sessionVersion?: true
     sudoModeExpiresAt?: true
+    registrationIp?: true
+    registrationLatitude?: true
+    registrationLongitude?: true
     lastLoginIp?: true
     lastLoginAt?: true
     deletedAt?: true
@@ -17632,6 +17671,9 @@ export namespace Prisma {
     mfaSecret?: true
     sessionVersion?: true
     sudoModeExpiresAt?: true
+    registrationIp?: true
+    registrationLatitude?: true
+    registrationLongitude?: true
     lastLoginIp?: true
     lastLoginAt?: true
     deletedAt?: true
@@ -17746,6 +17788,9 @@ export namespace Prisma {
     mfaSecret: string | null
     sessionVersion: number
     sudoModeExpiresAt: Date | null
+    registrationIp: string | null
+    registrationLatitude: number | null
+    registrationLongitude: number | null
     lastLoginIp: string | null
     lastLoginAt: Date | null
     deletedAt: Date | null
@@ -17792,6 +17837,9 @@ export namespace Prisma {
     mfaSecret?: boolean
     sessionVersion?: boolean
     sudoModeExpiresAt?: boolean
+    registrationIp?: boolean
+    registrationLatitude?: boolean
+    registrationLongitude?: boolean
     lastLoginIp?: boolean
     lastLoginAt?: boolean
     deletedAt?: boolean
@@ -17831,6 +17879,9 @@ export namespace Prisma {
     mfaSecret?: boolean
     sessionVersion?: boolean
     sudoModeExpiresAt?: boolean
+    registrationIp?: boolean
+    registrationLatitude?: boolean
+    registrationLongitude?: boolean
     lastLoginIp?: boolean
     lastLoginAt?: boolean
     deletedAt?: boolean
@@ -17861,6 +17912,9 @@ export namespace Prisma {
     mfaSecret?: boolean
     sessionVersion?: boolean
     sudoModeExpiresAt?: boolean
+    registrationIp?: boolean
+    registrationLatitude?: boolean
+    registrationLongitude?: boolean
     lastLoginIp?: boolean
     lastLoginAt?: boolean
     deletedAt?: boolean
@@ -17923,6 +17977,9 @@ export namespace Prisma {
       mfaSecret: string | null
       sessionVersion: number
       sudoModeExpiresAt: Date | null
+      registrationIp: string | null
+      registrationLatitude: number | null
+      registrationLongitude: number | null
       lastLoginIp: string | null
       lastLoginAt: Date | null
       deletedAt: Date | null
@@ -18351,6 +18408,9 @@ export namespace Prisma {
     readonly mfaSecret: FieldRef<"Usuario", 'String'>
     readonly sessionVersion: FieldRef<"Usuario", 'Int'>
     readonly sudoModeExpiresAt: FieldRef<"Usuario", 'DateTime'>
+    readonly registrationIp: FieldRef<"Usuario", 'String'>
+    readonly registrationLatitude: FieldRef<"Usuario", 'Float'>
+    readonly registrationLongitude: FieldRef<"Usuario", 'Float'>
     readonly lastLoginIp: FieldRef<"Usuario", 'String'>
     readonly lastLoginAt: FieldRef<"Usuario", 'DateTime'>
     readonly deletedAt: FieldRef<"Usuario", 'DateTime'>
@@ -21962,6 +22022,7 @@ export namespace Prisma {
     unidadMedida: 'unidadMedida',
     pesoReal: 'pesoReal',
     precioUnitarioHistorico: 'precioUnitarioHistorico',
+    costoUnitarioHistoricoUSD: 'costoUnitarioHistoricoUSD',
     tasaImpuestoAplicada: 'tasaImpuestoAplicada',
     subtotalLinea: 'subtotalLinea',
     impuestoLinea: 'impuestoLinea',
@@ -22067,6 +22128,9 @@ export namespace Prisma {
     mfaSecret: 'mfaSecret',
     sessionVersion: 'sessionVersion',
     sudoModeExpiresAt: 'sudoModeExpiresAt',
+    registrationIp: 'registrationIp',
+    registrationLatitude: 'registrationLatitude',
+    registrationLongitude: 'registrationLongitude',
     lastLoginIp: 'lastLoginIp',
     lastLoginAt: 'lastLoginAt',
     deletedAt: 'deletedAt',
@@ -22903,6 +22967,7 @@ export namespace Prisma {
     unidadMedida?: StringFilter<"ItemFactura"> | string
     pesoReal?: FloatNullableFilter<"ItemFactura"> | number | null
     precioUnitarioHistorico?: FloatFilter<"ItemFactura"> | number
+    costoUnitarioHistoricoUSD?: FloatNullableFilter<"ItemFactura"> | number | null
     tasaImpuestoAplicada?: FloatFilter<"ItemFactura"> | number
     subtotalLinea?: FloatFilter<"ItemFactura"> | number
     impuestoLinea?: FloatFilter<"ItemFactura"> | number
@@ -22921,6 +22986,7 @@ export namespace Prisma {
     unidadMedida?: SortOrder
     pesoReal?: SortOrderInput | SortOrder
     precioUnitarioHistorico?: SortOrder
+    costoUnitarioHistoricoUSD?: SortOrderInput | SortOrder
     tasaImpuestoAplicada?: SortOrder
     subtotalLinea?: SortOrder
     impuestoLinea?: SortOrder
@@ -22942,6 +23008,7 @@ export namespace Prisma {
     unidadMedida?: StringFilter<"ItemFactura"> | string
     pesoReal?: FloatNullableFilter<"ItemFactura"> | number | null
     precioUnitarioHistorico?: FloatFilter<"ItemFactura"> | number
+    costoUnitarioHistoricoUSD?: FloatNullableFilter<"ItemFactura"> | number | null
     tasaImpuestoAplicada?: FloatFilter<"ItemFactura"> | number
     subtotalLinea?: FloatFilter<"ItemFactura"> | number
     impuestoLinea?: FloatFilter<"ItemFactura"> | number
@@ -22960,6 +23027,7 @@ export namespace Prisma {
     unidadMedida?: SortOrder
     pesoReal?: SortOrderInput | SortOrder
     precioUnitarioHistorico?: SortOrder
+    costoUnitarioHistoricoUSD?: SortOrderInput | SortOrder
     tasaImpuestoAplicada?: SortOrder
     subtotalLinea?: SortOrder
     impuestoLinea?: SortOrder
@@ -22984,6 +23052,7 @@ export namespace Prisma {
     unidadMedida?: StringWithAggregatesFilter<"ItemFactura"> | string
     pesoReal?: FloatNullableWithAggregatesFilter<"ItemFactura"> | number | null
     precioUnitarioHistorico?: FloatWithAggregatesFilter<"ItemFactura"> | number
+    costoUnitarioHistoricoUSD?: FloatNullableWithAggregatesFilter<"ItemFactura"> | number | null
     tasaImpuestoAplicada?: FloatWithAggregatesFilter<"ItemFactura"> | number
     subtotalLinea?: FloatWithAggregatesFilter<"ItemFactura"> | number
     impuestoLinea?: FloatWithAggregatesFilter<"ItemFactura"> | number
@@ -23408,6 +23477,9 @@ export namespace Prisma {
     mfaSecret?: StringNullableFilter<"Usuario"> | string | null
     sessionVersion?: IntFilter<"Usuario"> | number
     sudoModeExpiresAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
+    registrationIp?: StringNullableFilter<"Usuario"> | string | null
+    registrationLatitude?: FloatNullableFilter<"Usuario"> | number | null
+    registrationLongitude?: FloatNullableFilter<"Usuario"> | number | null
     lastLoginIp?: StringNullableFilter<"Usuario"> | string | null
     lastLoginAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
     deletedAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
@@ -23446,6 +23518,9 @@ export namespace Prisma {
     mfaSecret?: SortOrderInput | SortOrder
     sessionVersion?: SortOrder
     sudoModeExpiresAt?: SortOrderInput | SortOrder
+    registrationIp?: SortOrderInput | SortOrder
+    registrationLatitude?: SortOrderInput | SortOrder
+    registrationLongitude?: SortOrderInput | SortOrder
     lastLoginIp?: SortOrderInput | SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
     deletedAt?: SortOrderInput | SortOrder
@@ -23487,6 +23562,9 @@ export namespace Prisma {
     mfaSecret?: StringNullableFilter<"Usuario"> | string | null
     sessionVersion?: IntFilter<"Usuario"> | number
     sudoModeExpiresAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
+    registrationIp?: StringNullableFilter<"Usuario"> | string | null
+    registrationLatitude?: FloatNullableFilter<"Usuario"> | number | null
+    registrationLongitude?: FloatNullableFilter<"Usuario"> | number | null
     lastLoginIp?: StringNullableFilter<"Usuario"> | string | null
     lastLoginAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
     deletedAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
@@ -23525,6 +23603,9 @@ export namespace Prisma {
     mfaSecret?: SortOrderInput | SortOrder
     sessionVersion?: SortOrder
     sudoModeExpiresAt?: SortOrderInput | SortOrder
+    registrationIp?: SortOrderInput | SortOrder
+    registrationLatitude?: SortOrderInput | SortOrder
+    registrationLongitude?: SortOrderInput | SortOrder
     lastLoginIp?: SortOrderInput | SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
     deletedAt?: SortOrderInput | SortOrder
@@ -23560,6 +23641,9 @@ export namespace Prisma {
     mfaSecret?: StringNullableWithAggregatesFilter<"Usuario"> | string | null
     sessionVersion?: IntWithAggregatesFilter<"Usuario"> | number
     sudoModeExpiresAt?: DateTimeNullableWithAggregatesFilter<"Usuario"> | Date | string | null
+    registrationIp?: StringNullableWithAggregatesFilter<"Usuario"> | string | null
+    registrationLatitude?: FloatNullableWithAggregatesFilter<"Usuario"> | number | null
+    registrationLongitude?: FloatNullableWithAggregatesFilter<"Usuario"> | number | null
     lastLoginIp?: StringNullableWithAggregatesFilter<"Usuario"> | string | null
     lastLoginAt?: DateTimeNullableWithAggregatesFilter<"Usuario"> | Date | string | null
     deletedAt?: DateTimeNullableWithAggregatesFilter<"Usuario"> | Date | string | null
@@ -24604,6 +24688,7 @@ export namespace Prisma {
     unidadMedida?: string
     pesoReal?: number | null
     precioUnitarioHistorico: number
+    costoUnitarioHistoricoUSD?: number | null
     tasaImpuestoAplicada: number
     subtotalLinea: number
     impuestoLinea: number
@@ -24622,6 +24707,7 @@ export namespace Prisma {
     unidadMedida?: string
     pesoReal?: number | null
     precioUnitarioHistorico: number
+    costoUnitarioHistoricoUSD?: number | null
     tasaImpuestoAplicada: number
     subtotalLinea: number
     impuestoLinea: number
@@ -24636,6 +24722,7 @@ export namespace Prisma {
     unidadMedida?: StringFieldUpdateOperationsInput | string
     pesoReal?: NullableFloatFieldUpdateOperationsInput | number | null
     precioUnitarioHistorico?: FloatFieldUpdateOperationsInput | number
+    costoUnitarioHistoricoUSD?: NullableFloatFieldUpdateOperationsInput | number | null
     tasaImpuestoAplicada?: FloatFieldUpdateOperationsInput | number
     subtotalLinea?: FloatFieldUpdateOperationsInput | number
     impuestoLinea?: FloatFieldUpdateOperationsInput | number
@@ -24654,6 +24741,7 @@ export namespace Prisma {
     unidadMedida?: StringFieldUpdateOperationsInput | string
     pesoReal?: NullableFloatFieldUpdateOperationsInput | number | null
     precioUnitarioHistorico?: FloatFieldUpdateOperationsInput | number
+    costoUnitarioHistoricoUSD?: NullableFloatFieldUpdateOperationsInput | number | null
     tasaImpuestoAplicada?: FloatFieldUpdateOperationsInput | number
     subtotalLinea?: FloatFieldUpdateOperationsInput | number
     impuestoLinea?: FloatFieldUpdateOperationsInput | number
@@ -24670,6 +24758,7 @@ export namespace Prisma {
     unidadMedida?: string
     pesoReal?: number | null
     precioUnitarioHistorico: number
+    costoUnitarioHistoricoUSD?: number | null
     tasaImpuestoAplicada: number
     subtotalLinea: number
     impuestoLinea: number
@@ -24684,6 +24773,7 @@ export namespace Prisma {
     unidadMedida?: StringFieldUpdateOperationsInput | string
     pesoReal?: NullableFloatFieldUpdateOperationsInput | number | null
     precioUnitarioHistorico?: FloatFieldUpdateOperationsInput | number
+    costoUnitarioHistoricoUSD?: NullableFloatFieldUpdateOperationsInput | number | null
     tasaImpuestoAplicada?: FloatFieldUpdateOperationsInput | number
     subtotalLinea?: FloatFieldUpdateOperationsInput | number
     impuestoLinea?: FloatFieldUpdateOperationsInput | number
@@ -24700,6 +24790,7 @@ export namespace Prisma {
     unidadMedida?: StringFieldUpdateOperationsInput | string
     pesoReal?: NullableFloatFieldUpdateOperationsInput | number | null
     precioUnitarioHistorico?: FloatFieldUpdateOperationsInput | number
+    costoUnitarioHistoricoUSD?: NullableFloatFieldUpdateOperationsInput | number | null
     tasaImpuestoAplicada?: FloatFieldUpdateOperationsInput | number
     subtotalLinea?: FloatFieldUpdateOperationsInput | number
     impuestoLinea?: FloatFieldUpdateOperationsInput | number
@@ -25138,6 +25229,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -25176,6 +25270,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -25208,6 +25305,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -25246,6 +25346,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -25281,6 +25384,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -25305,6 +25411,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -25332,6 +25441,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -26344,6 +26456,7 @@ export namespace Prisma {
     unidadMedida?: SortOrder
     pesoReal?: SortOrder
     precioUnitarioHistorico?: SortOrder
+    costoUnitarioHistoricoUSD?: SortOrder
     tasaImpuestoAplicada?: SortOrder
     subtotalLinea?: SortOrder
     impuestoLinea?: SortOrder
@@ -26355,6 +26468,7 @@ export namespace Prisma {
     cantidad?: SortOrder
     pesoReal?: SortOrder
     precioUnitarioHistorico?: SortOrder
+    costoUnitarioHistoricoUSD?: SortOrder
     tasaImpuestoAplicada?: SortOrder
     subtotalLinea?: SortOrder
     impuestoLinea?: SortOrder
@@ -26370,6 +26484,7 @@ export namespace Prisma {
     unidadMedida?: SortOrder
     pesoReal?: SortOrder
     precioUnitarioHistorico?: SortOrder
+    costoUnitarioHistoricoUSD?: SortOrder
     tasaImpuestoAplicada?: SortOrder
     subtotalLinea?: SortOrder
     impuestoLinea?: SortOrder
@@ -26386,6 +26501,7 @@ export namespace Prisma {
     unidadMedida?: SortOrder
     pesoReal?: SortOrder
     precioUnitarioHistorico?: SortOrder
+    costoUnitarioHistoricoUSD?: SortOrder
     tasaImpuestoAplicada?: SortOrder
     subtotalLinea?: SortOrder
     impuestoLinea?: SortOrder
@@ -26397,6 +26513,7 @@ export namespace Prisma {
     cantidad?: SortOrder
     pesoReal?: SortOrder
     precioUnitarioHistorico?: SortOrder
+    costoUnitarioHistoricoUSD?: SortOrder
     tasaImpuestoAplicada?: SortOrder
     subtotalLinea?: SortOrder
     impuestoLinea?: SortOrder
@@ -26711,6 +26828,9 @@ export namespace Prisma {
     mfaSecret?: SortOrder
     sessionVersion?: SortOrder
     sudoModeExpiresAt?: SortOrder
+    registrationIp?: SortOrder
+    registrationLatitude?: SortOrder
+    registrationLongitude?: SortOrder
     lastLoginIp?: SortOrder
     lastLoginAt?: SortOrder
     deletedAt?: SortOrder
@@ -26720,6 +26840,8 @@ export namespace Prisma {
 
   export type UsuarioAvgOrderByAggregateInput = {
     sessionVersion?: SortOrder
+    registrationLatitude?: SortOrder
+    registrationLongitude?: SortOrder
   }
 
   export type UsuarioMaxOrderByAggregateInput = {
@@ -26742,6 +26864,9 @@ export namespace Prisma {
     mfaSecret?: SortOrder
     sessionVersion?: SortOrder
     sudoModeExpiresAt?: SortOrder
+    registrationIp?: SortOrder
+    registrationLatitude?: SortOrder
+    registrationLongitude?: SortOrder
     lastLoginIp?: SortOrder
     lastLoginAt?: SortOrder
     deletedAt?: SortOrder
@@ -26769,6 +26894,9 @@ export namespace Prisma {
     mfaSecret?: SortOrder
     sessionVersion?: SortOrder
     sudoModeExpiresAt?: SortOrder
+    registrationIp?: SortOrder
+    registrationLatitude?: SortOrder
+    registrationLongitude?: SortOrder
     lastLoginIp?: SortOrder
     lastLoginAt?: SortOrder
     deletedAt?: SortOrder
@@ -26778,6 +26906,8 @@ export namespace Prisma {
 
   export type UsuarioSumOrderByAggregateInput = {
     sessionVersion?: SortOrder
+    registrationLatitude?: SortOrder
+    registrationLongitude?: SortOrder
   }
 
   export type SolicitudActivacionCountOrderByAggregateInput = {
@@ -28508,6 +28638,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -28544,6 +28677,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -28804,6 +28940,9 @@ export namespace Prisma {
     mfaSecret?: StringNullableFilter<"Usuario"> | string | null
     sessionVersion?: IntFilter<"Usuario"> | number
     sudoModeExpiresAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
+    registrationIp?: StringNullableFilter<"Usuario"> | string | null
+    registrationLatitude?: FloatNullableFilter<"Usuario"> | number | null
+    registrationLongitude?: FloatNullableFilter<"Usuario"> | number | null
     lastLoginIp?: StringNullableFilter<"Usuario"> | string | null
     lastLoginAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
     deletedAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
@@ -29046,6 +29185,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -29082,6 +29224,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -29409,6 +29554,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -29446,6 +29594,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -29546,6 +29697,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -29583,6 +29737,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -29614,6 +29771,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -29651,6 +29811,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -29792,6 +29955,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -29829,6 +29995,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -29892,6 +30061,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -29929,6 +30101,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -29955,6 +30130,7 @@ export namespace Prisma {
     unidadMedida?: string
     pesoReal?: number | null
     precioUnitarioHistorico: number
+    costoUnitarioHistoricoUSD?: number | null
     tasaImpuestoAplicada: number
     subtotalLinea: number
     impuestoLinea: number
@@ -29971,6 +30147,7 @@ export namespace Prisma {
     unidadMedida?: string
     pesoReal?: number | null
     precioUnitarioHistorico: number
+    costoUnitarioHistoricoUSD?: number | null
     tasaImpuestoAplicada: number
     subtotalLinea: number
     impuestoLinea: number
@@ -30015,6 +30192,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -30052,6 +30232,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -30094,6 +30277,7 @@ export namespace Prisma {
     unidadMedida?: StringFilter<"ItemFactura"> | string
     pesoReal?: FloatNullableFilter<"ItemFactura"> | number | null
     precioUnitarioHistorico?: FloatFilter<"ItemFactura"> | number
+    costoUnitarioHistoricoUSD?: FloatNullableFilter<"ItemFactura"> | number | null
     tasaImpuestoAplicada?: FloatFilter<"ItemFactura"> | number
     subtotalLinea?: FloatFilter<"ItemFactura"> | number
     impuestoLinea?: FloatFilter<"ItemFactura"> | number
@@ -30149,6 +30333,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -30186,6 +30373,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -30259,6 +30449,7 @@ export namespace Prisma {
     unidadMedida?: string
     pesoReal?: number | null
     precioUnitarioHistorico: number
+    costoUnitarioHistoricoUSD?: number | null
     tasaImpuestoAplicada: number
     subtotalLinea: number
     impuestoLinea: number
@@ -30275,6 +30466,7 @@ export namespace Prisma {
     unidadMedida?: string
     pesoReal?: number | null
     precioUnitarioHistorico: number
+    costoUnitarioHistoricoUSD?: number | null
     tasaImpuestoAplicada: number
     subtotalLinea: number
     impuestoLinea: number
@@ -30387,6 +30579,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -30424,6 +30619,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -30875,6 +31073,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -30912,6 +31113,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -31006,6 +31210,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -31043,6 +31250,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -31158,6 +31368,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -31195,6 +31408,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -31353,6 +31569,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -31390,6 +31609,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -31649,6 +31871,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -31686,6 +31911,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -31722,6 +31950,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -31758,6 +31989,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -32179,6 +32413,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -32216,6 +32453,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -32429,6 +32669,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -32466,6 +32709,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -32513,6 +32759,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -32550,6 +32799,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -32583,6 +32835,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -32678,6 +32933,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -32714,6 +32972,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -32748,6 +33009,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -32997,6 +33261,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -33025,6 +33292,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -33061,6 +33331,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -33095,6 +33368,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -33284,6 +33560,7 @@ export namespace Prisma {
     unidadMedida?: string
     pesoReal?: number | null
     precioUnitarioHistorico: number
+    costoUnitarioHistoricoUSD?: number | null
     tasaImpuestoAplicada: number
     subtotalLinea: number
     impuestoLinea: number
@@ -33298,6 +33575,7 @@ export namespace Prisma {
     unidadMedida?: StringFieldUpdateOperationsInput | string
     pesoReal?: NullableFloatFieldUpdateOperationsInput | number | null
     precioUnitarioHistorico?: FloatFieldUpdateOperationsInput | number
+    costoUnitarioHistoricoUSD?: NullableFloatFieldUpdateOperationsInput | number | null
     tasaImpuestoAplicada?: FloatFieldUpdateOperationsInput | number
     subtotalLinea?: FloatFieldUpdateOperationsInput | number
     impuestoLinea?: FloatFieldUpdateOperationsInput | number
@@ -33314,6 +33592,7 @@ export namespace Prisma {
     unidadMedida?: StringFieldUpdateOperationsInput | string
     pesoReal?: NullableFloatFieldUpdateOperationsInput | number | null
     precioUnitarioHistorico?: FloatFieldUpdateOperationsInput | number
+    costoUnitarioHistoricoUSD?: NullableFloatFieldUpdateOperationsInput | number | null
     tasaImpuestoAplicada?: FloatFieldUpdateOperationsInput | number
     subtotalLinea?: FloatFieldUpdateOperationsInput | number
     impuestoLinea?: FloatFieldUpdateOperationsInput | number
@@ -33329,6 +33608,7 @@ export namespace Prisma {
     unidadMedida?: StringFieldUpdateOperationsInput | string
     pesoReal?: NullableFloatFieldUpdateOperationsInput | number | null
     precioUnitarioHistorico?: FloatFieldUpdateOperationsInput | number
+    costoUnitarioHistoricoUSD?: NullableFloatFieldUpdateOperationsInput | number | null
     tasaImpuestoAplicada?: FloatFieldUpdateOperationsInput | number
     subtotalLinea?: FloatFieldUpdateOperationsInput | number
     impuestoLinea?: FloatFieldUpdateOperationsInput | number
@@ -33344,6 +33624,7 @@ export namespace Prisma {
     unidadMedida?: string
     pesoReal?: number | null
     precioUnitarioHistorico: number
+    costoUnitarioHistoricoUSD?: number | null
     tasaImpuestoAplicada: number
     subtotalLinea: number
     impuestoLinea: number
@@ -33369,6 +33650,7 @@ export namespace Prisma {
     unidadMedida?: StringFieldUpdateOperationsInput | string
     pesoReal?: NullableFloatFieldUpdateOperationsInput | number | null
     precioUnitarioHistorico?: FloatFieldUpdateOperationsInput | number
+    costoUnitarioHistoricoUSD?: NullableFloatFieldUpdateOperationsInput | number | null
     tasaImpuestoAplicada?: FloatFieldUpdateOperationsInput | number
     subtotalLinea?: FloatFieldUpdateOperationsInput | number
     impuestoLinea?: FloatFieldUpdateOperationsInput | number
@@ -33385,6 +33667,7 @@ export namespace Prisma {
     unidadMedida?: StringFieldUpdateOperationsInput | string
     pesoReal?: NullableFloatFieldUpdateOperationsInput | number | null
     precioUnitarioHistorico?: FloatFieldUpdateOperationsInput | number
+    costoUnitarioHistoricoUSD?: NullableFloatFieldUpdateOperationsInput | number | null
     tasaImpuestoAplicada?: FloatFieldUpdateOperationsInput | number
     subtotalLinea?: FloatFieldUpdateOperationsInput | number
     impuestoLinea?: FloatFieldUpdateOperationsInput | number
@@ -33400,6 +33683,7 @@ export namespace Prisma {
     unidadMedida?: StringFieldUpdateOperationsInput | string
     pesoReal?: NullableFloatFieldUpdateOperationsInput | number | null
     precioUnitarioHistorico?: FloatFieldUpdateOperationsInput | number
+    costoUnitarioHistoricoUSD?: NullableFloatFieldUpdateOperationsInput | number | null
     tasaImpuestoAplicada?: FloatFieldUpdateOperationsInput | number
     subtotalLinea?: FloatFieldUpdateOperationsInput | number
     impuestoLinea?: FloatFieldUpdateOperationsInput | number
@@ -33495,6 +33779,9 @@ export namespace Prisma {
     mfaSecret?: string | null
     sessionVersion?: number
     sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
@@ -33625,6 +33912,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -33661,6 +33951,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -33695,6 +33988,9 @@ export namespace Prisma {
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null

@@ -6,6 +6,7 @@ import { API } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui';
+import { getBrowserLocation } from '../utils/geolocation';
 
 const ROLES = [
   { value: 'CAJA', label: 'Caja (POS + Ventas)' },
@@ -63,7 +64,11 @@ export function UsuariosPage() {
     setSaving(true);
     setFieldErrors({});
     try {
-      await API.crearUsuario(createForm);
+      const location = await getBrowserLocation();
+      if (!location) {
+        showToast('No se pudo obtener la ubicación. El usuario se creará sin coordenadas.', 'info');
+      }
+      await API.crearUsuario({ ...createForm, ...location });
       showToast('Usuario creado correctamente', 'success');
       setShowCreateModal(false);
       loadUsuarios();
@@ -214,6 +219,9 @@ export function UsuariosPage() {
                     {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                   </select>
                 </div>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  Al crear la cuenta, se solicitará permiso para guardar la ubicación de este dispositivo. Si no autorizas, el usuario se creará sin coordenadas.
+                </p>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>Cancelar</button>

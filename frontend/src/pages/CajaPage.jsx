@@ -206,6 +206,7 @@ export function CajaPage() {
                   <th>Cierre</th>
                   <th>Monto Inicial</th>
                   <th>Efectivo</th>
+                  <th>Efectivo VES</th>
                   <th>Banco</th>
                   <th>Monto Final</th>
                   <th>Diferencia</th>
@@ -215,13 +216,13 @@ export function CajaPage() {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={10} className="empty-state">Cargando historial de caja...</td></tr>
+                  <tr><td colSpan={11} className="empty-state">Cargando historial de caja...</td></tr>
                 ) : historial.length === 0 ? (
                   <tr><td colSpan={10} className="empty-state">No hay registros de apertura o cierre de caja</td></tr>
                 ) : (
                   historial.map(c => {
                     const esperado = parseFloat(c.montoInicial || 0) + parseFloat(c.ingresosEfectivo || 0);
-                    const final = parseFloat(c.montoFinalEfectivo ?? c.montoFinal ?? 0);
+                    const final = parseFloat(c.montoFinal ?? 0);
                     const diff = c.estado === 'CLOSED' ? final - esperado : null;
 
                     return (
@@ -231,8 +232,9 @@ export function CajaPage() {
                         <td>{c.fechaCierre ? Utils.formatDate(c.fechaCierre) : '-'}</td>
                         <td>{Utils.formatMoney(c.montoInicial)}</td>
                         <td>{Utils.formatMoney(c.ingresosEfectivo || 0)}</td>
+                        <td>{Utils.formatMoney(c.ingresosEfectivoVES || 0)}</td>
                         <td>{Utils.formatMoney(c.ingresosBanco || 0)}</td>
-                        <td style={{ fontWeight: 700 }}>{c.montoFinalEfectivo ? Utils.formatMoney(c.montoFinalEfectivo) : '-'}</td>
+                        <td style={{ fontWeight: 700 }}>{Utils.formatMoney(final)}</td>
                         <td>
                           {diff !== null ? (
                             <span style={{ fontWeight: 700, color: diff >= 0 ? 'var(--success)' : 'var(--danger)' }}>

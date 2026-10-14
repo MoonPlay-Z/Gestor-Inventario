@@ -27,7 +27,6 @@ import cashIcon from '@iconify/icons-mdi/cash';
 import receiptIcon from '@iconify/icons-mdi/file-document-outline';
 import trendUpIcon from '@iconify/icons-mdi/trending-up';
 import trendDownIcon from '@iconify/icons-mdi/trending-down';
-import packageIcon from '@iconify/icons-mdi/package-variant';
 import chartBarIcon from '@iconify/icons-mdi/chart-bar';
 import chartLineIcon from '@iconify/icons-mdi/chart-line';
 import chartPieIcon from '@iconify/icons-mdi/chart-pie';
@@ -208,7 +207,7 @@ export function ReportesPage() {
   } : null;
 
   // Gráfico de ganancias
-  const gananciasChartData = ganancias ? {
+  const gananciasChartData = ganancias && ganancias.gananciaBruta !== null ? {
     labels: ['Ingresos', 'Costo Vendido', 'Ganancia Bruta'],
     datasets: [{
       data: [
@@ -303,93 +302,127 @@ export function ReportesPage() {
     try {
       const { jsPDF } = await import('jspdf');
       const autoTable = (await import('jspdf-autotable')).default;
-      
-      const doc = new jsPDF();
+      const params = new URLSearchParams({ periodo, fecha });
+      const reporte = await API.getReportesVentasDetalle(params);
+      const doc = new jsPDF({ orientation: 'landscape' });
       const pageWidth = doc.internal.pageSize.getWidth();
-      
-      // Título
+
       doc.setFontSize(18);
-      doc.text('Reporte de Ventas', pageWidth / 2, 15, { align: 'center' });
-      
-      // Período
-      doc.setFontSize(12);
-      doc.text(`Período: ${ventas?.etiqueta || 'N/A'}`, 14, 25);
-      doc.text(`Fecha de generación: ${new Date().toLocaleString('es-VE')}`, 14, 32);
-      
-      // Métricas principales
-      doc.setFontSize(14);
-      doc.text('Resumen', 14, 45);
-      
+      doc.text('Reporte de Ingresos y Ganancias por Ventas', pageWidth / 2, 15, { align: 'center' });
       doc.setFontSize(11);
-      let y = 55;
-      doc.text(`Total Ventas: ${Utils.formatMoney(ventas?.total || 0, currencySymbol)}`, 14, y);
-      y += 8;
-      doc.text(`Impuestos: ${Utils.formatMoney(ventas?.impuestos || 0, currencySymbol)}`, 14, y);
-      y += 8;
-      doc.text(`Subtotal: ${Utils.formatMoney(ventas?.subtotal || 0, currencySymbol)}`, 14, y);
-      y += 8;
-      doc.text(`Cantidad de Facturas: ${ventas?.cantidadFacturas || 0}`, 14, y);
-      y += 8;
-      doc.text(`Promedio por Venta: ${Utils.formatMoney(ventas?.promedioVenta || 0, currencySymbol)}`, 14, y);
-      
-      // Ganancias (si está disponible)
-      if (ganancias) {
-        y += 15;
-        doc.setFontSize(14);
-        doc.text('Ganancias', 14, y);
-        y += 10;
-        doc.setFontSize(11);
-        doc.text(`Ingresos Totales: ${Utils.formatMoney(ganancias.ingresosTotales, currencySymbol)}`, 14, y);
-        y += 8;
-        doc.text(`Costo Vendido: ${Utils.formatMoney(ganancias.costoVendido, currencySymbol)}`, 14, y);
-        y += 8;
-        doc.text(`Ganancia Bruta: ${Utils.formatMoney(ganancias.gananciaBruta, currencySymbol)}`, 14, y);
-        y += 8;
-        doc.text(`Margen: ${ganancias.margen}%`, 14, y);
-      }
-      
-      // Productos Top
-      if (productosTop.length > 0) {
-        y += 15;
-        doc.setFontSize(14);
-        doc.text('Productos Más Vendidos', 14, y);
-        y += 5;
-        
+      doc.text(`Período: ${reporte.etiqueta}`, 14, 24);
+      doc.text(`Fecha de generación: ${new Date().toLocaleString('es-VE')}`, 14, 31);
+      doc.text('Montos en USD · Período aplicado por fecha y hora de emisión de la factura', 14, 38);
+
+      const verGanancias = puedeVerGanancias;
+      const columnas = [
+        'Factura ID',
+        'Referencia',
+        'Cliente',
+        'Producto',
+        'Fecha y hora',
+        'Monto total (USD)',
+        ...(verGanancias ? ['Ganancia (USD)'] : []),
+      ];
+      const filas = reporte.detalle.map(item => [
+        `#${item.facturaId}`,
+        item.referencia,
+        item.cliente,
+        item.producto,
+        new Date(item.fechaHora).toLocaleString('es-VE'),
+        Utils.formatMoney(item.montoTotal, '$'),
+        ...(verGanancias ? [
+          item.costoDesconocido
+            ? 'No disponible'
+            : `${item.costoEstimado ? '* ' : ''}${Utils.formatMoney(item.ganancia, '$')}`,
+        ] : []),
+      ]);
+
+      autoTable(doc, {
+        startY: 44,
+        head: [columnas],
+        body: filas,
+        styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
+        headStyles: { fillColor: [99, 102, 241] },
+        columnStyles: {
+          0: { cellWidth: 22 },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 38 },
+          3: { cellWidth: 62 },
+          4: { cellWidth: 35 },
+          5: { cellWidth: 34, halign: 'right' },
+          ...(verGanancias ? { 6: { cellWidth: 34, halign: 'right' } } : {}),
+        },
+      });
+
+      const perdidas = verGanancias ? (reporte.productosConPerdida || []) : [];
+      if (perdidas.length > 0) {
+        let perdidasY = (doc.lastAutoTable?.finalY || 44) + 12;
+        if (perdidasY > doc.internal.pageSize.getHeight() - 35) {
+          doc.addPage();
+          perdidasY = 20;
+        }
+        doc.setFontSize(12);
+        doc.setTextColor(180, 35, 24);
+        doc.text('Detalle de ventas con pérdida', 14, perdidasY);
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(8);
+        doc.text('Cada línea aparece porque el costo histórico del producto supera el subtotal de venta sin impuestos.', 14, perdidasY + 5);
         autoTable(doc, {
-          startY: y,
-          head: [['Producto', 'SKU', 'Cantidad', 'Ingresos']],
-          body: productosTop.map(p => [
-            p.nombre,
-            p.sku || '-',
-            p.cantidadVendida.toString(),
-            Utils.formatMoney(p.ingresos, currencySymbol)
+          startY: perdidasY + 9,
+          head: [['Factura', 'Fecha y hora', 'Cliente', 'Producto', 'Cantidad', 'Subtotal sin impuestos (USD)', 'Costo histórico (USD)', 'Pérdida (USD)']],
+          body: perdidas.map(item => [
+            `#${item.facturaId}`,
+            new Date(item.fechaHora).toLocaleString('es-VE'),
+            item.cliente,
+            item.producto,
+            `${Number(item.cantidad).toLocaleString('es-VE')} ${item.unidad || ''}`.trim(),
+            Utils.formatMoney(item.subtotal, '$'),
+            Utils.formatMoney(item.costo, '$'),
+            Utils.formatMoney(item.perdida, '$'),
           ]),
-          styles: { fontSize: 9 },
-          headStyles: { fillColor: [99, 102, 241] }
+          styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+          headStyles: { fillColor: [180, 35, 24] },
+          columnStyles: {
+            0: { cellWidth: 18 },
+            1: { cellWidth: 30 },
+            2: { cellWidth: 30 },
+            3: { cellWidth: 48 },
+            4: { cellWidth: 20 },
+            5: { cellWidth: 32, halign: 'right' },
+            6: { cellWidth: 32, halign: 'right' },
+            7: { cellWidth: 28, halign: 'right' },
+          },
         });
       }
-      
-      // Clientes Top
-      if (clientesTop.length > 0) {
-        const finalY = doc.lastAutoTable?.finalY || y + 10;
-        doc.setFontSize(14);
-        doc.text('Clientes Principales', 14, finalY + 15);
-        
-        autoTable(doc, {
-          startY: finalY + 20,
-          head: [['Cliente', 'RIF', 'Facturas', 'Total Compras']],
-          body: clientesTop.map(c => [
-            c.nombre,
-            c.rif || '-',
-            c.cantidadFacturas.toString(),
-            Utils.formatMoney(c.totalCompras, currencySymbol)
-          ]),
-          styles: { fontSize: 9 },
-          headStyles: { fillColor: [99, 102, 241] }
-        });
+
+      const notas = [];
+      if (verGanancias && reporte.facturasSinCosto > 0) {
+        notas.push(reporte.facturasConCosto === 0
+          ? `No fue posible calcular la ganancia: ${reporte.facturasSinCosto} factura(s) no tienen costo histórico completo. No se usó el costo actual del inventario como sustituto.`
+          : `${reporte.facturasSinCosto} factura(s) sin costo histórico completo se excluyeron de la ganancia total; no se usó el costo actual del inventario como sustituto.`);
       }
-      
-      // Guardar
+      if (verGanancias && Number(reporte.gananciaTotal) < 0) {
+        notas.push('La ganancia neta del período es negativa porque las pérdidas detalladas superan las ganancias de las demás ventas con costo histórico completo.');
+      }
+      const notasLineas = notas.length > 0
+        ? doc.splitTextToSize(notas.join(' '), pageWidth - 28)
+        : [];
+      let summaryY = (doc.lastAutoTable?.finalY || 44) + 10;
+      const requiredSpace = (verGanancias ? 20 : 12) + (notasLineas.length > 0 ? 5 + notasLineas.length * 4 : 0);
+      if (summaryY + requiredSpace > doc.internal.pageSize.getHeight() - 10) {
+        doc.addPage();
+        summaryY = 20;
+      }
+      doc.setFontSize(12);
+      doc.text(`Monto total facturado: ${Utils.formatMoney(reporte.totalIngresos, '$')}`, 14, summaryY);
+      if (verGanancias) {
+        doc.text(`Ganancia total: ${reporte.gananciaTotal === null ? 'No disponible por falta de costo histórico' : Utils.formatMoney(reporte.gananciaTotal, '$')}`, 14, summaryY + 8);
+        doc.setFontSize(9);
+        doc.text('Ganancia = suma del subtotal vendido por producto (sin impuestos) menos su costo histórico; usa las ventas emitidas en el período seleccionado.', 14, summaryY + 16, { maxWidth: pageWidth - 28 });
+        if (notasLineas.length > 0) doc.text(notasLineas, 14, summaryY + 22);
+      }
+
       doc.save(`reporte_ventas_${periodo}_${fecha}.pdf`);
       showToast('Reporte PDF exportado correctamente', 'success');
     } catch (err) {
@@ -410,7 +443,7 @@ export function ReportesPage() {
       
       // Métricas
       rows.push(['Métricas']);
-      rows.push(['Total Ventas', ventas?.total || '0']);
+      rows.push(['Ingresos del período', ventas?.total || '0']);
       rows.push(['Impuestos', ventas?.impuestos || '0']);
       rows.push(['Subtotal', ventas?.subtotal || '0']);
       rows.push(['Cantidad de Facturas', ventas?.cantidadFacturas || '0']);
@@ -422,9 +455,26 @@ export function ReportesPage() {
         rows.push(['Ganancias']);
         rows.push(['Ingresos Totales', ganancias.ingresosTotales]);
         rows.push(['Costo Vendido', ganancias.costoVendido]);
-        rows.push(['Ganancia Bruta', ganancias.gananciaBruta]);
-        rows.push(['Margen (%)', ganancias.margen]);
+        rows.push(['Ganancia Bruta', ganancias.gananciaBruta ?? 'No disponible por falta de costo histórico']);
+        rows.push(['Margen (%)', ganancias.margen ?? 'No disponible']);
         rows.push([]);
+        if (ganancias.productosConPerdida?.length > 0) {
+          rows.push(['Ventas con pérdida: el costo histórico superó el subtotal de venta sin impuestos']);
+          rows.push(['Factura', 'Fecha y hora', 'Cliente', 'Producto', 'Cantidad', 'Subtotal USD', 'Costo histórico USD', 'Pérdida USD']);
+          ganancias.productosConPerdida.forEach(item => {
+            rows.push([
+              item.facturaId,
+              new Date(item.fechaHora).toLocaleString('es-VE'),
+              item.cliente,
+              item.producto,
+              `${item.cantidad} ${item.unidad || ''}`.trim(),
+              item.subtotal,
+              item.costo,
+              item.perdida,
+            ]);
+          });
+          rows.push([]);
+        }
       }
       
       // Productos Top
@@ -584,7 +634,7 @@ export function ReportesPage() {
                 <div className="metric-icon"><Icon icon={cashIcon} className="h-6 w-6" /></div>
                 <div>
                   <div className="metric-value">{Utils.formatMoney(ventas?.total || 0, currencySymbol)}</div>
-                  <div className="metric-label">Ventas {ventas?.etiqueta || ''}</div>
+                  <div className="metric-label">Ingresos {ventas?.etiqueta || ''}</div>
                   {ventas?.comparacion && (
                     <div style={{ fontSize: '0.75rem', marginTop: '4px', color: ventas.comparacion.tendencia === 'up' ? '#10b981' : ventas.comparacion.tendencia === 'down' ? '#ef4444' : textColor }}>
                       <Icon icon={ventas.comparacion.tendencia === 'up' ? trendUpIcon : ventas.comparacion.tendencia === 'down' ? trendDownIcon : null} className="h-3 w-3" style={{ verticalAlign: 'middle' }} />
@@ -598,26 +648,38 @@ export function ReportesPage() {
                 <div className="metric-card success">
                   <div className="metric-icon"><Icon icon={trendUpIcon} className="h-6 w-6" /></div>
                   <div>
-                    <div className="metric-value">{Utils.formatMoney(ganancias?.gananciaBruta || 0, currencySymbol)}</div>
+                    <div className="metric-value">
+                      {ganancias
+                        ? ganancias.gananciaBruta === null
+                          ? 'No disponible'
+                          : Utils.formatMoney(ganancias.gananciaBruta, currencySymbol)
+                        : errors.ganancias
+                          ? 'No disponible'
+                          : loading
+                            ? 'Cargando…'
+                            : '—'}
+                    </div>
                     <div className="metric-label">Ganancia Bruta</div>
                     {ganancias && (
                       <div style={{ fontSize: '0.75rem', marginTop: '4px', color: textColor }}>
-                        Margen: {ganancias.margen}%
+                        Margen: {ganancias.margen === null ? 'No disponible' : `${ganancias.margen}%`}
                       </div>
                     )}
-                  </div>
-                </div>
-              )}
-
-              {puedeVerInversion && (
-                <div className="metric-card warning">
-                  <div className="metric-icon"><Icon icon={packageIcon} className="h-6 w-6" /></div>
-                  <div>
-                    <div className="metric-value">{Utils.formatMoney(inversion?.valorInventario || 0, currencySymbol)}</div>
-                    <div className="metric-label">Valor Inventario</div>
-                    {inversion && (
-                      <div style={{ fontSize: '0.75rem', marginTop: '4px', color: textColor }}>
-                        {inversion.totalProductos} productos · {inversion.productosConStock} con stock
+                    {ganancias?.facturasSinCosto > 0 && (
+                      <div style={{ fontSize: '0.75rem', marginTop: '4px', color: '#b45309' }}>
+                        {ganancias.facturasConCosto === 0
+                          ? `No se puede calcular: ${ganancias.facturasSinCosto} factura(s) no tienen costo histórico registrado.`
+                          : `${ganancias.facturasSinCosto} factura(s) excluida(s) por falta de costo histórico; la ganancia mostrada es parcial.`}
+                      </div>
+                    )}
+                    {ganancias && ganancias.gananciaBruta === null && (
+                      <div style={{ fontSize: '0.75rem', marginTop: '4px', color: '#b45309' }}>
+                        Se conservan los ingresos facturados, pero no se estima ganancia usando el costo actual del inventario.
+                      </div>
+                    )}
+                    {!ganancias && errors.ganancias && (
+                      <div style={{ fontSize: '0.75rem', marginTop: '4px', color: '#b42318' }}>
+                        {errors.ganancias}
                       </div>
                     )}
                   </div>
@@ -651,6 +713,66 @@ export function ReportesPage() {
               </div>
             </div>
 
+            {puedeVerGanancias && ganancias?.productosConPerdida?.length > 0 && (
+              <section
+                className="card"
+                style={{
+                  marginBottom: '24px',
+                  border: '1px solid #fca5a5',
+                  background: isDark ? '#351f27' : '#fff7f7',
+                }}
+                aria-labelledby="ventas-perdida-titulo"
+              >
+                <div className="card-header">
+                  <div>
+                    <h3 className="card-title" id="ventas-perdida-titulo" style={{ color: '#b42318' }}>
+                      <Icon icon={alertIcon} className="h-5 w-5" style={{ verticalAlign: 'middle', marginRight: '8px' }} />
+                      Líneas de venta con pérdida ({ganancias.productosConPerdida.length})
+                    </h3>
+                    <p className="card-subtitle">
+                      Montos en USD. En estas líneas, el costo histórico superó el subtotal vendido sin impuestos. El detalle respeta el filtro y la empresa seleccionados.
+                      {Number(ganancias.gananciaBruta) < 0 && ' La pérdida neta del período ocurre porque estas pérdidas superan la ganancia de las demás ventas.'}
+                    </p>
+                  </div>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Factura</th>
+                        <th>Fecha y hora</th>
+                        <th>Cliente</th>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Subtotal sin impuestos (USD)</th>
+                        <th>Costo histórico (USD)</th>
+                        <th>Pérdida (USD)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ganancias.productosConPerdida.slice(0, 20).map((item, index) => (
+                        <tr key={`${item.facturaId}-${item.producto}-${index}`}>
+                          <td>#{item.facturaId}</td>
+                          <td>{new Date(item.fechaHora).toLocaleString('es-VE')}</td>
+                          <td>{item.cliente}</td>
+                          <td>{item.producto}</td>
+                          <td>{Number(item.cantidad).toLocaleString('es-VE')} {item.unidad || ''}</td>
+                          <td>{Utils.formatMoney(item.subtotal, '$')}</td>
+                          <td>{Utils.formatMoney(item.costo, '$')}</td>
+                          <td style={{ color: '#b42318', fontWeight: 600 }}>{Utils.formatMoney(item.perdida, '$')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {ganancias.productosConPerdida.length > 20 && (
+                  <p className="card-subtitle" style={{ marginTop: '12px' }}>
+                    Se muestran las primeras 20 líneas; el PDF y CSV incluyen las {ganancias.productosConPerdida.length} líneas del período.
+                  </p>
+                )}
+              </section>
+            )}
+
             {/* Gráficos principales */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
               {/* Gráfico de Ventas */}
@@ -682,7 +804,7 @@ export function ReportesPage() {
                         <Icon icon={chartPieIcon} className="h-5 w-5" style={{ verticalAlign: 'middle', marginRight: '8px' }} />
                         Distribución de Ganancias
                       </h3>
-                      <p className="card-subtitle">Ingresos vs Costos</p>
+                      <p className="card-subtitle">Costo de unidades vendidas e ingreso del período; excluye el inventario disponible</p>
                     </div>
                   </div>
                   <div style={{ height: '250px', width: '100%' }}>
@@ -699,12 +821,7 @@ export function ReportesPage() {
                               titleColor: isDark ? '#e8eaf6' : '#1a1d2e',
                               bodyColor: isDark ? '#9099c4' : '#4b5280',
                               callbacks: {
-                                label: (context) => {
-                                  const pago = caja?.desglose?.[context.dataIndex];
-                                  if (!pago) return `${context.label}: ${Utils.formatMoney(context.parsed, currencySymbol)}`;
-                                  const simbolo = pago.moneda === 'VES' ? 'Bs.' : '$';
-                                  return `${context.label}: ${Utils.formatMoney(pago.total, simbolo)} (equiv. ${Utils.formatMoney(pago.totalUSD, '$')})`;
-                                }
+                                label: (context) => `${context.label}: ${Utils.formatMoney(context.parsed, currencySymbol)}`
                               }
                             }
                           }

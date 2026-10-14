@@ -1,0 +1,95 @@
+/* frontend/src/components/ui/Form.module.css */
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.required {
+  color: var(--danger);
+  margin-left: 2px;
+}
+
+.control {
+  background: var(--bg-primary);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: all var(--transition);
+  width: 100%;
+}
+
+.control:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.control::placeholder {
+  color: var(--text-muted);
+}
+
+.controlError {
+  border-color: var(--danger);
+}
+
+.error {
+  font-size: 0.75rem;
+  color: var(--danger);
+  display: none;
+}
+
+.errorVisible {
+  display: block;
+}
+
+.helpIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-left: 6px;
+  cursor: help;
+  vertical-align: middle;
+  transition: background 0.2s, color 0.2s;
+}
+
+.helpIcon:hover {
+  background: var(--accent);
+  color: white;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.grid2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.grid3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+@media (max-width: 768px) {
+  .grid2,
+  .grid3 {
+    grid-template-columns: 1fr;
+  }
+}

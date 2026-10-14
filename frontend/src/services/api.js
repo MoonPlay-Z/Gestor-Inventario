@@ -114,6 +114,8 @@ export const API = {
   // Config
   getConfig: () => request('/config'),
   saveConfig: (data) => request('/config', { method: 'POST', body: data }),
+  getTasaBCV: () => request('/config/tasa-bcv'),
+  updateEmpresaConfig: (empresaId, data) => request(`/config/empresas/${empresaId}/config`, { method: 'PUT', body: data }),
 
   // Dashboard
   getDashboardStats: (periodo = 'mes') => request(`/dashboard?periodo=${periodo}`),
@@ -162,7 +164,7 @@ export const API = {
   },
   getFactura: (id) => request(`/facturas/${id}`),
   emitirFactura: (data) => request('/facturas', { method: 'POST', body: data }),
-  anularFactura: (id) => request(`/facturas/${id}/anular`, { method: 'PATCH' }),
+  anularFactura: (id, data) => request(`/facturas/${id}/anular`, { method: 'PATCH', body: data }),
   getFacturaPruebas: (codigo) => request(`/facturas-pruebas?codigo=${encodeURIComponent(codigo)}`),
   actualizarFacturaPruebas: (id, data) => request(`/facturas-pruebas/${id}`, { method: 'PUT', body: data }),
 
@@ -172,12 +174,14 @@ export const API = {
     return request(`/cotizaciones${qs ? `?${qs}` : ''}`);
   },
   crearCotizacion: (data) => request('/cotizaciones', { method: 'POST', body: data }),
+  getCotizacion: (id) => request(`/cotizaciones/${id}`),
   convertirCotizacion: (id) => request(`/cotizaciones/${id}/convert`, { method: 'POST' }),
 
   // Pagos
   getPagos: (facturaId) => request(`/pagos?facturaId=${facturaId}`),
   registrarPago: (data) => request('/pagos', { method: 'POST', body: data }),
   eliminarPago: (id) => request(`/pagos/${id}`, { method: 'DELETE' }),
+  backfillTasaBcv: () => request('/pagos/backfill-tasa-bcv', { method: 'POST' }),
 
   // Caja
   getCajaActual: () => request('/caja/status'),
@@ -205,9 +209,29 @@ export const API = {
   },
   getEmpresas: () => request('/activaciones/empresas'),
   cambiarEstadoEmpresa: (id, activo) => request(`/activaciones/empresas/${id}/estado`, { method: 'PUT', body: { activo } }),
-  eliminarEmpresa: (id) => request(`/activaciones/empresas/${id}`, { method: 'DELETE' }),
+  eliminarEmpresa: (id, nameConfirmation, deleteConfirmation) => request(`/activaciones/empresas/${id}`, {
+    method: 'DELETE',
+    body: { nameConfirmation, deleteConfirmation },
+  }),
   activarManual: (id, data) => request(`/activaciones/${id}/activar-manual`, { method: 'PUT', body: data }),
   resetPassword: (userId, newPassword) => request(`/activaciones/usuarios/${userId}/reset-password`, { method: 'PUT', body: { newPassword } }),
+  eliminarAdminUsuario: (id, usernameConfirmation, deleteConfirmation) => request(`/activaciones/usuarios/${id}`, {
+    method: 'DELETE',
+    body: { usernameConfirmation, deleteConfirmation },
+  }),
+  getAdminUsuarios: async (params = {}) => {
+    const limit = 100;
+    const firstPage = await request(`/activaciones/usuarios?${new URLSearchParams({ ...params, page: 1, limit })}`);
+    const usuarios = firstPage.data || [];
+    const totalPages = Math.ceil((Number(firstPage.total) || usuarios.length) / limit);
+
+    for (let page = 2; page <= totalPages; page++) {
+      const response = await request(`/activaciones/usuarios?${new URLSearchParams({ ...params, page, limit })}`);
+      usuarios.push(...(response.data || []));
+    }
+
+    return usuarios;
+  },
 
   // Promociones (Super Admin)
   getPromociones: () => request('/activaciones/promociones'),
@@ -262,11 +286,23 @@ export const API = {
   // Reportes
   getReportesVentas: (params) => request(`/reportes/ventas?${params}`),
   getReportesGanancias: (params) => request(`/reportes/ganancias?${params}`),
+  getReportesVentasDetalle: (params) => request(`/reportes/ventas-detalle?${params}`),
   getReportesInversion: () => request('/reportes/inversion'),
   getReportesProductosTop: (params) => request(`/reportes/productos-top?${params}`),
   getReportesClientesTop: (params) => request(`/reportes/clientes-top?${params}`),
   getReportesCaja: (params) => request(`/reportes/caja?${params}`),
   getReportesImpuestos: (params) => request(`/reportes/impuestos?${params}`),
+
+  // Cuentas por Cobrar
+  getCxcResumen: () => request('/cxc/resumen'),
+  getCxc: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/cxc${qs ? `?${qs}` : ''}`);
+  },
+  getCxcDetalle: (id) => request(`/cxc/${id}`),
+  getCxcPorCliente: (clienteId) => request(`/cxc/cliente/${clienteId}`),
+  registrarPagoCxc: (id, data) => request(`/cxc/${id}/pago`, { method: 'POST', body: data }),
+  registrarGestionCxc: (id, data) => request(`/cxc/${id}/gestion`, { method: 'POST', body: data }),
 };
 
 export const Utils = {
@@ -281,7 +317,10 @@ export const Utils = {
   },
 
   formatMoney: (amount, symbol = '$') => {
-    return `${symbol} ${Number(amount || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    // Use string conversion to avoid floating-point precision loss
+    const num = Number(amount || 0);
+    if (!isFinite(num)) return `${symbol} 0.00`;
+    return `${symbol} ${num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   },
 
   formatDate: (dateString) => {

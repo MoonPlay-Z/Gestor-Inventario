@@ -99,6 +99,7 @@ export function PrivacyPolicyPage() {
             <li>Dirección IP</li>
             <li>Tipo de navegador y dispositivo</li>
             <li>Páginas visitadas y tiempo de permanencia</li>
+            <li>Ubicación precisa del dispositivo desde el que se crea una cuenta, solo si autorizas el permiso del navegador</li>
           </ul>
 
           <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>3. Finalidad del tratamiento</h2>
@@ -108,6 +109,7 @@ export function PrivacyPolicyPage() {
             <li><strong>Facturación:</strong> Procesar pagos y emitir facturas</li>
             <li><strong>Comunicaciones:</strong> Enviar notificaciones sobre el servicio, actualizaciones y soporte técnico</li>
             <li><strong>Mejora del servicio:</strong> Analizar el uso del sistema para mejorar funcionalidades</li>
+            <li><strong>Seguridad y administración de cuentas:</strong> Registrar la IP, fecha y, si autorizas, ubicación del dispositivo al crear la cuenta</li>
             <li><strong>Cumplimiento legal:</strong> Cumplir con obligaciones fiscales y legales</li>
           </ul>
 

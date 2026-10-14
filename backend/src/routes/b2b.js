@@ -4,7 +4,12 @@ const { createBusinessError } = require('../middleware/errorHandler');
 
 const router = express.Router();
 
-const B2B_API_KEY = process.env.B2B_API_KEY || 'sk_dev_b2b_key_default_2026';
+const B2B_API_KEY = process.env.B2B_API_KEY;
+
+if (!B2B_API_KEY) {
+  console.error('FATAL: B2B_API_KEY no definida en las variables de entorno. Saliendo...');
+  process.exit(1);
+}
 
 /**
  * Middleware de autenticación B2B por API Key.

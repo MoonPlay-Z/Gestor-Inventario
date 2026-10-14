@@ -40,9 +40,9 @@ router.get('/metricas', async (req, res, next) => {
     `;
 
     res.json({
-      valorTotalVenta: Number(metricas[0]?.valor_total_venta || 0).toFixed(2),
-      valorTotalCosto: Number(metricas[0]?.valor_total_costo || 0).toFixed(2),
-      gananciaPotencial: Number(metricas[0]?.ganancia_potencial || 0).toFixed(2),
+      valorTotalVenta: new Decimal(metricas[0]?.valor_total_venta || 0).toFixed(2),
+      valorTotalCosto: new Decimal(metricas[0]?.valor_total_costo || 0).toFixed(2),
+      gananciaPotencial: new Decimal(metricas[0]?.ganancia_potencial || 0).toFixed(2),
       totalProductos: Number(metricas[0]?.total_productos || 0),
       productosConStock: Number(metricas[0]?.productos_con_stock || 0),
       productosSinStock: Number(metricas[0]?.productos_sin_stock || 0),
@@ -130,7 +130,10 @@ router.get('/lookup/:codigo', async (req, res, next) => {
     if (!rawCodigo) throw createValidationError('Código requerido');
 
     const isSuperAdmin = req.user.rol === 'SUPER_ADMIN';
-    const empresaId = req.user.empresaRefId || req.user.empresaId || req.user.id;
+    // `Producto.empresaId` referencia a `Usuario` (relación "EmpresaProductos"),
+    // NO a `empresas`. Usar `empresaRefId` hacía que el EMPRESA no encontrara
+    // nada al escanear un código de barras.
+    const empresaId = req.user.empresaId || req.user.id;
 
     const baseWhere = { activo: true };
     if (!isSuperAdmin && empresaId) {
@@ -174,13 +177,16 @@ router.get('/lookup/:codigo', async (req, res, next) => {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    let tasaBcv = 36.5;
+    let tasaBcv;
     try {
-      tasaBcv = getSystemConfig().moneda?.tasaDolar || 36.5;
+      tasaBcv = getSystemConfig().moneda?.tasaDolar;
     } catch (_) {}
+    if (!tasaBcv || !isFinite(Number(tasaBcv)) || Number(tasaBcv) <= 0) {
+      tasaBcv = 36.5; // fallback to hardcoded default
+    }
 
-    const precioUsd = Number(producto.precioVenta);
-    const precioVes = precioUsd * tasaBcv;
+    const precioUsd = new Decimal(producto.precioVenta.toString());
+    const precioVes = precioUsd.mul(tasaBcv);
 
     res.json({
       ...producto,

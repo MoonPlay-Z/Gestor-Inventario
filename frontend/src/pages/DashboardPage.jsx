@@ -5,6 +5,7 @@ import cashIcon from '@iconify/icons-mdi/cash';
 import receiptIcon from '@iconify/icons-mdi/file-document-outline';
 import timerIcon from '@iconify/icons-mdi/timer-sand';
 import alertIcon from '@iconify/icons-mdi/alert-circle-outline';
+import cashCheckIcon from '@iconify/icons-mdi/cash-check';
 import { useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { DolarWidget } from '../components/widgets/DolarWidget';
@@ -39,6 +40,7 @@ export function DashboardPage() {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
+  const [cxcResumen, setCxcResumen] = useState(null);
   const [currencySymbol, setCurrencySymbol] = useState('$');
   const [periodo, setPeriodo] = useState('mes');
 
@@ -58,8 +60,18 @@ export function DashboardPage() {
     }
   };
 
+  const loadCxcResumen = async () => {
+    try {
+      const data = await API.getCxcResumen();
+      setCxcResumen(data);
+    } catch (err) {
+      console.error('Error loading CxC resumen:', err);
+    }
+  };
+
   useEffect(() => {
     loadData(periodo);
+    loadCxcResumen();
   }, [periodo]);
 
   // Prepara datos de Chart.js
@@ -142,6 +154,41 @@ export function DashboardPage() {
 
       <div className="page-body">
         <DolarWidget />
+
+        {/* Widget de Cuentas por Cobrar */}
+        {cxcResumen && (
+          <div className="card" style={{ padding: '1.25rem', marginBottom: '24px', border: '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: "0.5rem" }}>
+                <Icon icon={cashCheckIcon} style={{ color: 'var(--accent)' }} className="h-5 w-5" />
+                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Cuentas por Cobrar</h3>
+              </div>
+              <a href="/cxc" style={{ fontSize: '0.8rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
+                Ver todas →
+              </a>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+              <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '10px', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Total Pendiente</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>{Utils.formatMoney(cxcResumen.totalPendiente, currencySymbol)}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{cxcResumen.cantidadPendientes} facturas</div>
+              </div>
+              <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '10px', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Vencido</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ef4444', marginTop: '4px' }}>{Utils.formatMoney(cxcResumen.totalVencido, currencySymbol)}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{cxcResumen.cantidadVencidas} facturas</div>
+              </div>
+              <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '10px', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>0-30 días</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#10b981', marginTop: '4px' }}>{Utils.formatMoney(cxcResumen.aging['0_30'], currencySymbol)}</div>
+              </div>
+              <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '10px', textAlign: 'center' }}>
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>61+ días</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f59e0b', marginTop: '4px' }}>{Utils.formatMoney(cxcResumen.aging['61_90'], currencySymbol)}</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="card" style={{ textAlign: 'center', padding: '60px' }}>

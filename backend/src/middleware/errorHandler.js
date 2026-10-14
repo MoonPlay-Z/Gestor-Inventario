@@ -27,6 +27,27 @@ function errorHandler(err, req, res, next) {
     });
   }
 
+  if (err.code === 'P2004') {
+    return res.status(400).json({
+      error: 'Violación de restricción',
+      message: 'Los datos proporcionados violan una restricción de la base de datos',
+    });
+  }
+
+  if (err.code === 'P2016') {
+    return res.status(400).json({
+      error: 'Error de consulta',
+      message: 'La consulta no pudo ser interpretada correctamente',
+    });
+  }
+
+  if (err.code === 'P2024') {
+    return res.status(503).json({
+      error: 'Tiempo agotado',
+      message: 'La base de datos tardó demasiado en responder. Inténtalo de nuevo.',
+    });
+  }
+
   // Base de datos inalcanzable o sin inicializar
   if (err.code === 'P1001' || err.code === 'P1003' || /Can't reach database server/i.test(err.message || '')) {
     return res.status(503).json({

@@ -1,0 +1,92 @@
+/* frontend/src/components/ui/Button.module.css */
+
+.btn {
+  @apply inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all;
+  box-shadow: var(--shadow-sm);
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+}
+
+.btnPrimary:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.btnSecondary {
+  background: var(--surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btnSecondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--surface3);
+  transform: translateY(-1px);
+}
+
+.btnSuccess {
+  background: var(--success);
+  color: white;
+  border: none;
+}
+
+.btnSuccess:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btnDanger {
+  background: var(--danger);
+  color: white;
+  border: none;
+}
+
+.btnDanger:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.btnGhost {
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+}
+
+.btnGhost:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.btnSm {
+  padding: 8px 14px;
+  font-size: 0.8rem;
+}
+
+.btnLg {
+  padding: 14px 28px;
+  font-size: 1rem;
+}
+
+.btnIcon {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}

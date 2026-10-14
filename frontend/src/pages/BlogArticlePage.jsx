@@ -532,8 +532,9 @@ export function BlogArticlePage() {
             fontSize: '1.05rem',
             color: '#cbd5e1'
           }}
-          dangerouslySetInnerHTML={{ __html: article.content }}
-        />
+        >
+          {article.content}
+        </div>
 
         {/* CTA */}
         <div style={{

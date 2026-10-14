@@ -22,7 +22,6 @@ import { TermsPage }               from './pages/TermsPage';
 import { DashboardPage }    from './pages/DashboardPage';
 import { PosPage }          from './pages/PosPage';
 import { VentasPage }       from './pages/VentasPage';
-import { PagosPage }        from './pages/PagosPage';
 import { CajaPage }         from './pages/CajaPage';
 import { CotizacionesPage } from './pages/CotizacionesPage';
 import { ConfigPage }       from './pages/ConfigPage';
@@ -33,6 +32,8 @@ import { ActivacionesPage } from './pages/ActivacionesPage';
 import { AdminPage }         from './pages/AdminPage';
 import { ReportesPage }       from './pages/ReportesPage';
 import { PruebasFacturasPage } from './pages/PruebasFacturasPage';
+import { CxcPage }            from './pages/CxcPage';
+import { CxcDetailPage }      from './pages/CxcDetailPage';
 
 export default function AppRoutes() {
   return (
@@ -66,8 +67,10 @@ export default function AppRoutes() {
           <Layout />
         </ProtectedRoute>
       }>
+        {/* Herramienta de diagnóstico del SUPER_ADMIN: queda fuera del menú de
+            los demás roles y solo se registra en desarrollo. */}
         {import.meta.env.DEV && <Route path="/pruebas/facturas" element={
-          <ProtectedRoute allowedRoles={ROLE_GROUPS.ADMIN_ONLY}>
+          <ProtectedRoute allowedRoles={ROLE_GROUPS.SUPER_ADMIN_ONLY}>
             <PruebasFacturasPage />
           </ProtectedRoute>
         } />}
@@ -90,11 +93,6 @@ export default function AppRoutes() {
             <VentasPage />
           </ProtectedRoute>
         } />
-        <Route path="/pagos" element={
-          <ProtectedRoute allowedRoles={ROLE_GROUPS.VENTAS}>
-            <PagosPage />
-          </ProtectedRoute>
-        } />
         <Route path="/caja" element={
           <ProtectedRoute allowedRoles={ROLE_GROUPS.VENTAS}>
             <CajaPage />
@@ -103,6 +101,16 @@ export default function AppRoutes() {
         <Route path="/reportes" element={
           <ProtectedRoute allowedRoles={ROLE_GROUPS.REPORTES}>
             <ReportesPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/cxc" element={
+          <ProtectedRoute allowedRoles={ROLE_GROUPS.VENTAS}>
+            <CxcPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/cxc/:id" element={
+          <ProtectedRoute allowedRoles={ROLE_GROUPS.VENTAS}>
+            <CxcDetailPage />
           </ProtectedRoute>
         } />
 

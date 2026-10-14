@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const { requireRole } = require('../middleware/auth');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { paginate, paginatedResponse } = require('../utils/pagination');
+const { getRegistrationMetadata } = require('../utils/registrationMetadata');
 
 const router = express.Router();
 
@@ -85,6 +86,7 @@ router.post('/', async (req, res, next) => {
         nombre: nombre.trim(),
         rol,
         empresaId: req.user.id,
+        ...getRegistrationMetadata(req, req.body),
       },
       select: {
         id: true,

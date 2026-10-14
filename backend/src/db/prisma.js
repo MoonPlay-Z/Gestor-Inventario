@@ -12,11 +12,12 @@ const prisma = global.__prisma || new Prisma({
 if (isSqlite && !global.__sqliteNumericMiddleware) {
   const numericFields = new Set([
     'precioVenta', 'costoCompra', 'tasaImpuesto', 'subtotal', 'impuestoTotal', 'total',
-    'tasaCambio', 'precioUnitarioHistorico', 'tasaImpuestoAplicada', 'subtotalLinea',
+    'tasaCambio', 'precioUnitarioHistorico', 'costoUnitarioHistoricoUSD', 'tasaImpuestoAplicada', 'subtotalLinea',
     'impuestoLinea', 'totalLinea', 'monto', 'montoInicial', 'montoFinal',
     'ingresosEfectivo', 'ingresosBanco', 'precioUnitario',
   ]);
   const convert = (value, key) => {
+    if (value instanceof Date) return value;
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [childKey, convert(childValue, childKey)]));
     }

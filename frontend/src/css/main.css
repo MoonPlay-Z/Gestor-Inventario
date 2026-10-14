@@ -3,6 +3,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+  ==========================================
+  ESTILOS GLOBALES (main.css)
+  ==========================================
+  Este archivo contiene:
+  - Variables CSS (--bg-page, --accent, etc.)
+  - Reset global (*, body, html)
+  - Clases de utilidad globales (.btn, .card, .badge, .modal, etc.)
+  - Tailwind @apply para componentes base
+
+  NOTA: Para estilos específicos de componentes, usar CSS Modules:
+  - frontend/src/components/ui/*.module.css
+  - Se importan como: import styles from './Button.module.css'
+  - Generan nombres únicos: Button__btnPrimary___a1b2c
+  - Configuración en vite.config.js (localsConvention: 'camelCaseOnly')
+*/
+
 :root {
   color-scheme: light;
   font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;

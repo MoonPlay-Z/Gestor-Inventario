@@ -198,21 +198,22 @@ model Factura {
 }
 
 model ItemFactura {
-  id                      String    @id @default(uuid())
-  facturaId               String
-  factura                 Factura   @relation(fields: [facturaId], references: [id], onDelete: Cascade)
-  productoId              String?
-  producto                Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
-  descripcionHistorica    String
-  cantidad                Float
-  unidadMedida            String    @default("UNIDAD")
-  pesoReal                Float?
-  precioUnitarioHistorico Float
-  tasaImpuestoAplicada    Float
-  subtotalLinea           Float
-  impuestoLinea           Float
-  totalLinea              Float
-  createdAt               DateTime  @default(now())
+  id                        String    @id @default(uuid())
+  facturaId                 String
+  factura                   Factura   @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  productoId                String?
+  producto                  Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
+  descripcionHistorica      String
+  cantidad                  Float
+  unidadMedida              String    @default("UNIDAD")
+  pesoReal                  Float?
+  precioUnitarioHistorico   Float
+  costoUnitarioHistoricoUSD Float?
+  tasaImpuestoAplicada      Float
+  subtotalLinea             Float
+  impuestoLinea             Float
+  totalLinea                Float
+  createdAt                 DateTime  @default(now())
 
   @@index([facturaId])
   @@map("items_factura")
@@ -309,34 +310,37 @@ model ItemCotizacion {
 }
 
 model Usuario {
-  id                 String    @id @default(uuid())
-  username           String    @unique
-  passwordHash       String
-  nombre             String    @default("")
-  email              String?
-  rol                String    @default("CAJA")
-  rolId              String?
-  rolDinamico        Rol?      @relation(fields: [rolId], references: [id], onDelete: SetNull)
-  activo             Boolean   @default(true)
-  empresaId          String?
-  empresaRefId       String?
-  empresaRef         Empresa?  @relation("EmpresaUsuarios", fields: [empresaRefId], references: [id], onDelete: SetNull)
+  id                    String    @id @default(uuid())
+  username              String    @unique
+  passwordHash          String
+  nombre                String    @default("")
+  email                 String?
+  rol                   String    @default("CAJA")
+  rolId                 String?
+  rolDinamico           Rol?      @relation(fields: [rolId], references: [id], onDelete: SetNull)
+  activo                Boolean   @default(true)
+  empresaId             String?
+  empresaRefId          String?
+  empresaRef            Empresa?  @relation("EmpresaUsuarios", fields: [empresaRefId], references: [id], onDelete: SetNull)
   // ── Suscripción SaaS ──
-  subscriptionStatus String    @default("trialing")
-  planType           String?
-  trialStartsAt      DateTime?
-  trialEndsAt        DateTime?
-  currentPeriodEnd   DateTime?
+  subscriptionStatus    String    @default("trialing")
+  planType              String?
+  trialStartsAt         DateTime?
+  trialEndsAt           DateTime?
+  currentPeriodEnd      DateTime?
   // ── Seguridad Avanzada ──
-  mfaEnabled         Boolean   @default(false)
-  mfaSecret          String?
-  sessionVersion     Int       @default(1)
-  sudoModeExpiresAt  DateTime?
-  lastLoginIp        String?
-  lastLoginAt        DateTime?
-  deletedAt          DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  mfaEnabled            Boolean   @default(false)
+  mfaSecret             String?
+  sessionVersion        Int       @default(1)
+  sudoModeExpiresAt     DateTime?
+  registrationIp        String?
+  registrationLatitude  Float?
+  registrationLongitude Float?
+  lastLoginIp           String?
+  lastLoginAt           DateTime?
+  deletedAt             DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   empresa               Usuario?              @relation("EmpresaSubusuarios", fields: [empresaId], references: [id])
   subUsuarios           Usuario[]             @relation("EmpresaSubusuarios")

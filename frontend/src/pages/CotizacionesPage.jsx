@@ -123,7 +123,7 @@ export function CotizacionesPage() {
     if (!window.confirm('¿Deseas convertir esta cotización en una factura de venta oficial?')) return;
     try {
       await API.convertirCotizacion(id);
-      showToast('🎉 Cotización convertida en factura con éxito', 'success');
+      showToast('Cotización convertida en factura con éxito', 'success');
       loadHistorial();
     } catch (err) {
       showToast('Error al convertir cotización: ' + err.message, 'error');
@@ -210,7 +210,7 @@ export function CotizacionesPage() {
       };
 
       const res = await API.crearCotizacion(payload);
-      showToast(`🎉 Presupuesto #${res.numero || ''} emitido con éxito`, 'success');
+      showToast(`Presupuesto #${res.numero || ''} emitido con éxito`, 'success');
       setCart([]);
       setValidezDias(15);
       
@@ -312,7 +312,14 @@ export function CotizacionesPage() {
                         <td style={{ fontWeight: 700 }}>{Utils.formatMoney(c.total)}</td>
                         <td>
                           {c.estado === 'ACCEPTED' || c.estado === 'CONVERTED' ? (
-                            <span className="badge badge-success">Convertida</span>
+                            <div>
+                              <span className="badge badge-success">Convertida</span>
+                              {c.factura?.numeroFactura && (
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                                  → Factura #{c.factura.numeroFactura.toString().padStart(5, '0')}
+                                </div>
+                              )}
+                            </div>
                           ) : (
                             <span className="badge badge-warning">Pendiente</span>
                           )}

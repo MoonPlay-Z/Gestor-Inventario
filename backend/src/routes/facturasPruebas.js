@@ -51,12 +51,8 @@ router.use((req, res, next) => {
   }
   next();
 });
-router.use(requireRole('EMPRESA', 'SUPER_ADMIN'));
-
-const tenantFilter = (req) => {
-  const empresaId = req.user.empresaId || req.user.id;
-  return { OR: [{ usuarioId: empresaId }, { usuario: { empresaId } }] };
-};
+// Herramienta de diagnóstico de facturación: exclusiva del SUPER_ADMIN.
+router.use(requireRole('SUPER_ADMIN'));
 
 const facturaInclude = {
   items: {
@@ -104,7 +100,6 @@ router.get('/', async (req, res, next) => {
     const factura = await prisma.factura.findFirst({
       where: {
         numeroFactura: Number(codigo),
-        ...(req.user.rol === 'SUPER_ADMIN' ? {} : tenantFilter(req)),
       },
       select: {
         ...facturaSelect,
@@ -133,7 +128,6 @@ router.put('/:id', async (req, res, next) => {
     const factura = await prisma.factura.findFirst({
       where: {
         id: req.params.id,
-        ...(req.user.rol === 'SUPER_ADMIN' ? {} : tenantFilter(req)),
       },
       include: facturaInclude,
     });

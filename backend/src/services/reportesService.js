@@ -47,13 +47,22 @@ function setCachedData(key, data) {
 // HELPER: NORMALIZACIÓN A USD
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// Whitelist de columnas permitidas para normalizarUSD (previene inyección SQL)
+const COLUMNAS_PERMITIDAS = new Set([
+  'f."total"', 'f."subtotal"', 'f."impuestoTotal"',
+  'p."monto"', 'item."subtotalLinea"', 'item."totalLinea"',
+]);
+
 /**
  * Genera SQL para normalizar un monto a USD usando la tasa de cambio.
- * @param {string} columna - Nombre de la columna a normalizar
+ * @param {string} columna - Nombre de la columna a normalizar (debe estar en whitelist)
  * @param {string} alias - Alias para el resultado
  * @returns {Prisma.Sql} Expresión SQL
  */
 function normalizarUSD(columna, alias) {
+  if (!COLUMNAS_PERMITIDAS.has(columna)) {
+    throw new Error(`Columna no permitida para normalizarUSD: ${columna}`);
+  }
   return Prisma.sql`COALESCE(SUM(
     CASE
       WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
@@ -89,10 +98,25 @@ function validarParametros(periodo, fecha) {
     throw err;
   }
 
-  if (fecha && !FORMATOS_FECHA[periodo].test(fecha)) {
-    const err = new Error(`Formato de fecha inválido para período ${periodo}. Formato esperado: ${FORMATOS_FECHA[periodo]}`);
-    err.status = 400;
-    throw err;
+  if (fecha) {
+    let fechaValida = FORMATOS_FECHA[periodo].test(fecha);
+    if (fechaValida && (periodo === 'diario' || periodo === 'semanal')) {
+      const [year, month, day] = fecha.split('-').map(Number);
+      const date = new Date(Date.UTC(year, month - 1, day));
+      fechaValida = year >= 1000 && date.getUTCFullYear() === year
+        && date.getUTCMonth() === month - 1
+        && date.getUTCDate() === day;
+    } else if (fechaValida && periodo === 'mensual') {
+      const [year, month] = fecha.split('-').map(Number);
+      fechaValida = year >= 1000 && month >= 1 && month <= 12;
+    } else if (fechaValida && periodo === 'anual') {
+      fechaValida = Number(fecha) >= 1000;
+    }
+    if (!fechaValida) {
+      const err = new Error(`Fecha inválida para período ${periodo}. Formato esperado: ${FORMATOS_FECHA[periodo]}`);
+      err.status = 400;
+      throw err;
+    }
   }
 }
 
@@ -182,6 +206,57 @@ function normalizarAUSD(monto, moneda, tasaCambio) {
   return m;
 }
 
+async function getProductosConPerdida(inicio, fin, tenantFilter) {
+  const whereClause = buildTenantSql(tenantFilter);
+  const ventaUSD = `(CASE
+    WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+    THEN item."subtotalLinea" / f."tasaCambio"
+    ELSE item."subtotalLinea"
+  END)`;
+  const perdidaUSD = `(${ventaUSD} - (item."cantidad" * item."costoUnitarioHistoricoUSD"))`;
+
+  const rows = await prisma.$queryRaw`
+    SELECT
+      f."numeroFactura" AS factura_id,
+      f."fechaEmision" AS fecha_hora,
+      cliente."razonSocial" AS cliente,
+      item."descripcionHistorica" AS producto,
+      item."cantidad" AS cantidad,
+      item."unidadMedida" AS unidad,
+      ${Prisma.raw(ventaUSD)} AS subtotal_usd,
+      (item."cantidad" * item."costoUnitarioHistoricoUSD") AS costo_usd,
+      ${Prisma.raw(perdidaUSD)} AS perdida_usd
+    FROM items_factura item
+    INNER JOIN facturas f ON f.id = item."facturaId"
+    INNER JOIN clientes cliente ON cliente.id = f."clienteId"
+    WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+      AND f."fechaEmision" <= ${tsFrag(fin)}
+      AND f."estado" != 'VOIDED'
+      AND item."costoUnitarioHistoricoUSD" IS NOT NULL
+      ${whereClause}
+      AND ${Prisma.raw(perdidaUSD)} < 0
+      AND NOT EXISTS (
+        SELECT 1
+        FROM items_factura item_sin_costo
+        WHERE item_sin_costo."facturaId" = f.id
+          AND item_sin_costo."costoUnitarioHistoricoUSD" IS NULL
+      )
+    ORDER BY f."fechaEmision" ASC, f."numeroFactura" ASC
+  `;
+
+  return rows.map(row => ({
+    facturaId: Number(row.factura_id),
+    fechaHora: row.fecha_hora,
+    cliente: row.cliente || '—',
+    producto: row.producto || '—',
+    cantidad: row.cantidad.toString(),
+    unidad: row.unidad,
+    subtotal: new Decimal(row.subtotal_usd.toString()).toFixed(2),
+    costo: new Decimal(row.costo_usd.toString()).toFixed(2),
+    perdida: new Decimal(row.perdida_usd.toString()).toFixed(2),
+  }));
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // REPORTE DE VENTAS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -266,39 +341,6 @@ async function getVentasReporte(req) {
 }
 
 /**
- * Construye una cláusula SQL segura usando Prisma.sql para evitar inyección SQL.
- * @param {Object} tenantFilter - Filtro de tenant
- * @returns {Prisma.Sql} Cláusula SQL segura
- */
-function buildTenantSql(tenantFilter) {
-  if (tenantFilter.usuarioId) {
-    return Prisma.sql`AND f."usuarioId" = ${tenantFilter.usuarioId}`;
-  }
-
-  if (tenantFilter.OR && tenantFilter.OR.length > 0) {
-    const condiciones = [];
-
-    for (const cond of tenantFilter.OR) {
-      if (cond.usuarioId) {
-        condiciones.push(Prisma.sql`f."usuarioId" = ${cond.usuarioId}`);
-      }
-      if (cond.usuario?.empresaId) {
-        condiciones.push(Prisma.sql`f."usuarioId" IN (SELECT id FROM usuarios WHERE "empresaId" = ${cond.usuario.empresaId})`);
-      }
-      if (cond.usuario?.empresaRefId) {
-        condiciones.push(Prisma.sql`f."usuarioId" IN (SELECT id FROM usuarios WHERE "empresaRefId" = ${cond.usuario.empresaRefId})`);
-      }
-    }
-
-    if (condiciones.length > 0) {
-      return Prisma.sql`AND (${Prisma.join(condiciones, ' OR ')})`;
-    }
-  }
-
-  return Prisma.empty;
-}
-
-/**
  * Agrupa ventas por día, semana o mes según el período.
  */
 async function getAgrupacionVentas(periodo, inicio, fin, tenantFilter) {
@@ -358,7 +400,7 @@ async function getAgrupacionVentas(periodo, inicio, fin, tenantFilter) {
 
   return resultados.map(row => ({
     fecha: row.periodo,
-    total: Number(row.total_usd || 0).toFixed(2),
+    total: new Decimal(row.total_usd || 0).toFixed(2),
     cantidad: Number(row.cantidad),
   }));
 }
@@ -374,8 +416,9 @@ async function getGananciasReporte(req) {
   const tenantFilter = getTenantFilter(req);
   const whereClause = buildTenantSql(tenantFilter);
 
-  // Ingresos totales (ventas)
-  const ingresos = await prisma.$queryRaw`
+  // El ingreso reportado es el total facturado; la ganancia se calcula sin impuestos.
+  const [ingresos, cogs, costosHistoricosFaltantes] = await Promise.all([
+    prisma.$queryRaw`
     SELECT
       COALESCE(SUM(
         CASE
@@ -389,64 +432,92 @@ async function getGananciasReporte(req) {
       AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
       ${whereClause}
-  `;
+    `,
 
-  // COGS (Costo de productos vendidos)
-  const cogs = await prisma.$queryRaw`
+    // Los costos actuales no representan el costo histórico de ventas anteriores a su registro.
+    // Se excluyen del cálculo de ganancia las facturas sin costo histórico en todos sus artículos.
+    prisma.$queryRaw`
     SELECT
+      COUNT(DISTINCT f.id) AS facturas_con_costo,
+      COALESCE(SUM(item."cantidad" * item."costoUnitarioHistoricoUSD"), 0) AS costo_vendido,
       COALESCE(SUM(
-        if."cantidad" * p."costoCompra"
-      ), 0) AS costo_vendido
-    FROM items_factura if
-    INNER JOIN productos p ON p.id = if."productoId"
-    INNER JOIN facturas f ON f.id = if."facturaId"
+        CASE
+          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+          THEN item."subtotalLinea" / f."tasaCambio"
+          ELSE item."subtotalLinea"
+        END
+      ), 0) AS subtotal_vendido
+    FROM items_factura item
+    INNER JOIN facturas f ON f.id = item."facturaId"
     WHERE f."fechaEmision" >= ${tsFrag(inicio)}
       AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
       ${whereClause}
-  `;
+      AND NOT EXISTS (
+        SELECT 1
+        FROM items_factura item_sin_costo
+        WHERE item_sin_costo."facturaId" = f.id
+          AND item_sin_costo."costoUnitarioHistoricoUSD" IS NULL
+      )
+    `,
+
+    prisma.$queryRaw`
+      SELECT COUNT(DISTINCT f.id) AS facturas_sin_costo
+      FROM facturas f
+      INNER JOIN items_factura item ON item."facturaId" = f.id
+      WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+        AND f."fechaEmision" <= ${tsFrag(fin)}
+        AND f."estado" != 'VOIDED'
+        ${whereClause}
+        AND EXISTS (
+          SELECT 1
+          FROM items_factura item_sin_costo
+          WHERE item_sin_costo."facturaId" = f.id
+            AND item_sin_costo."costoUnitarioHistoricoUSD" IS NULL
+        )
+    `,
+  ]);
 
   const ingresosTotal = new Decimal(ingresos[0]?.total_usd || 0);
   const costoVendido = new Decimal(cogs[0]?.costo_vendido || 0);
-  const gananciaBruta = ingresosTotal.minus(costoVendido);
-  const margen = ingresosTotal.gt(0)
+  const subtotalVentas = new Decimal(cogs[0]?.subtotal_vendido || 0);
+  const gananciaBruta = subtotalVentas.minus(costoVendido);
+  const facturasConCosto = Number(cogs[0]?.facturas_con_costo || 0);
+  const facturasSinCosto = Number(costosHistoricosFaltantes[0]?.facturas_sin_costo || 0);
+  const gananciaDisponible = facturasConCosto > 0 || facturasSinCosto === 0;
+  const margen = gananciaDisponible && ingresosTotal.gt(0)
     ? gananciaBruta.dividedBy(ingresosTotal).times(100)
-    : new Decimal(0);
+    : null;
+  const productosConPerdida = await getProductosConPerdida(inicio, fin, tenantFilter);
 
   // Comparación
   let comparacion = null;
   if (comparar === 'true') {
-    const ingresosAnterior = await prisma.$queryRaw`
+    const cogsAnterior = await prisma.$queryRaw`
       SELECT
+        COALESCE(SUM(item."cantidad" * item."costoUnitarioHistoricoUSD"), 0) AS costo_vendido,
         COALESCE(SUM(
           CASE
             WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-            THEN f."total" / f."tasaCambio"
-            ELSE f."total"
+            THEN item."subtotalLinea" / f."tasaCambio"
+            ELSE item."subtotalLinea"
           END
-        ), 0) AS total_usd
-      FROM facturas f
+        ), 0) AS subtotal_vendido
+      FROM items_factura item
+      INNER JOIN facturas f ON f.id = item."facturaId"
       WHERE f."fechaEmision" >= ${tsFrag(inicioAnterior)}
         AND f."fechaEmision" <= ${tsFrag(finAnterior)}
         AND f."estado" != 'VOIDED'
         ${whereClause}
+        AND NOT EXISTS (
+          SELECT 1
+          FROM items_factura item_sin_costo
+          WHERE item_sin_costo."facturaId" = f.id
+            AND item_sin_costo."costoUnitarioHistoricoUSD" IS NULL
+        )
     `;
 
-    const cogsAnterior = await prisma.$queryRaw`
-      SELECT
-        COALESCE(SUM(
-          if."cantidad" * p."costoCompra"
-        ), 0) AS costo_vendido
-      FROM items_factura if
-      INNER JOIN productos p ON p.id = if."productoId"
-      INNER JOIN facturas f ON f.id = if."facturaId"
-      WHERE f."fechaEmision" >= ${tsFrag(inicioAnterior)}
-        AND f."fechaEmision" <= ${tsFrag(finAnterior)}
-        AND f."estado" != 'VOIDED'
-        ${whereClause}
-    `;
-
-    const gananciaAnterior = new Decimal(ingresosAnterior[0]?.total_usd || 0)
+    const gananciaAnterior = new Decimal(cogsAnterior[0]?.subtotal_vendido || 0)
       .minus(new Decimal(cogsAnterior[0]?.costo_vendido || 0));
 
     comparacion = {
@@ -460,9 +531,135 @@ async function getGananciasReporte(req) {
     etiqueta,
     ingresosTotales: ingresosTotal.toFixed(2),
     costoVendido: costoVendido.toFixed(2),
-    gananciaBruta: gananciaBruta.toFixed(2),
-    margen: margen.toFixed(2),
+    gananciaBruta: gananciaDisponible ? gananciaBruta.toFixed(2) : null,
+    margen: margen?.toFixed(2) ?? null,
+    facturasConCosto,
+    facturasSinCosto,
+    productosConPerdida,
     comparacion,
+  };
+}
+
+async function getDetalleVentasReporte(req) {
+  const { periodo = 'mensual', fecha, page: pageStr, limit: limitStr } = req.query;
+  validarParametros(periodo, fecha);
+  const { inicio, fin, etiqueta } = getFechasPeriodo(periodo, fecha);
+  const tenantFilter = getTenantFilter(req);
+  const puedeVerGanancia = req.user?.rol !== 'CAJA';
+  const productosConPerdida = puedeVerGanancia
+    ? await getProductosConPerdida(inicio, fin, tenantFilter)
+    : [];
+
+  // Paginación: limitar el número de facturas cargadas para evitar respuestas masivas
+  const page = Math.max(1, parseInt(pageStr) || 1);
+  const limit = Math.min(Math.max(1, parseInt(limitStr) || 50), 200);
+  const skip = (page - 1) * limit;
+
+  const where = {
+    fechaEmision: { gte: new Date(inicio), lte: new Date(fin) },
+    estado: { not: 'VOIDED' },
+    ...tenantFilter,
+  };
+
+  const [facturas, total] = await Promise.all([
+    prisma.factura.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { fechaEmision: 'asc' },
+      select: {
+        id: true,
+        numeroFactura: true,
+        fechaEmision: true,
+        total: true,
+        moneda: true,
+        tasaCambio: true,
+        cliente: { select: { razonSocial: true } },
+        pagos: { select: { referenciaTransaccion: true } },
+        items: {
+          select: {
+            descripcionHistorica: true,
+            cantidad: true,
+            subtotalLinea: true,
+            costoUnitarioHistoricoUSD: true,
+            producto: { select: { nombre: true } },
+          },
+        },
+      },
+    }),
+    prisma.factura.count({ where }),
+  ]);
+
+  let totalIngresos = new Decimal(0);
+  let gananciaTotal = new Decimal(0);
+  let facturasSinCosto = 0;
+  let facturasConCosto = 0;
+
+  const detalle = facturas.map((factura) => {
+    const tasaCambio = factura.tasaCambio;
+    const totalFacturaUSD = normalizarAUSD(factura.total, factura.moneda, tasaCambio);
+    totalIngresos = totalIngresos.plus(totalFacturaUSD);
+
+    let ganancia = new Decimal(0);
+    let costoDesconocido = false;
+
+    if (puedeVerGanancia) {
+      for (const item of factura.items) {
+        const subtotalUSD = normalizarAUSD(item.subtotalLinea, factura.moneda, tasaCambio);
+        const costoUnitario = item.costoUnitarioHistoricoUSD;
+        if (costoUnitario === null || costoUnitario === undefined) {
+          costoDesconocido = true;
+          continue;
+        }
+        ganancia = ganancia.plus(subtotalUSD.minus(
+          new Decimal(item.cantidad.toString()).times(costoUnitario.toString())
+        ));
+      }
+      if (costoDesconocido) {
+        facturasSinCosto += 1;
+      } else {
+        gananciaTotal = gananciaTotal.plus(ganancia);
+        facturasConCosto += 1;
+      }
+    }
+
+    const referencias = [...new Set(
+      factura.pagos.map((pago) => pago.referenciaTransaccion?.trim()).filter(Boolean)
+    )];
+    const productos = [...new Set(
+      factura.items.map((item) => item.descripcionHistorica || item.producto?.nombre).filter(Boolean)
+    )];
+
+    return {
+      facturaId: factura.numeroFactura,
+      referencia: referencias.join(', ') || '—',
+      cliente: factura.cliente?.razonSocial || '—',
+      producto: productos.join(', ') || '—',
+      fechaHora: factura.fechaEmision,
+      montoTotal: totalFacturaUSD.toFixed(2),
+      ganancia: puedeVerGanancia && !costoDesconocido ? ganancia.toFixed(2) : null,
+      costoDesconocido: puedeVerGanancia && costoDesconocido,
+    };
+  });
+
+  return {
+    periodo,
+    etiqueta,
+    moneda: 'USD',
+    totalIngresos: totalIngresos.toFixed(2),
+    gananciaTotal: puedeVerGanancia
+      ? (facturasConCosto === 0 && facturasSinCosto > 0 ? null : gananciaTotal.toFixed(2))
+      : null,
+    facturasConCosto,
+    facturasSinCosto,
+    productosConPerdida,
+    detalle,
+    paginacion: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
   };
 }
 
@@ -471,7 +668,6 @@ async function getGananciasReporte(req) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function getInversionReporte(req) {
-  // Los productos están asociados al usuario EMPRESA a través de empresaId
   const empresaId = req.user?.id || null;
 
   if (!empresaId) {
@@ -485,44 +681,41 @@ async function getInversionReporte(req) {
     };
   }
 
-  // Valor total del inventario (los productos no tienen moneda/tasaCambio)
-  const valorTotal = await prisma.$queryRaw`
-    SELECT
-      COALESCE(SUM("stockActual" * "costoCompra"), 0) AS valor_total,
-      COUNT(*) AS total_productos,
-      COUNT(CASE WHEN "stockActual" > 0 THEN 1 END) AS con_stock,
-      COUNT(CASE WHEN "stockActual" = 0 THEN 1 END) AS sin_stock
-    FROM productos
-    WHERE "empresaId" = ${empresaId}
-      AND activo = true
-  `;
-
-  // Top 5 productos con mayor inversión
-  const productosMasInvertidos = await prisma.$queryRaw`
-    SELECT
-      nombre,
-      "stockActual" AS stock,
-      "costoCompra" AS costo_unitario,
-      ("stockActual" * "costoCompra") AS valor_total
-    FROM productos
-    WHERE "empresaId" = ${empresaId}
-      AND activo = true
-      AND "stockActual" > 0
-    ORDER BY valor_total DESC
-    LIMIT 5
-  `;
-
-  // Inversión por categoría
-  const inversionPorCategoria = await prisma.$queryRaw`
-    SELECT
-      COALESCE(categoria, 'General') AS categoria,
-      COALESCE(SUM("stockActual" * "costoCompra"), 0) AS valor
-    FROM productos
-    WHERE "empresaId" = ${empresaId}
-      AND activo = true
-    GROUP BY categoria
-    ORDER BY valor DESC
-  `;
+  const [valorTotal, productosMasInvertidos, inversionPorCategoria] = await Promise.all([
+    prisma.$queryRaw`
+      SELECT
+        COALESCE(SUM("stockActual" * "costoCompra"), 0) AS valor_total,
+        COUNT(*) AS total_productos,
+        COUNT(CASE WHEN "stockActual" > 0 THEN 1 END) AS con_stock,
+        COUNT(CASE WHEN "stockActual" = 0 THEN 1 END) AS sin_stock
+      FROM productos
+      WHERE "empresaId" = ${empresaId}
+        AND activo = true
+    `,
+    prisma.$queryRaw`
+      SELECT
+        nombre,
+        "stockActual" AS stock,
+        "costoCompra" AS costo_unitario,
+        ("stockActual" * "costoCompra") AS valor_total
+      FROM productos
+      WHERE "empresaId" = ${empresaId}
+        AND activo = true
+        AND "stockActual" > 0
+      ORDER BY valor_total DESC
+      LIMIT 5
+    `,
+    prisma.$queryRaw`
+      SELECT
+        COALESCE(categoria, 'General') AS categoria,
+        COALESCE(SUM("stockActual" * "costoCompra"), 0) AS valor
+      FROM productos
+      WHERE "empresaId" = ${empresaId}
+        AND activo = true
+      GROUP BY categoria
+      ORDER BY valor DESC
+    `,
+  ]);
 
   return {
     valorInventario: Number(valorTotal[0]?.valor_total || 0).toFixed(2),
@@ -751,6 +944,7 @@ module.exports = {
   invalidarCacheVentas,
   getVentasReporte,
   getGananciasReporte,
+  getDetalleVentasReporte,
   getInversionReporte,
   getProductosTop,
   getClientesTop,

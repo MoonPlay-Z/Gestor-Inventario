@@ -157,6 +157,7 @@ router.post('/import', async (req, res, next) => {
             numeroFactura: item.numeroFactura,
             clienteId: item.clienteId,
             usuarioId: item.usuarioId || req.user.id,
+            empresaId: isSuperAdmin ? item.empresaId : empresaId,
             fechaEmision: new Date(item.fechaEmision).toISOString(),
             fechaVencimiento: new Date(item.fechaVencimiento).toISOString(),
             subtotal: item.subtotal,

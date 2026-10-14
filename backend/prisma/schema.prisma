@@ -58,6 +58,10 @@ model Empresa {
   rif                String    @unique
   direccion          String?
   telefono           String?
+  email              String?
+  monedaSimbolo      String?
+  monedaCodigo       String?
+  tasaDolar          Float?    @default(36.5)
   activo             Boolean   @default(true)
   subscriptionStatus String    @default("trialing")
   planType           String?
@@ -73,6 +77,7 @@ model Empresa {
   cierresCaja  CierreCaja[]
   cotizaciones Cotizacion[]
   auditLogs    AuditLog[]
+  cuentasPorCobrar CuentaPorCobrar[]
 
   @@map("empresas")
 }
@@ -148,6 +153,7 @@ model Cliente {
   empresa      Usuario?     @relation("EmpresaClientes", fields: [empresaId], references: [id], onDelete: Cascade)
   facturas     Factura[]
   cotizaciones Cotizacion[]
+  cuentasPorCobrar CuentaPorCobrar[]
 
   @@unique([empresaId, rifCedula])
   @@index([empresaId])
@@ -186,6 +192,7 @@ model Producto {
 
   empresa      Usuario      @relation("EmpresaProductos", fields: [empresaId], references: [id])
   itemsFactura ItemFactura[]
+  itemsCotizacion ItemCotizacion[]
 
   @@unique([empresaId, sku])
   @@index([empresaId])
@@ -220,6 +227,8 @@ model Factura {
 
   items ItemFactura[]
   pagos Pago[]
+  cuentaPorCobrar CuentaPorCobrar?
+  cotizacionOrigen Cotizacion?
 
   @@index([fechaEmision])
   @@index([usuarioId])
@@ -240,6 +249,7 @@ model ItemFactura {
   unidadMedida            UnidadMedida  @default(UNIDAD)
   pesoReal                Decimal?      @db.Decimal(10, 3)
   precioUnitarioHistorico Decimal       @db.Decimal(10, 2)
+  costoUnitarioHistoricoUSD Decimal?    @db.Decimal(10, 2)
   tasaImpuestoAplicada    Decimal       @db.Decimal(5, 2)
   subtotalLinea           Decimal       @db.Decimal(12, 2)
   impuestoLinea           Decimal       @db.Decimal(12, 2)
@@ -260,6 +270,7 @@ model Pago {
   referenciaTransaccion String?
   fechaPago             DateTime   @default(now())
   notas                 String?
+  tasaBCV               Decimal?   @db.Decimal(10, 4)
   createdAt             DateTime   @default(now())
 
   @@index([facturaId])
@@ -287,6 +298,8 @@ model CierreCaja {
   montoFinal       Decimal?  @db.Decimal(12, 2)
   ingresosEfectivo Decimal   @default(0.00) @db.Decimal(12, 2)
   ingresosBanco    Decimal   @default(0.00) @db.Decimal(12, 2)
+  ingresosEfectivoVES Decimal? @db.Decimal(12, 2)
+  ingresosBancoVES    Decimal? @db.Decimal(12, 2)
   estado           String    @default("OPEN")
   observaciones    String?
   arqueoDetalle   String?
@@ -316,6 +329,8 @@ model Cotizacion {
   total         Decimal  @db.Decimal(12, 2)
   moneda        String   @default("USD")
   estado        String   @default("PENDING")
+  facturaId     String?   @unique
+  factura       Factura?  @relation(fields: [facturaId], references: [id])
 
   items ItemCotizacion[]
 
@@ -331,6 +346,7 @@ model ItemCotizacion {
   cotizacionId   String
   cotizacion     Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
   productoId     String?
+  producto       Producto?  @relation(fields: [productoId], references: [id])
   descripcion    String
   cantidad       Int
   precioUnitario Decimal    @db.Decimal(10, 2)
@@ -364,6 +380,9 @@ model Usuario {
   mfaSecret          String?
   sessionVersion     Int       @default(1)
   sudoModeExpiresAt  DateTime?
+  registrationIp        String?
+  registrationLatitude Float?
+  registrationLongitude Float?
   lastLoginIp        String?
   lastLoginAt        DateTime?
   deletedAt          DateTime?
@@ -379,6 +398,8 @@ model Usuario {
   cotizaciones          Cotizacion[]
   solicitudesActivacion SolicitudActivacion[]
   auditLogs             AuditLog[]
+  cuentasPorCobrar      CuentaPorCobrar[]
+  gestionesCobranza     GestionCobranza[]
 
   @@map("usuarios")
 }
@@ -430,4 +451,54 @@ model Promocion {
   updatedAt      DateTime  @updatedAt
 
   @@map("promociones")
+}
+
+model CuentaPorCobrar {
+  id                String    @id @default(uuid())
+  empresaId         String
+  empresa           Empresa?  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  facturaId         String    @unique
+  factura           Factura   @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  clienteId         String
+  cliente           Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  usuarioId         String?
+  usuario           Usuario?  @relation(fields: [usuarioId], references: [id])
+  montoOriginal     Decimal   @db.Decimal(12, 2)
+  montoCobrado      Decimal   @default(0.00) @db.Decimal(12, 2)
+  montoPendiente    Decimal   @db.Decimal(12, 2)
+  fechaEmision      DateTime
+  fechaVencimiento  DateTime
+  estado            String    @default("PENDING")
+  diasVencido       Int       @default(0)
+  ultimaGestion     DateTime?
+  notas             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  gestions          GestionCobranza[]
+
+  @@index([empresaId])
+  @@index([clienteId])
+  @@index([usuarioId])
+  @@index([estado])
+  @@index([fechaVencimiento])
+  @@map("cuentas_por_cobrar")
+}
+
+model GestionCobranza {
+  id                String    @id @default(uuid())
+  cuentaPorCobrarId String
+  cuentaPorCobrar   CuentaPorCobrar @relation(fields: [cuentaPorCobrarId], references: [id], onDelete: Cascade)
+  empresaId         String
+  usuarioId         String
+  usuario           Usuario?  @relation(fields: [usuarioId], references: [id])
+  accion            String
+  notas             String?
+  fecha             DateTime  @default(now())
+  createdAt         DateTime  @default(now())
+
+  @@index([cuentaPorCobrarId])
+  @@index([empresaId])
+  @@index([usuarioId])
+  @@map("gestiones_cobranza")
 }

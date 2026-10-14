@@ -11,6 +11,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { FieldError, FormError } from '../components/ui';
 import { ValidationRules, getErrorMessage } from '../utils/validation';
+import { getBrowserLocation } from '../utils/geolocation';
 
 export function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -77,12 +78,17 @@ export function RegisterPage() {
     setLoading(true);
 
     try {
+      const location = await getBrowserLocation();
+      if (!location) {
+        showToast('No se pudo obtener la ubicación. La cuenta se creará sin coordenadas.', 'info');
+      }
       const res = await API.register({
         nombre: formData.nombre,
         username: formData.username,
         email: formData.email,
         password: formData.password,
-        aceptaComunicaciones: formData.aceptaComunicaciones
+        aceptaComunicaciones: formData.aceptaComunicaciones,
+        ...location,
       });
       loginUser(res.usuario, res.token);
       showToast('🎉 ¡Cuenta creada con éxito! Tus 7 días de prueba gratuita han comenzado.', 'success');
@@ -417,6 +423,9 @@ export function RegisterPage() {
               borderRadius: '10px',
               border: fieldErrors.aceptaTerminos || fieldErrors.aceptaPrivacidad ? '1px solid #ef4444' : '1px solid #e2e8f0'
             }}>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#334155', lineHeight: 1.5 }}>
+                Al registrarte, solicitaremos permiso para guardar la ubicación precisa de este dispositivo junto con la IP y fecha de creación de la cuenta. Si no autorizas o no está disponible, podrás continuar sin coordenadas.
+              </p>
               <div>
                 <label style={{
                   display: 'flex',

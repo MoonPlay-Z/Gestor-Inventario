@@ -19,9 +19,17 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState('');
+  const { user, token } = useAuth();
   const { loginUser } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+
+  // Redirect to dashboard if already logged in
+  React.useEffect(() => {
+    if (token && navigate) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [token, navigate]);
 
   const validateForm = () => {
     const errors = {};
@@ -47,7 +55,7 @@ export function LoginPage() {
     setLoading(true);
     try {
       const res = await API.login({ username, password });
-      loginUser(res.usuario, res.token);
+      loginUser(res.usuario, res.token, res.empresa);
       showToast(`¡Bienvenido de nuevo, ${res.usuario.nombre || res.usuario.username}!`, 'success');
       navigate('/dashboard');
     } catch (err) {

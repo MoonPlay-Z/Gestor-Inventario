@@ -6,8 +6,26 @@ const Decimal = require('decimal.js').Decimal;
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
 const { paginate, paginatedResponse } = require('../utils/pagination');
+const { getTasaSistemaPorEmpresa } = require('../utils/paymentCurrency');
+const { resolverEmpresaRefId } = require('../utils/empresaContext');
 
 const router = express.Router();
+
+/**
+ * Convierte a Decimal sin lanzar. `new Decimal()` con texto no numérico o con
+ * null/'' lanza DecimalError, que el errorHandler no conoce y terminaba en 500.
+ * Devuelve un Decimal no finito para que la validación del llamador lo rechace
+ * con un 422 legible.
+ */
+const toDecimalSeguro = (valor, porDefecto) => {
+  if (valor === undefined || valor === null || valor === '') return new Decimal(porDefecto);
+  try {
+    const d = new Decimal(String(valor).trim());
+    return d.isFinite() ? d : new Decimal(NaN);
+  } catch {
+    return new Decimal(NaN);
+  }
+};
 
 // SUPER_ADMIN no abre ni cierra caja
 router.use(requireRole('EMPRESA', 'CAJA'));
@@ -24,6 +42,37 @@ function getEmpresaFilter(req) {
     ]
   };
 }
+
+// Query compartido para agregar pagos por método y moneda en un turno.
+// Corrige el bug de tasaCambio: solo divide por f."tasaCambio" cuando la factura
+// fue emitida en VES (donde es una tasa real). En facturas USD (tasaCambio=1)
+// se usa la tasa vigente del sistema, evitando que 1000 Bs se lean como 1000 USD.
+const buildPagosTurnoSql = ({ fechaApertura, usuarioId, tasaSistema }) => {
+  const usuarioFilter = usuarioId ? Prisma.sql`AND f."usuarioId" = ${usuarioId}` : Prisma.empty;
+  return Prisma.sql`
+    SELECT
+      p."metodoPago" AS metodo,
+      p."monedaPago" AS moneda,
+      CAST(SUM(CASE
+        WHEN p."monedaPago" = 'VES' THEN
+          CASE WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+            THEN p."monto" / f."tasaCambio"
+            ELSE p."monto" / ${tasaSistema}
+          END
+        ELSE p."monto"
+      END) AS TEXT) AS total_usd,
+      CAST(SUM(CASE WHEN p."monedaPago" = 'VES' THEN p."monto" ELSE 0 END) AS TEXT) AS total_ves,
+      CAST(SUM(CASE WHEN p."monedaPago" = 'USD' THEN p."monto" ELSE 0 END) AS TEXT) AS total_usd_orig,
+      COUNT(*) AS cantidad,
+      COUNT(p."referenciaTransaccion") AS con_referencia
+    FROM pagos p
+    INNER JOIN facturas f ON f."id" = p."facturaId"
+    WHERE p."fechaPago" >= ${tsFrag(fechaApertura)}
+      AND f."estado" != 'VOIDED'
+      ${usuarioFilter}
+    GROUP BY p."metodoPago", p."monedaPago"
+  `;
+};
 
 // 1. Obtener estado de la caja del usuario actual (o global si es EMPRESA y busca por usuario)
 router.get('/status', async (req, res, next) => {
@@ -51,6 +100,8 @@ router.get('/status', async (req, res, next) => {
         montoFinal: true,
         ingresosEfectivo: true,
         ingresosBanco: true,
+        ingresosEfectivoVES: true,
+        ingresosBancoVES: true,
         estado: true,
         observaciones: true,
         arqueoDetalle: true,
@@ -75,12 +126,14 @@ router.post('/open', async (req, res, next) => {
 
     if (!userId) throw createValidationError('Usuario no autenticado');
 
-    const montoInicialNum = montoInicial !== undefined ? Number(montoInicial) : 0;
-    if (isNaN(montoInicialNum) || montoInicialNum < 0) {
+    // `new Decimal('abc')` lanza DecimalError y `new Decimal(null)` también,
+    // lo que devolvía un 500. Se convierte a texto y se valida antes de construir.
+    const montoInicialDecimal = toDecimalSeguro(montoInicial, 0);
+    if (!montoInicialDecimal.isFinite() || montoInicialDecimal.lt(0)) {
       throw createValidationError('El monto inicial debe ser un número positivo');
     }
 
-    const empresaId = req.user?.empresaRefId || null;
+    const empresaId = await resolverEmpresaRefId(req);
 
     const nuevaCaja = await prisma.$transaction(async (tx) => {
       const cajaAbierta = await tx.cierreCaja.findFirst({
@@ -106,7 +159,7 @@ router.post('/open', async (req, res, next) => {
         data: {
           usuarioId: userId,
           empresaId,
-          montoInicial: montoInicialNum,
+          montoInicial: montoInicialDecimal.toFixed(2),
           observaciones: observaciones?.trim() || null
         },
         include: {
@@ -147,6 +200,8 @@ router.get('/preview', async (req, res, next) => {
         montoFinal: true,
         ingresosEfectivo: true,
         ingresosBanco: true,
+        ingresosEfectivoVES: true,
+        ingresosBancoVES: true,
         estado: true,
         observaciones: true,
         arqueoDetalle: true,
@@ -163,28 +218,13 @@ router.get('/preview', async (req, res, next) => {
 
     const fechaApertura = new Date(cajaAbierta.fechaApertura).toISOString();
     const usuarioId = cajaAbierta.usuarioId;
-    const usuarioFilter = usuarioId ? Prisma.sql`AND f."usuarioId" = ${usuarioId}` : Prisma.empty;
 
-    const pagosAgregados = await prisma.$queryRaw`
-      SELECT
-        p."metodoPago" AS metodo,
-        p."monedaPago" AS moneda,
-        CAST(SUM(CASE
-          WHEN p."monedaPago" = 'VES' AND f."tasaCambio" > 0
-          THEN p."monto" / f."tasaCambio"
-          ELSE p."monto"
-        END) AS TEXT) AS total_usd,
-        CAST(SUM(CASE WHEN p."monedaPago" = 'VES' THEN p."monto" ELSE 0 END) AS TEXT) AS total_ves,
-        CAST(SUM(CASE WHEN p."monedaPago" = 'USD' THEN p."monto" ELSE 0 END) AS TEXT) AS total_usd_orig,
-        COUNT(*) AS cantidad,
-        COUNT(p."referenciaTransaccion") AS con_referencia
-      FROM pagos p
-      INNER JOIN facturas f ON f."id" = p."facturaId"
-      WHERE p."fechaPago" >= ${tsFrag(fechaApertura)}
-        AND f."estado" != 'VOIDED'
-        ${usuarioFilter}
-      GROUP BY p."metodoPago", p."monedaPago"
-    `;
+    const tasaSistema = await getTasaSistemaPorEmpresa(await resolverEmpresaRefId(req));
+    const pagosAgregados = await prisma.$queryRaw(buildPagosTurnoSql({
+      fechaApertura,
+      usuarioId,
+      tasaSistema,
+    }));
 
     let efectivoUSD = new Decimal(0);
     let pagoMovilUSD = new Decimal(0);
@@ -221,18 +261,8 @@ router.get('/preview', async (req, res, next) => {
       }
     }
 
-    // Tasa BCV vigente del turno (última factura no anulada desde la apertura)
-    const ultimasFacturas = await prisma.factura.findMany({
-      where: {
-        fechaEmision: { gte: new Date(fechaApertura).toISOString() },
-        ...(cajaAbierta.usuarioId ? { usuarioId: cajaAbierta.usuarioId } : {}),
-      },
-      orderBy: { fechaEmision: 'desc' },
-      take: 10,
-      select: { estado: true, tasaCambio: true },
-    });
-    const ultimaFactura = ultimasFacturas.find(f => f.estado !== 'VOIDED' && Number(f.tasaCambio) > 0) || null;
-    const tasaCambio = ultimaFactura ? Number(ultimaFactura.tasaCambio) : null;
+    // Tasa vigente del sistema para conversión VES→USD en el frontend
+    const tasaCambio = tasaSistema.toNumber();
 
     const ingresosBancoUSD = pagoMovilUSD.add(puntoUSD).add(transferenciaUSD);
     const ingresosEfectivoUSD = efectivoUSD;
@@ -288,10 +318,10 @@ router.post('/close', async (req, res, next) => {
       }
     }
 
-    let montoFinalNum;
-    if (montoFinal !== undefined && montoFinal !== '') {
-      montoFinalNum = Number(montoFinal);
-      if (isNaN(montoFinalNum) || montoFinalNum < 0) {
+    let montoFinalDecimal;
+    if (montoFinal !== undefined && montoFinal !== null && montoFinal !== '') {
+      montoFinalDecimal = toDecimalSeguro(montoFinal, 0);
+      if (!montoFinalDecimal.isFinite() || montoFinalDecimal.lt(0)) {
         throw createValidationError('El monto final debe ser un número positivo');
       }
     }
@@ -317,38 +347,47 @@ router.post('/close', async (req, res, next) => {
 
       const fechaApertura = new Date(cajaAbierta.fechaApertura).toISOString();
       const cajaUsuarioId = cajaAbierta.usuarioId;
-      const usuarioFilter = cajaUsuarioId ? Prisma.sql`AND f."usuarioId" = ${cajaUsuarioId}` : Prisma.empty;
 
-      const pagosAgregados = await tx.$queryRaw`
-        SELECT
-          p."metodoPago" AS metodo,
-          CAST(SUM(CASE
-            WHEN p."monedaPago" = 'VES' AND f."tasaCambio" > 0
-            THEN p."monto" / f."tasaCambio"
-            ELSE p."monto"
-          END) AS TEXT) AS total_usd
-        FROM pagos p
-        INNER JOIN facturas f ON f."id" = p."facturaId"
-        WHERE p."fechaPago" >= ${tsFrag(fechaApertura)}
-          AND f."estado" != 'VOIDED'
-          ${usuarioFilter}
-        GROUP BY p."metodoPago", p."monedaPago"
-      `;
+      const tasaSistema = await getTasaSistemaPorEmpresa(await resolverEmpresaRefId(req));
+      const pagosAgregados = await tx.$queryRaw(buildPagosTurnoSql({
+        fechaApertura,
+        usuarioId: cajaUsuarioId,
+        tasaSistema,
+      }));
 
       let ingresosEfectivoUSD = new Decimal(0);
       let ingresosBancoUSD = new Decimal(0);
+      let ingresosEfectivoVES = new Decimal(0);
+      let ingresosBancoVES = new Decimal(0);
 
       for (const row of pagosAgregados) {
-        const monto = new Decimal(row.total_usd || 0);
+        const usd = new Decimal(row.total_usd || 0);
+        const ves = new Decimal(row.total_ves || 0);
         if (row.metodo === 'CASH') {
-          ingresosEfectivoUSD = ingresosEfectivoUSD.add(monto);
+          ingresosEfectivoUSD = ingresosEfectivoUSD.add(usd);
+          ingresosEfectivoVES = ingresosEfectivoVES.add(ves);
         } else {
-          ingresosBancoUSD = ingresosBancoUSD.add(monto);
+          ingresosBancoUSD = ingresosBancoUSD.add(usd);
+          ingresosBancoVES = ingresosBancoVES.add(ves);
         }
       }
 
-      const finalMonto = montoFinalNum !== undefined
-        ? new Decimal(montoFinalNum)
+      // Validación de montoFinal: recalcular desde arqueoDetalle y advertir si difiere
+      let advertenciaMonto = null;
+      try {
+        const arqueo = typeof arqueoDetalle === 'string'
+          ? JSON.parse(arqueoDetalle || '{}')
+          : (arqueoDetalle || {});
+        const contadoUSD = Number(arqueo?.arqueo?.usd?.contado) || 0;
+        const contadoVES = Number(arqueo?.arqueo?.ves?.contado) || 0;
+        const montoRecalculado = contadoUSD + (tasaSistema.gt(0) ? contadoVES / tasaSistema.toNumber() : 0);
+        if (montoFinalDecimal && Math.abs(montoRecalculado - montoFinalDecimal.toNumber()) > 0.01) {
+          advertenciaMonto = `montoFinal enviado (${montoFinalDecimal.toFixed(2)}) difiere del recalculado (${montoRecalculado.toFixed(2)})`;
+        }
+      } catch { /* si no hay arqueoDetalle, omitir validación */ }
+
+      const finalMonto = montoFinalDecimal !== undefined
+        ? montoFinalDecimal
         : new Decimal(cajaAbierta.montoInicial.toString()).add(ingresosEfectivoUSD);
 
       return await tx.cierreCaja.update({
@@ -358,8 +397,12 @@ router.post('/close', async (req, res, next) => {
           montoFinal: finalMonto.toFixed(2),
           ingresosEfectivo: ingresosEfectivoUSD.toFixed(2),
           ingresosBanco: ingresosBancoUSD.toFixed(2),
+          ingresosEfectivoVES: ingresosEfectivoVES.gt(0) ? ingresosEfectivoVES.toFixed(2) : null,
+          ingresosBancoVES: ingresosBancoVES.gt(0) ? ingresosBancoVES.toFixed(2) : null,
           estado: 'CLOSED',
-          observaciones: observaciones ? `${cajaAbierta.observaciones ? cajaAbierta.observaciones + '\n' : ''}${observaciones}` : cajaAbierta.observaciones,
+          observaciones: observaciones
+            ? `${cajaAbierta.observaciones ? cajaAbierta.observaciones + '\n' : ''}${observaciones}${advertenciaMonto ? ` ⚠ ${advertenciaMonto}` : ''}`
+            : (cajaAbierta.observaciones || advertenciaMonto ? `${cajaAbierta.observaciones ? cajaAbierta.observaciones + '\n' : ''}${advertenciaMonto || ''}`.trim() || null : null),
           ...(arqueoDetalleStr ? { arqueoDetalle: arqueoDetalleStr } : {}),
         },
         select: {
@@ -372,12 +415,9 @@ router.post('/close', async (req, res, next) => {
           montoFinal: true,
           ingresosEfectivo: true,
           ingresosBanco: true,
+          ingresosEfectivoVES: true,
+          ingresosBancoVES: true,
           estado: true,
-          observaciones: true,
-        arqueoDetalle: true,
-          createdAt: true,
-          updatedAt: true,
-          usuario: { select: { id: true, username: true, nombre: true } },
         }
       });
     });
@@ -434,6 +474,8 @@ router.get('/', async (req, res, next) => {
           montoFinal: true,
           ingresosEfectivo: true,
           ingresosBanco: true,
+          ingresosEfectivoVES: true,
+          ingresosBancoVES: true,
           estado: true,
           observaciones: true,
         arqueoDetalle: true,

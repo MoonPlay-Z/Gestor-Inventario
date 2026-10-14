@@ -112,6 +112,15 @@ export const ValidationRules = {
       return `${fieldName} no coincide`;
     }
     return null;
+  },
+
+  tasaCambio: (value, fieldName = 'La tasa de cambio') => {
+    if (!value) return null;
+    const num = Number(value);
+    if (!isFinite(num) || num <= 0) {
+      return `${fieldName} debe ser un número mayor a cero`;
+    }
+    return null;
   }
 };
 

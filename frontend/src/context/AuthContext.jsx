@@ -31,9 +31,18 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const loginUser = (userData, userToken) => {
+  const [empresa, setEmpresa] = useState(() => {
+    const saved = localStorage.getItem('empresa');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const loginUser = (userData, userToken, empresaData) => {
     setUser(userData);
     setToken(userToken);
+    if (empresaData) {
+      setEmpresa(empresaData);
+      localStorage.setItem('empresa', JSON.stringify(empresaData));
+    }
     localStorage.setItem('user', JSON.stringify(userData));
     localStorage.setItem('token', userToken);
   };
@@ -41,14 +50,21 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     setToken(null);
+    setEmpresa(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('empresa');
+  };
+
+  const updateEmpresa = (empresaData) => {
+    setEmpresa(empresaData);
+    localStorage.setItem('empresa', JSON.stringify(empresaData));
   };
 
   const isExpired = user && (user.subscriptionStatus === 'expired_trial' || user.subscriptionStatus === 'canceled');
 
   return (
-    <AuthContext.Provider value={{ user, token, loginUser, logout, isExpired }}>
+    <AuthContext.Provider value={{ user, token, empresa, loginUser, logout, updateEmpresa, isExpired }}>
       {children}
     </AuthContext.Provider>
   );

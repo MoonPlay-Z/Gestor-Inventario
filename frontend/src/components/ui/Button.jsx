@@ -1,5 +1,5 @@
 /**
- * Button — Componente de botón centralizado
+ * Button — Componente de botón centralizado (CSS Modules)
  *
  * Variantes: primary | secondary | danger | success | ghost | outline
  * Tamaños  : sm | md (default) | lg | icon
@@ -17,21 +17,22 @@
 import React from 'react';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../../context/AuthContext';
+import styles from './Button.module.css';
 
 const VARIANT_CLASSES = {
-  primary:   'btn btn-primary',
-  secondary: 'btn btn-secondary',
-  danger:    'btn btn-danger',
-  success:   'btn btn-success',
-  ghost:     'btn btn-ghost',
-  outline:   'btn btn-secondary',
+  primary:   styles.btnPrimary,
+  secondary: styles.btnSecondary,
+  danger:    styles.btnDanger,
+  success:   styles.btnSuccess,
+  ghost:     styles.btnGhost,
+  outline:   styles.btnSecondary,
 };
 
 const SIZE_CLASSES = {
-  sm:   'btn-sm',
+  sm:   styles.btnSm,
   md:   '',
-  lg:   'btn-lg',
-  icon: 'btn-icon',
+  lg:   styles.btnLg,
+  icon: styles.btnIcon,
 };
 
 export function Button({
@@ -57,6 +58,7 @@ export function Button({
   }
 
   const classes = [
+    styles.btn,
     VARIANT_CLASSES[variant] || VARIANT_CLASSES.secondary,
     SIZE_CLASSES[size] || '',
     className,

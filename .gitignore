@@ -55,3 +55,16 @@ __pycache__/
 
 # Vendor folder (contains large binaries)
 vendor/
+
+# Playwright (E2E)
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
+# Credenciales de sesión capturadas por Playwright: NUNCA versionar
+storageState.json
+**/storageState.json
+
+# Tooling de agentes (no forma parte de la app)
+.agents/
+skills-lock.json

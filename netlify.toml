@@ -9,3 +9,12 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# API REDIRECT (proxy to backend in production)
+# -----------------------------------------------------------
+# Uncomment and replace with your backend URL after deploying the backend.
+# [[redirects]]
+#   from = "/api/*"
+#   to = "https://your-backend.onrender.com/api/:splat"
+#   status = 200
+#   force = true

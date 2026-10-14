@@ -20,6 +20,7 @@ const activacionesRouter = require('./routes/activaciones');
 const b2bRouter        = require('./routes/b2b');
 const fiscalRouter     = require('./routes/fiscal');
 const reportesRouter   = require('./routes/reportes');
+const cxcRouter        = require('./routes/cxc');
 const { authMiddleware, requireRole } = require('./middleware/auth');
 const { subscriptionGuard } = require('./middleware/subscriptionGuard');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -27,7 +28,29 @@ const { errorHandler } = require('./middleware/errorHandler');
 const app    = express();
 const PORT   = process.env.PORT || 3001;
 
+// ─── Security headers ─────────────────────────────────────────────────────────
+// Set basic security headers without requiring helmet dependency
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=(self)');
+  next();
+});
+
 // ─── Middleware ───────────────────────────────────────────────────────────────
+// trust proxy must be explicitly set behind the reverse proxy (e.g., 1 for single proxy)
+// Previously was set to 1 unconditionally which allowed IP spoofing if behind multiple proxies
+if (process.env.NODE_ENV === 'production') {
+  const trustProxy = process.env.TRUST_PROXY;
+  if (trustProxy === 'true') {
+    app.set('trust proxy', 1);
+  } else if (trustProxy) {
+    app.set('trust proxy', parseInt(trustProxy, 10));
+  }
+}
+
 const configuredOrigins = process.env.ALLOWED_ORIGINS
   ?.split(',')
   .map((origin) => origin.trim())
@@ -169,6 +192,7 @@ app.use('/api/activaciones', activacionesRouter);
 app.use('/api/roles',        rolesRouter);
 app.use('/api/fiscal',       fiscalRouter);
 app.use('/api/reportes',     reportesRouter);
+app.use('/api/cxc',          cxcRouter);
 
 // ─── Dashboard stats ──────────────────────────────────────────────────────────
 app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'), async (req, res, next) => {

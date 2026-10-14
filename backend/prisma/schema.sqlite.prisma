@@ -26,6 +26,10 @@ model Empresa {
   rif                String    @unique
   direccion          String?
   telefono           String?
+  email              String?
+  monedaSimbolo      String?
+  monedaCodigo       String?
+  tasaDolar          Float     @default(36.5)
   activo             Boolean   @default(true)
   subscriptionStatus String    @default("trialing")
   planType           String?
@@ -154,6 +158,7 @@ model Producto {
 
   empresa      Usuario       @relation("EmpresaProductos", fields: [empresaId], references: [id])
   itemsFactura ItemFactura[]
+  itemsCotizacion ItemCotizacion[]
 
   @@unique([empresaId, sku])
   @@index([empresaId])
@@ -188,6 +193,7 @@ model Factura {
 
   items ItemFactura[]
   pagos Pago[]
+  cotizacionOrigen Cotizacion?
 
   @@index([fechaEmision])
   @@index([usuarioId])
@@ -208,6 +214,7 @@ model ItemFactura {
   unidadMedida            String    @default("UNIDAD")
   pesoReal                Float?
   precioUnitarioHistorico Float
+  costoUnitarioHistoricoUSD Float?
   tasaImpuestoAplicada    Float
   subtotalLinea           Float
   impuestoLinea           Float
@@ -255,6 +262,8 @@ model CierreCaja {
   montoFinal       Float?
   ingresosEfectivo Float     @default(0.00)
   ingresosBanco    Float     @default(0.00)
+  ingresosEfectivoVES Float?
+  ingresosBancoVES    Float?
   estado           String    @default("OPEN")
   observaciones    String?
   arqueoDetalle    String?
@@ -284,6 +293,8 @@ model Cotizacion {
   total         Float
   moneda        String   @default("USD")
   estado        String   @default("PENDING")
+  facturaId     String?  @unique
+  factura       Factura? @relation(fields: [facturaId], references: [id])
 
   items ItemCotizacion[]
 
@@ -299,6 +310,7 @@ model ItemCotizacion {
   cotizacionId   String
   cotizacion     Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
   productoId     String?
+  producto       Producto? @relation(fields: [productoId], references: [id])
   descripcion    String
   cantidad       Int
   precioUnitario Float
@@ -332,6 +344,9 @@ model Usuario {
   mfaSecret          String?
   sessionVersion     Int       @default(1)
   sudoModeExpiresAt  DateTime?
+  registrationIp        String?
+  registrationLatitude Float?
+  registrationLongitude Float?
   lastLoginIp        String?
   lastLoginAt        DateTime?
   deletedAt          DateTime?

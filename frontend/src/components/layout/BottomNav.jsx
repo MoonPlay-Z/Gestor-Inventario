@@ -6,6 +6,7 @@ import cartIcon from '@iconify/icons-mdi/cart';
 import packageIcon from '@iconify/icons-mdi/package-variant';
 import cashRegIcon from '@iconify/icons-mdi/cash-register';
 import menuIcon from '@iconify/icons-mdi/menu';
+import cashCheckIcon from '@iconify/icons-mdi/cash-check';
 
 export function BottomNav({ setIsMobileOpen }) {
   return (
@@ -44,6 +45,18 @@ export function BottomNav({ setIsMobileOpen }) {
       >
         <Icon icon={packageIcon} className="h-5 w-5" />
         <span>Stock</span>
+      </NavLink>
+
+      <NavLink
+        to="/cxc"
+        className={({ isActive }) =>
+          `flex flex-col items-center gap-1 text-[0.7rem] font-semibold p-1 transition ${
+            isActive ? 'text-[#2563eb]' : 'text-[var(--text-secondary)]'
+          }`
+        }
+      >
+        <Icon icon={cashCheckIcon} className="h-5 w-5" />
+        <span>Cobrar</span>
       </NavLink>
 
       <NavLink

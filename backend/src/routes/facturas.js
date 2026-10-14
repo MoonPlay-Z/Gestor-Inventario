@@ -7,13 +7,17 @@ const { invalidarCacheVentas } = require('../services/reportesService');
 const { requireRole } = require('../middleware/auth');
 const { obtenerSiguienteNumeroFactura } = require('../utils/numeracionFacturas');
 const { MONEDAS_PAGO, convertirMontoMoneda, normalizarPagoAFactura } = require('../utils/paymentCurrency');
+const { resolverEmpresaRefId } = require('../utils/empresaContext');
+const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
+const configRouter = require('./config');
 
 // SUPER_ADMIN no genera facturas
 router.use(requireRole('EMPRESA', 'CAJA'));
 
 const getEmpresaId = (req) => req.user?.empresaId || req.user?.id;
-// empresaRefId ya viene en req.user desde authMiddleware (no necesita query adicional)
-const getEmpresaRefId = (req) => req.user?.empresaRefId || null;
+// Las sub-cuentas (CAJA/INVENTARIO/VISOR) nacen con empresaRefId=NULL, así que
+// hay que subir por el Usuario padre para obtener el Empresa real.
+const getEmpresaRefId = (req) => resolverEmpresaRefId(req);
 const facturaTenantFilter = (empresaId) => ({
   OR: [
     { usuarioId: empresaId },
@@ -60,16 +64,33 @@ router.get('/', async (req, res, next) => {
       if (h) where.fechaEmision.lte = h;
     }
     if (q) {
-      where.AND = [
-        facturaTenantFilter(empresaId),
-        {
-          OR: [
-            { cliente: { razonSocial: { contains: q, mode: 'insensitive' } } },
-            { cliente: { rifCedula:   { contains: q, mode: 'insensitive' } } },
-          ]
-        }
-      ];
-      delete where.OR;
+      const terms = q.trim().split(/\s+/).filter(Boolean);
+      if (terms.length > 0) {
+        where.AND = [
+          ...(where.AND || []),
+          facturaTenantFilter(empresaId),
+          ...terms.map(term => ({
+            OR: [
+              { cliente: { razonSocial: { contains: term, mode: 'insensitive' } } },
+              { cliente: { rifCedula: { contains: term, mode: 'insensitive' } } },
+              { usuario: { username: { contains: term, mode: 'insensitive' } } },
+              { usuario: { nombre: { contains: term, mode: 'insensitive' } } },
+              {
+                items: {
+                  some: {
+                    OR: [
+                      { descripcionHistorica: { contains: term, mode: 'insensitive' } },
+                      { producto: { sku: { contains: term, mode: 'insensitive' } } },
+                      { producto: { nombre: { contains: term, mode: 'insensitive' } } },
+                    ],
+                  },
+                },
+              },
+            ],
+          })),
+        ];
+        delete where.OR;
+      }
     }
 
     const [facturas, total] = await Promise.all([
@@ -81,6 +102,12 @@ router.get('/', async (req, res, next) => {
         include: {
           cliente: true,
           usuario: { select: { id: true, username: true, nombre: true, rol: true } },
+          items: {
+            select: {
+              descripcionHistorica: true,
+              producto: { select: { sku: true, nombre: true } },
+            },
+          },
           _count: { select: { items: true } },
         },
       }),
@@ -108,7 +135,7 @@ router.get('/', async (req, res, next) => {
       return {
         ...f,
         estaVencida: ['PENDING', 'PARTIALLY_PAID'].includes(f.estado) && new Date(f.fechaVencimiento) < hoy,
-        saldoPendiente: saldoPendiente.toNumber(),
+        saldoPendiente: saldoPendiente.toFixed(2),
       };
     });
 
@@ -205,13 +232,13 @@ router.post('/', async (req, res, next) => {
       monedaPago = 'USD',
     } = req.body;
     const empresaId = req.user?.empresaId || req.user?.id;
-    const empresaRefId = getEmpresaRefId(req);
+    const empresaRefId = await getEmpresaRefId(req);
 
-    // Una factura en VES sin tasa de cambio explícita quedaría normalizada incorrectamente a USD
-    if (moneda === 'VES' && (tasaCambio === undefined || tasaCambio === null || tasaCambio === '')) {
-      throw createValidationError('La tasa de cambio es obligatoria para facturas en VES', { tasaCambio: 'Ingrese la tasa' });
-    }
-    const tasaFacturacion = new Decimal(tasaCambio ?? 1);
+    // Usar tasa BCV de la configuración del sistema si no se proporciona explícitamente
+    const systemConfig = configRouter.getSystemConfig();
+    const tasaBCV = systemConfig.moneda?.tasaDolar || 36.5;
+    
+    const tasaFacturacion = new Decimal(tasaCambio ?? tasaBCV);
     if (!tasaFacturacion.isFinite() || tasaFacturacion.lte(0)) {
       throw createValidationError('La tasa de cambio debe ser mayor a cero');
     }
@@ -327,6 +354,7 @@ router.post('/', async (req, res, next) => {
           : parseFloat(item.cantidad),
         unidadMedida:            producto.esVentaPorPeso ? 'KILOGRAMO' : producto.unidadMedida,
         precioUnitarioHistorico: precio.toFixed(2),
+        costoUnitarioHistoricoUSD: producto.costoCompra.toString(),
         tasaImpuestoAplicada:    producto.tasaImpuesto.toString(),
         subtotalLinea:           subtotalLinea.toFixed(2),
         impuestoLinea:           impuestoLinea.toFixed(2),
@@ -341,6 +369,18 @@ router.post('/', async (req, res, next) => {
     const subtotalTotal    = itemsCalculados.reduce((acc, i) => acc.add(new Decimal(i.subtotalLinea)), new Decimal(0));
     const impuestoTotalSum = itemsCalculados.reduce((acc, i) => acc.add(new Decimal(i.impuestoLinea)), new Decimal(0));
     const totalFactura     = subtotalTotal.add(impuestoTotalSum);
+
+    // Tasa BCV del día para el pago de contado. Se resuelve FUERA de la
+    // transacción porque es una llamada HTTP externa y no debe mantener
+    // bloqueadas las filas de factura/cxC mientras espera la red.
+    let tasaBCVPago = null;
+    if (metodoPago) {
+      try {
+        tasaBCVPago = await tasaBCVPorFecha(new Date());
+      } catch (err) {
+        console.warn('[facturas] No se pudo obtener la tasa BCV:', err.message);
+      }
+    }
 
     // ── Transacción atómica ───────────────────────────────────────────────────
     const factura = await prisma.$transaction(async (tx) => {
@@ -414,6 +454,28 @@ router.post('/', async (req, res, next) => {
         },
       });
 
+      // 1.5. Crear CuentaPorCobrar asociada (montos siempre en USD normalizado)
+      const totalFacturaUSD = convertirMontoMoneda(totalFactura, moneda, 'USD', tasaFacturacion);
+      const estadoCxC = metodoPago ? 'PAID' : 'PENDING';
+      const montoCobradoInicial = metodoPago ? totalFacturaUSD.toFixed(2) : '0.00';
+      const montoPendienteInicial = metodoPago ? '0.00' : totalFacturaUSD.toFixed(2);
+
+      await tx.cuentaPorCobrar.create({
+        data: {
+          empresaId: empresaRefId,
+          facturaId: nuevaFactura.id,
+          clienteId,
+          usuarioId: req.user?.id || null,
+          montoOriginal: totalFacturaUSD.toFixed(2),
+          montoCobrado: montoCobradoInicial,
+          montoPendiente: montoPendienteInicial,
+          fechaEmision: nuevaFactura.fechaEmision,
+          fechaVencimiento: fVencimiento.toISOString(),
+          estado: estadoCxC,
+          diasVencido: 0
+        }
+      });
+
       // 2. Crear el registro de pago inmediato si aplica (CONTADO)
       if (metodoPago) {
         const monedaRecibida = metodoPago === 'CASH' ? monedaPago : moneda;
@@ -431,6 +493,7 @@ router.post('/', async (req, res, next) => {
             metodoPago,
             referenciaTransaccion: metodoPago === 'CASH' ? null : referenciaTransaccion,
             notas: 'Pago de contado al momento de emisión',
+            tasaBCV: tasaBCVPago ? tasaBCVPago.toFixed(4) : null,
           },
           select: {
             id: true,
@@ -439,6 +502,7 @@ router.post('/', async (req, res, next) => {
             metodoPago: true,
             referenciaTransaccion: true,
             fechaPago: true,
+            tasaBCV: true,
           },
         });
         nuevaFactura.pagos = [pagoCreado];
@@ -492,8 +556,18 @@ router.post('/', async (req, res, next) => {
 // PATCH /api/facturas/:id/anular — Anular factura (requiere código para rol CAJA)
 router.patch('/:id/anular', async (req, res, next) => {
   try {
-    const { codigoAnulacion, motivo } = req.body;
+    const { codigoAnulacion, confirmacion, motivo } = req.body;
     const userRole = req.user?.rol;
+
+    if (confirmacion !== 'anular') {
+      throw createValidationError('Debes escribir "anular" para confirmar la anulación', { confirmacion: 'Escribe anular exactamente' });
+    }
+    if (typeof motivo !== 'string' || !motivo.trim()) {
+      throw createValidationError('Debes describir el motivo de la anulación', { motivo: 'La descripción es obligatoria' });
+    }
+    if (motivo.trim().length > 500) {
+      throw createValidationError('La descripción no puede superar 500 caracteres', { motivo: 'Máximo 500 caracteres' });
+    }
 
     if (userRole === 'INVENTARIO') {
       return res.status(403).json({ error: 'Acceso denegado: El personal de inventario no tiene permiso para anular facturas.' });
@@ -502,7 +576,7 @@ router.patch('/:id/anular', async (req, res, next) => {
     // Para el rol CAJA, se requiere código de anulación obligatorio
     if (userRole === 'CAJA') {
       const systemVoidCode = process.env.VOID_CODE || '1234';
-      if (!codigoAnulacion || codigoAnulacion.trim() !== systemVoidCode) {
+      if (typeof codigoAnulacion !== 'string' || codigoAnulacion.trim() !== systemVoidCode) {
         return res.status(403).json({
           error: 'Código de anulación inválido',
           message: 'Los usuarios de Caja requieren el código de autorización del supervisor/empresa para anular una venta.'
@@ -546,7 +620,7 @@ router.patch('/:id/anular', async (req, res, next) => {
         data: {
           estado: 'VOIDED',
           anuladoPor: req.user?.nombre || req.user?.username || 'Anónimo',
-          motivoAnulacion: motivo?.trim() || 'Anulación solicitada por la caja',
+          motivoAnulacion: motivo.trim(),
         },
         select: {
           id: true,
@@ -585,6 +659,11 @@ router.patch('/:id/anular', async (req, res, next) => {
             },
           },
         },
+      });
+
+      // Eliminar CuentaPorCobrar asociada
+      await tx.cuentaPorCobrar.deleteMany({
+        where: { facturaId: req.params.id }
       });
 
       // Restaurar stock de los productos

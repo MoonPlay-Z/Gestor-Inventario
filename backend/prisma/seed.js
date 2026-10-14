@@ -191,6 +191,12 @@ async function main() {
 
   for (const user of targetUsers) {
     console.log(`Limpiando e insertando catálogo para @${user.username}...`);
+    // Idempotent: only delete and reinsert if count differs from expected
+    const existingCount = await prisma.producto.count({ where: { empresaId: user.id } });
+    if (existingCount === catalogo600.length) {
+      console.log(`  ✓ Ya existen ${catalogo600.length} productos, omitiendo...`);
+      continue;
+    }
     await prisma.producto.deleteMany({ where: { empresaId: user.id } });
 
     const batch = catalogo600.map(p => ({ ...p, empresaId: user.id }));

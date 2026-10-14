@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import closeIcon from '@iconify/icons-mdi/close';
 import { Utils } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const fmtVES = (n) => `Bs. ${Number(n || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtUSD = (n) => `$${Number(n || 0).toFixed(2)}`;
@@ -87,6 +88,7 @@ const Row = ({ label, value, color }) => (
 );
 
 export function CierreTurnoModal({ preview, submitting, onCancel, onConfirm }) {
+  const { empresa } = useAuth();
   const [lotesPM, setLotesPM] = useState('');
   const [verPM, setVerPM] = useState(preview?.desglose?.pagoMovil || '');
   const [lotesPt, setLotesPt] = useState('');
@@ -102,7 +104,8 @@ export function CierreTurnoModal({ preview, submitting, onCancel, onConfirm }) {
   const [contadoVES, setContadoVES] = useState('');
   const [observaciones, setObservaciones] = useState('');
 
-  const tasa = Number(preview?.tasaCambio) || 0;
+  // Tasa manual de la empresa (desde AuthContext, cargada al login)
+  const tasa = Number(empresa?.tasaDolar) || 0;
   const esperadoUSD = useMemo(() => {
     // Fondo inicial viene en USD (montoInicial). Ventas en efectivo USD + VES convertido a USD - vueltos - retiros
     const fondo = Number(preview?.caja?.montoInicial || 0);

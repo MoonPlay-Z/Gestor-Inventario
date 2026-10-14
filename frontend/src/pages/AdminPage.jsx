@@ -95,6 +95,7 @@ export function AdminPage() {
   const [promocionForm, setPromocionForm] = useState(EMPTY_PROMOCION);
   const [noticiaForm, setNoticiaForm] = useState(EMPTY_NOTICIA);
   const [resetForm, setResetForm] = useState({ userId: '', newPassword: '' });
+  const [deleteUserForm, setDeleteUserForm] = useState({ username: '', confirmation: '' });
   const [fieldErrors, setFieldErrors] = useState({});
 
   // Búsqueda y filtros
@@ -206,8 +207,8 @@ export function AdminPage() {
   const loadUsuarios = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await API.getUsuarios({ limit: 100 });
-      setUsuarios(data.data || data);
+      const data = await API.getAdminUsuarios();
+      setUsuarios(data);
     } catch (err) {
       showToast(getErrorMessage(err, 'Error cargando usuarios'), 'error');
     } finally {
@@ -215,13 +216,34 @@ export function AdminPage() {
     }
   }, [showToast]);
 
+  const loadDashboard = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [empresasData, usuariosData, promocionesData, noticiasData] = await Promise.all([
+        API.getEmpresas(),
+        API.getAdminUsuarios(),
+        API.getPromociones(),
+        API.getNoticias(),
+      ]);
+      setEmpresas(empresasData);
+      setUsuarios(usuariosData);
+      setPromociones(promocionesData);
+      setNoticias(noticiasData);
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error cargando las estadísticas del panel'), 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
   useEffect(() => {
-    if (tab === 'empresas') loadEmpresas();
+    if (tab === 'dashboard') loadDashboard();
+    else if (tab === 'empresas') loadEmpresas();
     else if (tab === 'historial') loadActivaciones();
     else if (tab === 'promociones') loadPromociones();
     else if (tab === 'noticias') loadNoticias();
     else if (tab === 'usuarios') loadUsuarios();
-  }, [tab, loadEmpresas, loadActivaciones, loadPromociones, loadNoticias, loadUsuarios]);
+  }, [tab, loadDashboard, loadEmpresas, loadActivaciones, loadPromociones, loadNoticias, loadUsuarios]);
 
   // ─── Acciones de Empresas ───────────────────────────────────────────────────
 
@@ -265,18 +287,25 @@ export function AdminPage() {
   };
 
   const handleEliminarEmpresa = async (u) => {
-    const code = Math.floor(1000 + Math.random() * 9000).toString();
-    const promptAns = window.prompt(
-      `CUIDADO: Esto eliminará permanentemente la empresa ${u.nombre} y TODOS sus datos.\n\nIngresa el código ${code} para confirmar:`
+    const expectedName = u.nombre || u.username;
+    const nameConfirmation = window.prompt(
+      `CUIDADO: Esto eliminará permanentemente la empresa ${expectedName} y TODOS sus datos.\n\nEscribe el nombre exacto de la empresa para continuar:`
     );
-    
-    if (promptAns !== code) {
-      if (promptAns !== null) showToast('Código incorrecto. Eliminación cancelada.', 'error');
+    if (nameConfirmation === null) return;
+    if (nameConfirmation !== expectedName) {
+      showToast('El nombre no coincide. Eliminación cancelada.', 'error');
+      return;
+    }
+
+    const deleteConfirmation = window.prompt('Escribe "eliminar" para confirmar el borrado permanente:');
+    if (deleteConfirmation === null) return;
+    if (deleteConfirmation !== 'eliminar') {
+      showToast('La confirmación no coincide. Eliminación cancelada.', 'error');
       return;
     }
 
     try {
-      await API.eliminarEmpresa(u.id);
+      await API.eliminarEmpresa(u.id, nameConfirmation, deleteConfirmation);
       showToast(`Empresa ${u.nombre} eliminada por completo.`, 'success');
       loadEmpresas();
     } catch (err) {
@@ -289,7 +318,10 @@ export function AdminPage() {
   const openPromocionModal = (p = null) => {
     setModalType('promocion');
     setModalTarget(p);
-    setPromocionForm(p ? { ...p } : EMPTY_PROMOCION);
+    setPromocionForm(p ? {
+      ...p,
+      fechaFin: p.fechaFin ? new Date(p.fechaFin).toISOString().slice(0, 10) : '',
+    } : EMPTY_PROMOCION);
     setFieldErrors({});
     setShowModal(true);
   };
@@ -422,6 +454,35 @@ export function AdminPage() {
     }
   };
 
+  const openDeleteUserModal = (user) => {
+    setModalType('deleteUser');
+    setModalTarget(user);
+    setDeleteUserForm({ username: '', confirmation: '' });
+    setFieldErrors({});
+    setShowModal(true);
+  };
+
+  const handleDeleteUser = async (e) => {
+    e.preventDefault();
+    if (deleteUserForm.username !== modalTarget.username || deleteUserForm.confirmation !== 'eliminar') {
+      setFieldErrors({ confirmation: 'Escribe el nombre de usuario exacto y la palabra eliminar.' });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await API.eliminarAdminUsuario(modalTarget.id, deleteUserForm.username, deleteUserForm.confirmation);
+      showToast(`Usuario ${modalTarget.username} y sus datos eliminados permanentemente`, 'success');
+      setShowModal(false);
+      setModalTarget(null);
+      loadUsuarios();
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Error al eliminar el usuario'), 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // ─── Exportar a CSV ─────────────────────────────────────────────────────────
 
   const exportarCSV = (tipo) => {
@@ -441,12 +502,16 @@ export function AdminPage() {
       csvContent = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
       filename = `empresas_${new Date().toISOString().slice(0, 10)}.csv`;
     } else if (tipo === 'usuarios') {
-      const headers = ['Usuario', 'Nombre', 'Rol', 'Estado'];
+      const headers = ['Usuario', 'Nombre', 'Rol', 'Estado', 'IP de registro', 'Fecha de creación', 'Latitud', 'Longitud'];
       const rows = usuariosFiltrados.map(u => [
         u.username,
         u.nombre || '—',
         u.rol,
         u.activo ? 'Activo' : 'Inactivo',
+        u.registrationIp || 'No disponible',
+        u.createdAt ? new Date(u.createdAt).toLocaleString('es-VE') : 'No disponible',
+        u.registrationLatitude ?? 'No disponible',
+        u.registrationLongitude ?? 'No disponible',
       ]);
       csvContent = [headers, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n');
       filename = `usuarios_${new Date().toISOString().slice(0, 10)}.csv`;
@@ -565,7 +630,8 @@ export function AdminPage() {
         actions={
           <Button
             onClick={() => {
-              if (tab === 'empresas') loadEmpresas();
+              if (tab === 'dashboard') loadDashboard();
+              else if (tab === 'empresas') loadEmpresas();
               else if (tab === 'historial') loadActivaciones();
               else if (tab === 'promociones') loadPromociones();
               else if (tab === 'noticias') loadNoticias();
@@ -989,14 +1055,17 @@ export function AdminPage() {
                     <th>Nombre</th>
                     <th>Rol</th>
                     <th>Estado</th>
-                    <th style={{ minWidth: '100px' }}>Acción</th>
+                    <th>IP de registro</th>
+                    <th>Fecha de creación</th>
+                    <th>Ubicación de creación</th>
+                    <th style={{ minWidth: '120px' }}>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr><td colSpan={5} className="empty-state">Cargando usuarios...</td></tr>
+                    <tr><td colSpan={8} className="empty-state">Cargando usuarios...</td></tr>
                   ) : usuariosFiltrados.length === 0 ? (
-                    <tr><td colSpan={5} className="empty-state">No hay usuarios registrados</td></tr>
+                    <tr><td colSpan={8} className="empty-state">No hay usuarios registrados</td></tr>
                   ) : usuariosFiltrados.map(u => (
                     <tr key={u.id}>
                       <td>
@@ -1014,10 +1083,29 @@ export function AdminPage() {
                           {u.activo ? 'ACTIVO' : 'INACTIVO'}
                         </span>
                       </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>{u.registrationIp || 'No registrada'}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {u.createdAt ? new Date(u.createdAt).toLocaleString('es-VE') : 'No disponible'}
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {Number.isFinite(u.registrationLatitude) && Number.isFinite(u.registrationLongitude)
+                          ? `${u.registrationLatitude.toFixed(5)}, ${u.registrationLongitude.toFixed(5)}`
+                          : 'No disponible'}
+                      </td>
                       <td>
-                        <button onClick={() => openResetModal(u)} className="btn btn-sm" style={{ background: 'var(--surface3)' }} title="Resetear contraseña">
-                          <Icon icon={keyIcon} className="h-4 w-4" />
-                        </button>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button onClick={() => openResetModal(u)} className="btn btn-sm" style={{ background: 'var(--surface3)' }} title="Resetear contraseña">
+                            <Icon icon={keyIcon} className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => openDeleteUserModal(u)}
+                            className="btn btn-sm"
+                            style={{ background: 'var(--danger)', color: 'white' }}
+                            title="Eliminar usuario y sus datos permanentemente"
+                          >
+                            <Icon icon="mdi:delete-forever" className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1038,6 +1126,7 @@ export function AdminPage() {
                 {modalType === 'promocion' && (modalTarget ? 'Editar Promoción' : 'Nueva Promoción')}
                 {modalType === 'noticia' && (modalTarget ? 'Editar Noticia' : 'Nueva Noticia')}
                 {modalType === 'reset' && 'Resetear Contraseña'}
+                {modalType === 'deleteUser' && 'Eliminar Usuario Permanentemente'}
               </h3>
               <button className="btn btn-ghost btn-sm" onClick={() => setShowModal(false)}>
                 <Icon icon={closeIcon} className="h-5 w-5" />
@@ -1195,6 +1284,61 @@ export function AdminPage() {
                   <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
                   <button type="submit" className="btn btn-primary" disabled={saving}>
                     {saving ? 'Reseteando...' : 'Resetear'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {modalType === 'deleteUser' && modalTarget && (
+              <form onSubmit={handleDeleteUser}>
+                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ padding: '0.75rem', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', color: '#ef4444' }}>
+                    <div style={{ fontWeight: 700 }}>Esta acción es permanente e irreversible.</div>
+                    <div style={{ fontSize: '0.85rem', marginTop: '4px' }}>
+                      {modalTarget.rol === 'EMPRESA'
+                        ? 'Se eliminarán también sus subusuarios, ventas, pagos, productos, clientes y demás datos asociados.'
+                        : 'Se eliminarán también las ventas, pagos y demás actividad asociada a este usuario.'}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                      Escribe el nombre del usuario a eliminar: <strong>{modalTarget.username}</strong>
+                    </label>
+                    <input
+                      autoComplete="off"
+                      style={inputStyle(fieldErrors.username)}
+                      value={deleteUserForm.username}
+                      onChange={e => {
+                        setDeleteUserForm(form => ({ ...form, username: e.target.value }));
+                        setFieldErrors({});
+                      }}
+                    />
+                    <FieldError message={fieldErrors.username} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                      Luego escribe <strong>eliminar</strong>
+                    </label>
+                    <input
+                      autoComplete="off"
+                      style={inputStyle(fieldErrors.confirmation)}
+                      value={deleteUserForm.confirmation}
+                      onChange={e => {
+                        setDeleteUserForm(form => ({ ...form, confirmation: e.target.value }));
+                        setFieldErrors({});
+                      }}
+                    />
+                    <FieldError message={fieldErrors.confirmation} />
+                  </div>
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancelar</button>
+                  <button
+                    type="submit"
+                    className="btn btn-danger"
+                    disabled={saving || deleteUserForm.username !== modalTarget.username || deleteUserForm.confirmation !== 'eliminar'}
+                  >
+                    {saving ? 'Eliminando...' : 'Eliminar usuario y sus datos'}
                   </button>
                 </div>
               </form>

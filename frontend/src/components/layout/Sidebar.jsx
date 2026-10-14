@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { useAuth } from '../../context/AuthContext';
 import { NavItem, NavSection, ROLE_GROUPS } from '../ui';
+import { API } from '../../services/api';
 
 // ─── Iconos ─────────────────────────────────────────────────────────────────
 import closeIcon from '@iconify/icons-mdi/close';
@@ -12,13 +13,13 @@ import dashboardIcon from '@iconify/icons-mdi/view-dashboard';
 import cartIcon from '@iconify/icons-mdi/cart';
 import fileDocIcon from '@iconify/icons-mdi/file-document-outline';
 import clipboardIcon from '@iconify/icons-mdi/clipboard-list';
-import cashMultipleIcon from '@iconify/icons-mdi/cash-multiple';
 import cashRegIcon from '@iconify/icons-mdi/cash-register';
 import accountGroupIcon from '@iconify/icons-mdi/account-group';
 import accountKeyIcon from '@iconify/icons-mdi/account-key';
 import bellRingIcon from '@iconify/icons-mdi/bell-ring';
 import cogIcon from '@iconify/icons-mdi/cog';
 import chartBarIcon from '@iconify/icons-mdi/chart-bar';
+import cashCheckIcon from '@iconify/icons-mdi/cash-check';
 
 const ROL_LABEL = {
   SUPER_ADMIN: 'Super Admin',
@@ -31,8 +32,24 @@ const ROL_LABEL = {
 export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSidebar, brandName }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [cxCvencidas, setCxCvencidas] = useState(0);
 
   const closeMobile = () => setIsMobileOpen(false);
+
+  useEffect(() => {
+    if (!user || (user.rol !== 'EMPRESA' && user.rol !== 'CAJA')) return;
+    const loadCxC = async () => {
+      try {
+        const data = await API.getCxcResumen();
+        setCxCvencidas(data.cantidadVencidas || 0);
+      } catch (err) {
+        console.error('Error loading CxC resumen in sidebar:', err);
+      }
+    };
+    loadCxC();
+    const interval = setInterval(loadCxC, 60000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleLogout = (e) => {
     e.preventDefault();
@@ -102,10 +119,9 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
                 roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false} />
               <NavItem to="/ventas" icon={clipboardIcon} label="Historial Ventas"
                 roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false} />
-              {import.meta.env.DEV && <NavItem to="/pruebas/facturas" icon={clipboardIcon} label="Pruebas de facturas"
-                roles={ROLE_GROUPS.ADMIN_ONLY} onClick={closeMobile} isCollapsed={false} />}
-              <NavItem to="/pagos" icon={cashMultipleIcon} label="Cuentas por Cobrar"
-                roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false} />
+              <NavItem to="/cxc" icon={cashCheckIcon} label="Cuentas por Cobrar"
+                roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false}
+                badge={cxCvencidas > 0 ? cxCvencidas : null} />
               <NavItem to="/caja" icon={cashRegIcon} label="Cierre de Caja"
                 roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false} />
               <NavItem to="/reportes" icon={chartBarIcon} label="Reportes"

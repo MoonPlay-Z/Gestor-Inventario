@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Icon } from '@iconify/react';
 import closeIcon from '@iconify/icons-mdi/close';
 import cashIcon from '@iconify/icons-mdi/cash';
@@ -29,7 +29,13 @@ export function PosPage() {
   const [selectedClienteId, setSelectedClienteId] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [searchResultsTerm, setSearchResultsTerm] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchPage, setSearchPage] = useState(1);
+  const [searchHasMore, setSearchHasMore] = useState(false);
+  const [searchMoreLoading, setSearchMoreLoading] = useState(false);
+  const [searchError, setSearchError] = useState('');
+  const searchTermRef = useRef('');
   const [cart, setCart] = useState([]);
   const [tipoDocumento, setTipoDocumento] = useState('factura');
   const [metodoPago, setMetodoPago] = useState('EFECTIVO_USD');
@@ -45,6 +51,8 @@ export function PosPage() {
   const [showReceipt, setShowReceipt] = useState(false);
   const [lastFactura, setLastFactura] = useState(null);
   const [tipoUltimoDocumento, setTipoUltimoDocumento] = useState('factura');
+
+  const [initialLoading, setInitialLoading] = useState(true);
 
   const loadInitialData = async () => {
     try {
@@ -66,6 +74,25 @@ export function PosPage() {
       setCajaStatus('CLOSED');
     } finally {
       setCajaLoading(false);
+      setInitialLoading(false);
+    }
+  };
+
+  // Reintento tras abrir la caja en otra pestaña: solo consulta el estado,
+  // sin recargar clientes/productos, y vuelve a habilitar el POS si ya está OPEN.
+  const reintentarCaja = async () => {
+    setCajaLoading(true);
+    try {
+      const cajaRes = await API.getCajaActual().catch(() => ({ estado: 'CLOSED' }));
+      const abierto = cajaRes?.estado === 'OPEN' ? 'OPEN' : 'CLOSED';
+      setCajaStatus(abierto);
+      if (abierto === 'OPEN') {
+        showToast('Turno activo. Ya puedes facturar', 'success');
+      } else {
+        showToast('El turno sigue cerrado. Ábrelo desde Cierre de Caja', 'warning');
+      }
+    } finally {
+      setCajaLoading(false);
     }
   };
 
@@ -75,8 +102,16 @@ export function PosPage() {
 
   useEffect(() => {
     const term = searchTerm.trim();
+    searchTermRef.current = term;
+    setSearchResults([]);
+    setSearchResultsTerm('');
+    setSearchPage(1);
+    setSearchHasMore(false);
+    setSearchError('');
+    setSearchMoreLoading(false);
+
     if (!term) {
-      setSearchResults([]);
+      setSearchLoading(false);
       return;
     }
 
@@ -85,10 +120,15 @@ export function PosPage() {
 
     const timeoutId = setTimeout(async () => {
       try {
-        const res = await API.getProductos({ q: term, limit: 20 });
-        if (!cancelled) setSearchResults(res.data || []);
+        const res = await API.getProductos({ q: term, page: 1, limit: 20 });
+        if (!cancelled) {
+          const results = res.data || [];
+          setSearchResults(results);
+          setSearchResultsTerm(term);
+          setSearchHasMore(results.length < Number(res.total || 0));
+        }
       } catch (err) {
-        if (!cancelled) setSearchResults([]);
+        if (!cancelled) setSearchError(err.message || 'No se pudieron buscar los productos');
       } finally {
         if (!cancelled) setSearchLoading(false);
       }
@@ -100,14 +140,41 @@ export function PosPage() {
     };
   }, [searchTerm]);
 
-  const tasaDolar = parseFloat(config?.moneda?.tasaDolar) || 1;
+  const loadMoreSearchResults = async () => {
+    const term = searchTerm.trim();
+    if (!term || !searchHasMore || searchMoreLoading) return;
+
+    const nextPage = searchPage + 1;
+    setSearchMoreLoading(true);
+    setSearchError('');
+    try {
+      const res = await API.getProductos({ q: term, page: nextPage, limit: 20 });
+      if (searchTermRef.current !== term) return;
+      const results = res.data || [];
+      setSearchResults(current => {
+        const knownIds = new Set(current.map(product => product.id));
+        return [...current, ...results.filter(product => !knownIds.has(product.id))];
+      });
+      setSearchPage(nextPage);
+      setSearchHasMore(nextPage * 20 < Number(res.total || 0));
+    } catch (err) {
+      if (searchTermRef.current === term) {
+        setSearchError(err.message || 'No se pudieron cargar más productos');
+      }
+    } finally {
+      if (searchTermRef.current === term) setSearchMoreLoading(false);
+    }
+  };
+
+  const rawTasa = parseFloat(config?.moneda?.tasaDolar);
+  const tasaDolar = (isFinite(rawTasa) && rawTasa > 0) ? rawTasa : 1;
   const currencySymbol = config?.moneda?.simbolo || '$';
 
   // Buscador de productos por texto usando el backend
   const filteredProducts = useMemo(() => {
-    if (!searchTerm.trim()) return [];
+    if (!searchTerm.trim() || searchResultsTerm !== searchTerm.trim()) return [];
     return searchResults;
-  }, [searchTerm, searchResults]);
+  }, [searchTerm, searchResults, searchResultsTerm]);
 
   const addToCart = (product) => {
     const stockActual = Number(product.stockActual);
@@ -304,14 +371,116 @@ export function PosPage() {
         </div>
       ) : cajaStatus !== 'OPEN' ? (
         <div className="page-body" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-          <div className="card" style={{ maxWidth: '480px', width: '100%', textAlign: 'center', padding: '48px 32px' }}>
-            <div style={{ fontSize: '3.5rem', marginBottom: '16px' }}>
-              <Icon icon={lockOpenIcon} style={{ fontSize: '4rem', color: 'var(--danger)' }} />
+          <div
+            className="card"
+            style={{ maxWidth: '520px', width: '100%', textAlign: 'center', padding: '40px 32px 32px' }}
+          >
+            {/* Emblema */}
+            <div
+              style={{
+                width: '72px',
+                height: '72px',
+                margin: '0 auto 20px',
+                borderRadius: '50%',
+                background: 'var(--warning-dim)',
+                border: '1px solid rgba(245, 158, 11, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Icon icon={lockOpenIcon} style={{ fontSize: '2.1rem', color: 'var(--warning)' }} />
             </div>
-            <h2 style={{ marginBottom: '8px', color: 'var(--text-primary)' }}>Turno No Iniciado</h2>
-            <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-              No hay ningún turno activo. Para realizar ventas, primero debes <strong>abrir la caja</strong> desde el módulo de Cierre de Caja.
+
+            <h2
+              style={{
+                marginBottom: '6px',
+                color: 'var(--text-primary)',
+                fontSize: '1.35rem',
+                fontWeight: 800,
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Turno no iniciado
+            </h2>
+
+            <p
+              style={{
+                color: 'var(--text-secondary)',
+                lineHeight: '1.65',
+                maxWidth: '400px',
+                margin: '0 auto 24px',
+              }}
+            >
+              Para facturar necesitas un turno de caja abierto. Así cada pago queda asociado
+              a un turno y el cierre cuadra al final del día.
             </p>
+
+            {/* Pasos */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px',
+                textAlign: 'left',
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border)',
+                borderRadius: 'var(--radius-md)',
+                padding: '14px 16px',
+                marginBottom: '24px',
+              }}
+            >
+              <span
+                style={{
+                  flexShrink: 0,
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  background: 'var(--accent)',
+                  color: 'white',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                1
+              </span>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                Ve a <strong style={{ color: 'var(--text-primary)' }}>Cierre de Caja</strong> y registra el
+                monto inicial con el que arrancas.
+              </p>
+            </div>
+
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px',
+              }}
+            >
+              <Button
+                variant="primary"
+                size="lg"
+                icon="mdi:cash-register"
+                iconRight="mdi:arrow-right"
+                onClick={() => navigate('/caja')}
+                className="w-full"
+              >
+                Ir a Cierre de Caja
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                icon="mdi:refresh"
+                onClick={reintentarCaja}
+                disabled={cajaLoading}
+              >
+                Ya abrí la caja, reintentar
+              </Button>
+            </div>
           </div>
         </div>
       ) : (
@@ -355,6 +524,12 @@ export function PosPage() {
                 />
                 {searchLoading && searchTerm.trim() && (
                   <div className="small text-muted mt-2">Buscando productos...</div>
+                )}
+                {searchError && (
+                  <div className="small mt-2" role="alert" style={{ color: 'var(--danger)' }}>{searchError}</div>
+                )}
+                {searchTerm.trim() && !searchLoading && !searchError && filteredProducts.length === 0 && (
+                  <div className="small text-muted mt-2">No se encontraron productos.</div>
                 )}
               </div>
 
@@ -414,6 +589,17 @@ export function PosPage() {
                     </div>
                   ))}
                 </div>
+              )}
+              {filteredProducts.length > 0 && searchHasMore && (
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ marginTop: '8px' }}
+                  onClick={loadMoreSearchResults}
+                  disabled={searchMoreLoading}
+                >
+                  {searchMoreLoading ? 'Cargando...' : 'Cargar más resultados'}
+                </button>
               )}
             </div>
 
