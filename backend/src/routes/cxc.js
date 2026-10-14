@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const prisma = require('../db/prisma');
+const { Prisma } = require('../db/prisma');
 const { Decimal } = require('decimal.js');
 const { requireRole } = require('../middleware/auth');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
@@ -42,6 +43,28 @@ const pagoAUsd = (pago, factura) => convertirMontoMoneda(
   'USD',
   tasaCambioEfectiva(factura)
 );
+
+// Traduce `cxcTenantFilter` a SQL para las consultas crudas del resumen.
+// Debe mantenerse en espejo con esa función: si divergen, los totales y el
+// aging cuentan conjuntos distintos y el resumen se contradice.
+const buildCxcTenantSql = (tenantFilter) => {
+  if (tenantFilter.usuarioId) {
+    return Prisma.sql`c."usuarioId" = ${tenantFilter.usuarioId}`;
+  }
+  if (tenantFilter.OR?.length) {
+    const condiciones = [];
+    for (const cond of tenantFilter.OR) {
+      if (cond.usuarioId) {
+        condiciones.push(Prisma.sql`c."usuarioId" = ${cond.usuarioId}`);
+      }
+      if (cond.usuario?.empresaId) {
+        condiciones.push(Prisma.sql`c."usuarioId" IN (SELECT id FROM usuarios WHERE "empresaId" = ${cond.usuario.empresaId})`);
+      }
+    }
+    if (condiciones.length) return Prisma.sql`(${Prisma.join(condiciones, ' OR ')})`;
+  }
+  return Prisma.sql`TRUE`;
+};
 
 // ─── GET /api/cxc/resumen ──────────────────────────────────────────────────────
 router.get('/resumen', async (req, res, next) => {
@@ -97,7 +120,7 @@ router.get('/resumen', async (req, res, next) => {
             WHEN c."fechaVencimiento" < NOW() - INTERVAL '60 days' AND c."estado" IN ('PENDING', 'PARTIALLY_PAID')
             THEN c."montoPendiente" ELSE 0 END), 0) AS "90plus"
         FROM "cuentas_por_cobrar" c
-        WHERE c."empresaId" = ${await getEmpresaRefId(req) || getEmpresaId(req)}
+        WHERE ${buildCxcTenantSql(tenantFilter)}
           AND c."estado" IN ('PENDING', 'PARTIALLY_PAID')
       `
     ]);
