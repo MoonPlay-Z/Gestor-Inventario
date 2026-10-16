@@ -10,6 +10,21 @@ node_modules/
 **/.env.local
 **/.env.*.local
 
+# ── Datos sensibles: nunca versionar ────────────────────────────────────────
+# Backups de base de datos: contienen RIF, email, teléfono y datos de clientes.
+backup_*.json
+backup-*.json
+**/backup_*.json
+*_backup.json
+*.backup.json
+# Dumps de base de datos (los *.sql de esquema SÍ se versionan: no tienen datos)
+*.dump
+*.sql.gz
+# Credenciales y configuración local de la impresora fiscal
+fiscal.json
+data/config.json
+**/data/*.json
+
 # Log files
 *.log
 npm-debug.log*

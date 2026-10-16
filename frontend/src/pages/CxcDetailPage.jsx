@@ -10,7 +10,6 @@ import accountIcon from '@iconify/icons-mdi/account';
 import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
-import { useAuth } from '../context/AuthContext';
 import { Button, FieldError } from '../components/ui';
 
 const ESTADOS = {
@@ -23,7 +22,6 @@ export function CxcDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { empresa } = useAuth();
   const [cuenta, setCuenta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPago, setShowPago] = useState(false);
@@ -33,16 +31,41 @@ export function CxcDetailPage() {
   const [pagoForm, setPagoForm] = useState({ monto: '', metodoPago: 'CASH', monedaPago: 'USD', referenciaTransaccion: '', notas: '' });
   const [gestionForm, setGestionForm] = useState({ accion: 'LLAMADA', notas: '' });
   const [errors, setErrors] = useState({});
-  // Tasa manual de la empresa (cargada al login desde AuthContext)
-  const tasa = Number(empresa?.tasaDolar) || 1;
+  // La conversión la hace el backend. Solo se guarda lo que devuelve para
+  // mostrarlo; el frontend NUNCA calcula el equivalente ni valida el sobrepago,
+  // porque su tasa puede diferir de la que aplica el servidor.
+  const [conversion, setConversion] = useState(null);
 
-  const aUsd = (monto, moneda) => (moneda === 'VES' ? Number(monto) / tasa : Number(monto));
-  const desdeUsd = (montoUsd, moneda) => (moneda === 'VES' ? Number(montoUsd) * tasa : Number(montoUsd));
+  // Consulta al backend cuánto vale el abono en la moneda elegida. El frontend
+  // no calcula equivalencias: las pide para no divergir de la tasa del servidor.
+  const consultarConversion = async (monto, moneda) => {
+    try {
+      const data = await API.request(
+        `/cxc/${id}/conversion?moneda=${encodeURIComponent(moneda)}&monto=${encodeURIComponent(monto)}`
+      );
+      setConversion(data);
+      return data;
+    } catch (err) {
+      console.error('Error consultando conversión:', err);
+      return null;
+    }
+  };
+
+  // Refleja el equivalente en pantalla mientras el usuario escribe.
+  useEffect(() => {
+    if (!showPago) return;
+    const monto = Number(pagoForm.monto);
+    if (!monto || monto <= 0) { setConversion(null); return; }
+    const t = setTimeout(() => consultarConversion(monto, pagoForm.monedaPago), 300);
+    return () => clearTimeout(t);
+  }, [showPago, pagoForm.monto, pagoForm.monedaPago, id]);
 
   const loadCuenta = async () => {
     try {
       const data = await API.request(`/cxc/${id}`);
       setCuenta(data);
+      // El monto por defecto es el pendiente en USD; en Bs lo deja el backend
+      // para que el usuario vea un valor que no dispare el error de sobrepago.
       setPagoForm(p => ({ ...pagoForm, monto: data.montoPendiente }));
     } catch (err) {
       showToast('Error al cargar cuenta: ' + err.message, 'error');
@@ -58,9 +81,9 @@ export function CxcDetailPage() {
     const errs = {};
     if (!pagoForm.monto || Number(pagoForm.monto) <= 0) errs.monto = 'Ingrese un monto válido';
     if (pagoForm.metodoPago !== 'CASH' && !pagoForm.referenciaTransaccion.trim()) errs.referencia = 'Referencia obligatoria';
-    if (aUsd(pagoForm.monto, pagoForm.monedaPago) > Number(cuenta.montoPendiente) + 0.005) {
-      errs.monto = `Excede el saldo pendiente (${Utils.formatMoney(cuenta.montoPendiente)})`;
-    }
+    // El sobrepago lo valida el backend, que es quien conoce la tasa efectiva
+    // de la cuenta. Si lo validáramos aquí con la tasa del login mostraríamos un
+    // error equivocado (o dejaríamos pasar uno real).
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
@@ -229,9 +252,14 @@ export function CxcDetailPage() {
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Monto</label>
                     <input type="number" step="0.01" value={pagoForm.monto} onChange={(e) => setPagoForm({ ...pagoForm, monto: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
-                    {pagoForm.monedaPago === 'VES' && Number(pagoForm.monto) > 0 && (
+                    {conversion?.montoUsd !== undefined && (
                       <p className="mt-1 text-xs text-gray-500">
-                        Equivale a {Utils.formatMoney(aUsd(pagoForm.monto, 'VES'))} USD · tasa {tasa} Bs/USD
+                        Equivale a {Utils.formatMoney(conversion.montoUsd)} USD · tasa {conversion.tasaUsada} Bs/USD
+                      </p>
+                    )}
+                    {conversion?.excedePendiente && (
+                      <p className="mt-1 text-xs text-red-600">
+                        Excede el pendiente ({Utils.formatMoney(cuenta.montoPendiente)}). Se aplicara solo {Utils.formatMoney(conversion.usdAplicable)}.
                       </p>
                     )}
                     {errors.monto && <FieldError message={errors.monto} />}
@@ -248,16 +276,24 @@ export function CxcDetailPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
-                    <select value={pagoForm.monedaPago} onChange={(e) => {
+                    <select value={pagoForm.monedaPago} onChange={async (e) => {
                       const moneda = e.target.value;
-                      // Conserva el valor real del abono al cambiar de moneda
-                      setPagoForm(p => ({
-                        ...p,
-                        monedaPago: moneda,
-                        monto: Number(p.monto) > 0
-                          ? String(Number(desdeUsd(aUsd(p.monto, p.monedaPago), moneda).toFixed(2)))
-                          : p.monto
-                      }));
+                      const montoActual = Number(pagoForm.monto);
+                      setPagoForm(p => ({ ...p, monedaPago: moneda }));
+                      // Conserva el valor real del abono al cambiar de moneda,
+                      // preguntando al backend la tasa que EL aplicaría.
+                      if (montoActual > 0) {
+                        const convActual = await consultarConversion(montoActual, pagoForm.monedaPago);
+                        if (convActual?.montoUsd !== undefined) {
+                          const enNueva = await consultarConversion(convActual.montoUsd, moneda);
+                          if (enNueva?.maximoAceptable !== undefined) {
+                            const equivalente = moneda === 'VES'
+                              ? Number(convActual.montoUsd) * Number(enNueva.tasaUsada)
+                              : Number(convActual.montoUsd);
+                            setPagoForm(p => ({ ...p, monto: equivalente.toFixed(2) }));
+                          }
+                        }
+                      }
                     }} className="w-full px-3 py-2 border rounded-lg">
                       <option value="USD">USD</option>
                       <option value="VES">VES (Bs.)</option>

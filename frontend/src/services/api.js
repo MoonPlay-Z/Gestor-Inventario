@@ -149,6 +149,7 @@ export const API = {
     return request(`/productos${qs ? `?${qs}` : ''}`);
   },
   getMetricasInventario: () => request('/productos/metricas'),
+  getAlertasInventario: () => request('/productos/alertas'),
   getProducto: (id) => request(`/productos/${id}`),
   lookupProducto: (codigo) => request(`/productos/lookup/${encodeURIComponent(codigo)}`),
   getNextSku: () => request('/productos/next-sku'),

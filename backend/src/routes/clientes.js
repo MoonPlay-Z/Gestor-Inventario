@@ -111,7 +111,7 @@ router.post('/', async (req, res, next) => {
     if (!razonSocial?.trim()) throw createValidationError('La razón social es obligatoria', { razonSocial: 'Campo requerido' });
     if (!rifCedula?.trim())   throw createValidationError('El Documento/Identificación es obligatorio', { rifCedula: 'Campo requerido' });
 
-    const idRegex = /^[a-zA-Z0-9\-\.]{4,20}$/;
+    const idRegex = /^[a-zA-Z0-9-.]{4,20}$/;
     const cleanRif = rifCedula.trim().toUpperCase();
     if (!idRegex.test(cleanRif)) {
       throw createValidationError('Formato de Identificación inválido (debe contener entre 4 y 20 caracteres alfanuméricos)', { rifCedula: 'Formato inválido' });
@@ -148,7 +148,7 @@ router.put('/:id', async (req, res, next) => {
     if (!razonSocial?.trim()) throw createValidationError('La razón social es obligatoria');
     if (!rifCedula?.trim())   throw createValidationError('El Documento/Identificación es obligatorio');
 
-    const idRegex = /^[a-zA-Z0-9\-\.]{4,20}$/;
+    const idRegex = /^[a-zA-Z0-9-.]{4,20}$/;
     const cleanRif = rifCedula.trim().toUpperCase();
     if (!idRegex.test(cleanRif)) {
       throw createValidationError('Formato de Identificación inválido (debe contener entre 4 y 20 caracteres alfanuméricos)');

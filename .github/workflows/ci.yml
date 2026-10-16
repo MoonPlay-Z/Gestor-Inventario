@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'fix/**', 'feat/**']
+  pull_request:
+    branches: [main]
+
+# Cancela ejecuciones anteriores del mismo ref: ahorra minutos de runner.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── 1. Higiene del repo ────────────────────────────────────────────────
+  # Detecta secretos y artefactos sensibles antes de que lleguen al historial.
+  higiene:
+    name: Higiene del repositorio
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verificar que no haya archivos sensibles versionados
+        run: |
+          SENSIBLES=$(git ls-files \
+            | grep -iE '(^|/)(backup[_-].*\.json|.*\.(dump|sql\.gz)|fiscal\.json)$' \
+            || true)
+          if [ -n "$SENSIBLES" ]; then
+            echo "::error::Archivos sensibles versionados en git:"
+            echo "$SENSIBLES"
+            echo "::error::Sácalos con: git rm --cached <archivo> y añádelos al .gitignore"
+            exit 1
+          fi
+          echo "OK: no hay backups ni credenciales versionados"
+
+      - name: Verificar que .env está ignorado
+        run: |
+          if git ls-files --error-unmatch .env backend/.env 2>/dev/null; then
+            echo "::error::.env está versionado. Sácalo con git rm --cached y añádelo al .gitignore"
+            exit 1
+          fi
+          echo "OK: .env no está versionado"
+
+  # ── 2. Lint del backend ───────────────────────────────────────────────
+  # no-floating-promises es la regla que habría atrapado el bug de
+  # "[object Promise]" que llegó a producción.
+  lint:
+    name: Lint backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+
+  # ── 3. Schema de Prisma ───────────────────────────────────────────────
+  # Detecta drift entre schema.prisma y las migraciones antes del deploy.
+  prisma:
+    name: Prisma schema y migraciones
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: npx prisma validate
+      - run: npx prisma generate
+
+      # Comprueba que cada carpeta de migración tenga su .sql y que el historial
+      # esté ordenado (una migración editada rompe la reproducibilidad).
+      - name: Integridad de las migraciones
+        run: |
+          for d in prisma/migrations/*/; do
+            [ -f "$d/migration.sql" ] || { echo "::error::Migración sin migration.sql: $d"; exit 1; }
+          done
+          echo "OK: $(ls -d prisma/migrations/*/ | wc -l) migraciones íntegras"
+
+  # ── 4. Build del frontend ─────────────────────────────────────────────
+  frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run build
+
+      # El backend sirve frontend/dist en producción: si el build falla o queda
+      # incompleto, la SPA no arranca.
+      - name: Verificar artefactos del build
+        run: |
+          test -f dist/index.html || { echo "::error::No se generó dist/index.html"; exit 1; }
+          echo "OK: dist/ generado ($(du -sh dist | cut -f1))"

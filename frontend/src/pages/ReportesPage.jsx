@@ -74,6 +74,13 @@ export function ReportesPage() {
   const [currencySymbol, setCurrencySymbol] = useState('$');
   const [errors, setErrors] = useState({});
 
+  // Estado de paginación
+  const [paginaPerdidas, setPaginaPerdidas] = useState(1);
+  const [paginaGananciaProducto, setPaginaGananciaProducto] = useState(1);
+  const [paginaProductosTop, setPaginaProductosTop] = useState(1);
+  const [paginaClientesTop, setPaginaClientesTop] = useState(1);
+  const POR_PAGINA = 10;
+
   const puedeVerGanancias = rol === 'EMPRESA' || rol === 'SUPER_ADMIN';
   const puedeVerInversion = rol === 'EMPRESA' || rol === 'SUPER_ADMIN';
 
@@ -160,6 +167,13 @@ export function ReportesPage() {
   }, [periodo, fecha, comparar, rol, showToast]);
 
   useEffect(() => {
+    setPaginaPerdidas(1);
+    setPaginaGananciaProducto(1);
+    setPaginaProductosTop(1);
+    setPaginaClientesTop(1);
+  }, [periodo, fecha, comparar]);
+
+  useEffect(() => {
     loadData();
   }, [loadData]);
 
@@ -208,7 +222,7 @@ export function ReportesPage() {
 
   // Gráfico de ganancias
   const gananciasChartData = ganancias && ganancias.gananciaBruta !== null ? {
-    labels: ['Ingresos', 'Costo Vendido', 'Ganancia Bruta'],
+    labels: ['Ingresos', 'Costo Vendido', 'Ganancia'],
     datasets: [{
       data: [
         parseFloat(ganancias.ingresosTotales),
@@ -378,8 +392,7 @@ export function ReportesPage() {
             item.producto,
             `${Number(item.cantidad).toLocaleString('es-VE')} ${item.unidad || ''}`.trim(),
             Utils.formatMoney(item.subtotal, '$'),
-            Utils.formatMoney(item.costo, '$'),
-            Utils.formatMoney(item.perdida, '$'),
+            Utils.formatMoney(item.ganancia, '$'),
           ]),
           styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
           headStyles: { fillColor: [180, 35, 24] },
@@ -455,7 +468,7 @@ export function ReportesPage() {
         rows.push(['Ganancias']);
         rows.push(['Ingresos Totales', ganancias.ingresosTotales]);
         rows.push(['Costo Vendido', ganancias.costoVendido]);
-        rows.push(['Ganancia Bruta', ganancias.gananciaBruta ?? 'No disponible por falta de costo histórico']);
+        rows.push(['Ganancia', ganancias.gananciaBruta ?? 'No disponible por falta de costo histórico']);
         rows.push(['Margen (%)', ganancias.margen ?? 'No disponible']);
         rows.push([]);
         if (ganancias.productosConPerdida?.length > 0) {
@@ -659,7 +672,7 @@ export function ReportesPage() {
                             ? 'Cargando…'
                             : '—'}
                     </div>
-                    <div className="metric-label">Ganancia Bruta</div>
+                    <div className="metric-label">{ganancias.etiquetaGanancia || 'Ganancia'}</div>
                     {ganancias && (
                       <div style={{ fontSize: '0.75rem', marginTop: '4px', color: textColor }}>
                         Margen: {ganancias.margen === null ? 'No disponible' : `${ganancias.margen}%`}
@@ -750,7 +763,9 @@ export function ReportesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {ganancias.productosConPerdida.slice(0, 20).map((item, index) => (
+                      {ganancias.productosConPerdida
+                        .slice((paginaPerdidas - 1) * POR_PAGINA, paginaPerdidas * POR_PAGINA)
+                        .map((item, index) => (
                         <tr key={`${item.facturaId}-${item.producto}-${index}`}>
                           <td>#{item.facturaId}</td>
                           <td>{new Date(item.fechaHora).toLocaleString('es-VE')}</td>
@@ -758,17 +773,108 @@ export function ReportesPage() {
                           <td>{item.producto}</td>
                           <td>{Number(item.cantidad).toLocaleString('es-VE')} {item.unidad || ''}</td>
                           <td>{Utils.formatMoney(item.subtotal, '$')}</td>
-                          <td>{Utils.formatMoney(item.costo, '$')}</td>
-                          <td style={{ color: '#b42318', fontWeight: 600 }}>{Utils.formatMoney(item.perdida, '$')}</td>
+                          <td style={{ color: '#b42318', fontWeight: 600 }}>{Utils.formatMoney(item.ganancia, '$')}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-                {ganancias.productosConPerdida.length > 20 && (
-                  <p className="card-subtitle" style={{ marginTop: '12px' }}>
-                    Se muestran las primeras 20 líneas; el PDF y CSV incluyen las {ganancias.productosConPerdida.length} líneas del período.
-                  </p>
+                {ganancias.productosConPerdida.length > POR_PAGINA && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+                    <button
+                      className="btn btn-sm btn-secondary"
+                      disabled={paginaPerdidas === 1}
+                      onClick={() => setPaginaPerdidas(p => p - 1)}
+                    >
+                      Anterior
+                    </button>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                      Página {paginaPerdidas} de {Math.ceil(ganancias.productosConPerdida.length / POR_PAGINA)}
+                    </span>
+                    <button
+                      className="btn btn-sm btn-secondary"
+                      disabled={paginaPerdidas >= Math.ceil(ganancias.productosConPerdida.length / POR_PAGINA)}
+                      onClick={() => setPaginaPerdidas(p => p + 1)}
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* Ganancia por Producto */}
+            {puedeVerGanancias && ganancias?.gananciaPorProducto && ganancias.gananciaPorProducto.length > 0 && (
+              <section className="card" style={{ marginBottom: '24px' }}>
+                <div className="card-header">
+                  <div>
+                    <h3 className="card-title">Ganancia por Producto</h3>
+                    <p className="card-subtitle">Detalle de ganancia por cada producto vendido en el período</p>
+                  </div>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="table">
+                    <thead>
+                      <tr>
+                        <th>Producto</th>
+                        <th>SKU</th>
+                        <th>Unidad</th>
+                        <th>Cantidad Vendida</th>
+                        <th>Ingresos</th>
+                        <th>Costo</th>
+                        <th>Ganancia</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ganancias.gananciaPorProducto
+                        .slice((paginaGananciaProducto - 1) * POR_PAGINA, paginaGananciaProducto * POR_PAGINA)
+                        .map((p, i) => (
+                        <tr key={i}>
+                          <td>{p.nombre}</td>
+                          <td>{p.sku}</td>
+                          <td>{p.unidad || '—'}</td>
+                          <td>{p.cantidadVendida}</td>
+                          <td>{Utils.formatMoney(p.ingresos, currencySymbol)}</td>
+                          <td>{Utils.formatMoney(p.costo, currencySymbol)}</td>
+                          <td style={{ fontWeight: 600, color: Number(p.ganancia) < 0 ? '#b42318' : '#10b981' }}>
+                            {Utils.formatMoney(p.ganancia, currencySymbol)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr style={{ fontWeight: 700, background: isDark ? '#1e2130' : '#f8f9fc', borderTop: '2px solid var(--border-color)' }}>
+                        <td colSpan={3}>Total General</td>
+                        <td>{ganancias.gananciaPorProducto.reduce((acc, p) => acc + Number(p.cantidadVendida), 0).toFixed(2)}</td>
+                        <td>{Utils.formatMoney(ganancias.gananciaPorProducto.reduce((acc, p) => acc + parseFloat(p.ingresos), 0), currencySymbol)}</td>
+                        <td>{Utils.formatMoney(ganancias.gananciaPorProducto.reduce((acc, p) => acc + parseFloat(p.costo), 0), currencySymbol)}</td>
+                        <td style={{ color: Number(ganancias.gananciaBruta) < 0 ? '#b42318' : '#10b981' }}>
+                          {Utils.formatMoney(ganancias.gananciaPorProducto.reduce((acc, p) => acc + parseFloat(p.ganancia), 0), currencySymbol)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                {ganancias.gananciaPorProducto.length > POR_PAGINA && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+                    <button
+                      className="btn btn-sm btn-secondary"
+                      disabled={paginaGananciaProducto === 1}
+                      onClick={() => setPaginaGananciaProducto(p => p - 1)}
+                    >
+                      Anterior
+                    </button>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                      Página {paginaGananciaProducto} de {Math.ceil(ganancias.gananciaPorProducto.length / POR_PAGINA)}
+                    </span>
+                    <button
+                      className="btn btn-sm btn-secondary"
+                      disabled={paginaGananciaProducto >= Math.ceil(ganancias.gananciaPorProducto.length / POR_PAGINA)}
+                      onClick={() => setPaginaGananciaProducto(p => p + 1)}
+                    >
+                      Siguiente
+                    </button>
+                  </div>
                 )}
               </section>
             )}
@@ -937,6 +1043,7 @@ export function ReportesPage() {
                     <thead>
                       <tr>
                         <th>Producto</th>
+                        <th>Unidad</th>
                         <th>Cantidad</th>
                         <th>Ingresos</th>
                       </tr>
@@ -947,12 +1054,15 @@ export function ReportesPage() {
                           <td colSpan={3} className="empty-state">No hay datos</td>
                         </tr>
                       ) : (
-                        productosTop.map((p, i) => (
+                        productosTop
+                          .slice((paginaProductosTop - 1) * POR_PAGINA, paginaProductosTop * POR_PAGINA)
+                          .map((p, i) => (
                           <tr key={i}>
                             <td>
                               <div style={{ fontWeight: 500 }}>{p.nombre}</div>
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{p.sku}</div>
                             </td>
+                            <td style={{ color: 'var(--text-secondary)' }}>{p.unidad || '—'}</td>
                             <td style={{ fontWeight: 600 }}>{p.cantidadVendida}</td>
                             <td style={{ fontWeight: 600 }}>{Utils.formatMoney(p.ingresos, currencySymbol)}</td>
                           </tr>
@@ -961,6 +1071,13 @@ export function ReportesPage() {
                     </tbody>
                   </table>
                 </div>
+                {productosTop.length > POR_PAGINA && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+                    <button className="btn btn-sm btn-secondary" disabled={paginaProductosTop === 1} onClick={() => setPaginaProductosTop(p => p - 1)}>Anterior</button>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Página {paginaProductosTop} de {Math.ceil(productosTop.length / POR_PAGINA)}</span>
+                    <button className="btn btn-sm btn-secondary" disabled={paginaProductosTop >= Math.ceil(productosTop.length / POR_PAGINA)} onClick={() => setPaginaProductosTop(p => p + 1)}>Siguiente</button>
+                  </div>
+                )}
               </div>
 
               {/* Clientes Top */}

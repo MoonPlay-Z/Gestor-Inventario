@@ -1,0 +1,17 @@
+{
+  "//": "Solo para ESLint con typed linting (no-floating-promises). El proyecto es JavaScript CommonJS; esto no compila ni emite nada.",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": false
+  },
+  "include": ["src/**/*.js", "scripts/**/*.js", "eslint.config.js"],
+  "exclude": ["node_modules", "src/generated"]
+}

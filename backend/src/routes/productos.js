@@ -53,10 +53,59 @@ router.get('/metricas', async (req, res, next) => {
   }
 });
 
+// GET /api/productos/alertas — Sistema de alertas de inventario
+router.get('/alertas', async (req, res, next) => {
+  try {
+    const empresaId = req.user.empresaId || req.user.id;
+
+    const [conIva, costoMayorAVenta] = await Promise.all([
+      prisma.$queryRaw`
+        SELECT id, sku, nombre, "tasaImpuesto", "precioVenta", "costoCompra", "unidadMedida"
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+          AND "tasaImpuesto" > 0
+        ORDER BY nombre ASC
+      `,
+      prisma.$queryRaw`
+        SELECT id, sku, nombre, "tasaImpuesto", "precioVenta", "costoCompra", "unidadMedida",
+          ("costoCompra" - "precioVenta") AS diferencia
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+          AND "costoCompra" > "precioVenta"
+        ORDER BY diferencia DESC
+      `,
+    ]);
+
+    res.json({
+      conIva: conIva.map(p => ({
+        id: p.id,
+        sku: p.sku,
+        nombre: p.nombre,
+        tasaImpuesto: Number(p.tasaImpuesto),
+        precioVenta: Number(p.precioVenta),
+        costoCompra: Number(p.costoCompra),
+        unidadMedida: p.unidadMedida,
+      })),
+      costoMayorAVenta: costoMayorAVenta.map(p => ({
+        id: p.id,
+        sku: p.sku,
+        nombre: p.nombre,
+        tasaImpuesto: Number(p.tasaImpuesto),
+        precioVenta: Number(p.precioVenta),
+        costoCompra: Number(p.costoCompra),
+        unidadMedida: p.unidadMedida,
+        diferencia: Number(p.diferencia),
+      })),
+    });
+  } catch (err) { next(err); }
+});
+
 // GET /api/productos
 router.get('/', async (req, res, next) => {
   try {
-    const { q, soloActivos = 'true', stockBajo, categoria, page = 1, limit, limite } = req.query;
+    const { q, soloActivos = 'true', stockBajo, categoria, alertaIva, alertaCostoVenta, page = 1, limit, limite } = req.query;
     const pageNumber = parseInt(page) || 1;
     const take = parseInt(limit ?? limite) || 25;
     const skip = (pageNumber - 1) * take;
@@ -65,6 +114,29 @@ router.get('/', async (req, res, next) => {
     const where = { empresaId };
     if (soloActivos === 'true') where.activo = true;
     if (categoria) where.categoria = categoria;
+    if (alertaIva === 'true') where.tasaImpuesto = { gt: 0 };
+    if (alertaCostoVenta === 'true') {
+      const productosRaw = await prisma.$queryRaw`
+        SELECT id, sku, nombre, descripcion, "imagenUrl", "unidadMedida", "esVentaPorPeso",
+          "precioPorKilo", "toleranciaPeso", "stockActual", "stockMinimo", "precioVenta",
+          "costoCompra", "tasaImpuesto", categoria, activo, "empresaId", "createdAt", "updatedAt"
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+          AND "costoCompra" > "precioVenta"
+        ORDER BY nombre ASC
+        LIMIT ${take} OFFSET ${skip}
+      `;
+      const totalRaw = await prisma.$queryRaw`
+        SELECT COUNT(*) AS count FROM productos
+        WHERE "empresaId" = ${empresaId} AND activo = true AND "costoCompra" > "precioVenta"
+      `;
+      const productos = productosRaw.map(p => ({
+        ...p,
+        stockBajoMinimo: Number(p.stockActual) <= Number(p.stockMinimo),
+      }));
+      return res.json({ data: productos, total: Number(totalRaw[0].count), page: pageNumber, limit: take });
+    }
     if (q) {
       const terms = q.split(' ').filter(t => t.length > 0);
       where.AND = terms.map(term => ({

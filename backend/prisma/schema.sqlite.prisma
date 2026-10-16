@@ -188,6 +188,7 @@ model Factura {
   observaciones    String?
   anuladoPor       String?
   motivoAnulacion  String?
+  requestId        String?  @unique
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

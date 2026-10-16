@@ -5,7 +5,8 @@ const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
 const { paginate, paginatedResponse } = require('../utils/pagination');
-const { MONEDAS_PAGO, convertirAFactura, normalizarPagoAFactura } = require('../utils/paymentCurrency');
+const { MONEDAS_PAGO, convertirAFactura, sumarPagosNormalizados } = require('../utils/paymentCurrency');
+const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
 
 // Medio centavo de tolerancia: absorber el excedente de redondeo que aparece al
@@ -16,6 +17,9 @@ const TOLERANCIA_REDONDEO = new Decimal('0.005');
 router.use(requireRole('EMPRESA', 'CAJA'));
 
 const getEmpresaId = (req) => req.user?.empresaId || req.user?.id;
+// Sube por el Usuario padre para obtener el id real en `empresas`, necesario
+// para resolver la tasa por empresa (las sub-cuentas CAJA tienen empresaRefId=NULL).
+const getEmpresaRefId = (req) => resolverEmpresaRefId(req);
 const facturaTenantFilter = (empresaId) => ({
   OR: [
     { usuarioId: empresaId },
@@ -116,17 +120,16 @@ router.post('/', async (req, res, next) => {
       throw createBusinessError('La factura ya está completamente pagada');
     }
 
+    const empresaRefId = await getEmpresaRefId(req);
     const monedaDelPago = monedaPago || factura.moneda || 'USD';
-    const totalPagado = factura.pagos.reduce(
-      (acc, p) => acc.add(normalizarPagoAFactura(p, factura)),
-      new Decimal(0)
-    );
+    const totalPagado = await sumarPagosNormalizados(factura.pagos, factura, empresaRefId);
     const totalFactura     = new Decimal(factura.total.toString());
     const balancePendiente = totalFactura.sub(totalPagado);
-    const montoEnMonedaFactura = convertirAFactura(
+    const montoEnMonedaFactura = await convertirAFactura(
       montoPago,
       monedaDelPago,
-      factura
+      factura,
+      empresaRefId
     );
 
     if (montoEnMonedaFactura.gt(balancePendiente.plus(TOLERANCIA_REDONDEO))) {
@@ -226,10 +229,7 @@ router.post('/', async (req, res, next) => {
     });
 
     // Calcular totales para la respuesta
-    const totalPagadoFinal = facturaActualizada.pagos.reduce(
-      (acc, p) => acc.add(normalizarPagoAFactura(p, facturaActualizada)),
-      new Decimal(0)
-    );
+    const totalPagadoFinal = await sumarPagosNormalizados(facturaActualizada.pagos, facturaActualizada, empresaRefId);
     const balanceFinal = totalFactura.sub(totalPagadoFinal);
 
     res.status(201).json({
@@ -294,10 +294,9 @@ router.delete('/:id', async (req, res, next) => {
 
       // Recalcular estado
       const otrosPagos = factura.pagos.filter(p => p.id !== req.params.id);
-      const totalOtros = otrosPagos.reduce(
-        (acc, p) => acc.add(normalizarPagoAFactura(p, factura)),
-        new Decimal(0)
-      );
+      // Se calcula fuera de la transacción: la conversión puede requerir I/O
+      // (tasa por empresa) y no debe bloquear filas mientras tanto.
+      const totalOtros = await sumarPagosNormalizados(otrosPagos, factura, await getEmpresaRefId(req));
       const totalFactura = new Decimal(factura.total.toString());
 
       let nuevoEstado;

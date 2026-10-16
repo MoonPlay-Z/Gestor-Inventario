@@ -42,6 +42,14 @@ export function PosPage() {
   const [referencia, setReferencia] = useState('');
   const [cuotas, setCuotas] = useState(1);
   const [loadingEmitir, setLoadingEmitir] = useState(false);
+  // Guard síncrono contra doble emisión. `loadingEmitir` no sirve: el estado
+  // solo llega al DOM en el siguiente render, así que dos clics rápidos
+  // (o Enter repetido) disparan onSubmit antes de que el botón se deshabilite.
+  // useRef se actualiza en el momento, antes de cualquier await.
+  const emitiendoRef = useRef(false);
+  // Clave de idempotencia: sobrevive a recarga y reintentos del proxy, donde
+  // el guard de ref se pierde. El backend la usa para no crear dos facturas.
+  const requestIdRef = useRef(null);
   const [monedaVisualizacion, setMonedaVisualizacion] = useState('USD'); // 'USD' o 'VES'
 
   const [showClienteModal, setShowClienteModal] = useState(false);
@@ -274,6 +282,9 @@ export function PosPage() {
 
   const handleEmitirFactura = async (e) => {
     e.preventDefault();
+    // Guard síncrono: corta el segundo envío aunque el botón aún no se vea
+    // deshabilitado. Se libera siempre en el finally.
+    if (emitiendoRef.current) return;
     if (!selectedClienteId) {
       showToast('Selecciona un cliente para la factura', 'error');
       return;
@@ -283,8 +294,15 @@ export function PosPage() {
       return;
     }
 
+    emitiendoRef.current = true;
     setLoadingEmitir(true);
     const tipoDocumentoEmitido = tipoDocumento;
+    // Se reutiliza la misma clave si el usuario reintenta tras un fallo de red:
+    // el backend devolverá la factura ya creada en lugar de duplicarla.
+    if (!requestIdRef.current) {
+      requestIdRef.current = (crypto.randomUUID?.()
+        ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    }
     try {
       const paymentMethodMap = {
         'EFECTIVO_USD': 'CASH',
@@ -295,6 +313,7 @@ export function PosPage() {
       };
 
       const payload = {
+        requestId: requestIdRef.current,
         clienteId: selectedClienteId,
         moneda: 'USD',
         tasaCambio: tasaDolar,
@@ -329,9 +348,14 @@ export function PosPage() {
       // Recargar productos para refrescar el stock actualizado
       const prodRes = await API.getProductos({ limite: 100 });
       setProductos(prodRes.data || []);
+      // Venta confirmada: la próxima venta es una venta nueva, con clave nueva.
+      requestIdRef.current = null;
     } catch (err) {
       showToast('Error al emitir factura: ' + err.message, 'error');
+      // Se conserva requestId para que un reintento no duplique la venta: el
+      // backend devolverá la factura ya creada si llegó a crearse.
     } finally {
+      emitiendoRef.current = false;
       setLoadingEmitir(false);
     }
   };

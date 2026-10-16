@@ -57,8 +57,21 @@ export function InventarioPage() {
   const [stockForm, setStockForm] = useState({ cantidad: '', operacion: 'set', unidadMedida: '' });
   const [metricas, setMetricas] = useState(null);
   const [skuTocado, setSkuTocado] = useState(false);
+  const [alertas, setAlertas] = useState(null);
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [filtroIva, setFiltroIva] = useState(false);
+  const [filtroCostoVenta, setFiltroCostoVenta] = useState(false);
   const debounceRef = useRef(null);
   const LIMIT = 20;
+
+  const loadAlertas = useCallback(async () => {
+    try {
+      const data = await API.getAlertasInventario();
+      setAlertas(data);
+    } catch (err) {
+      console.error('Error cargando alertas:', err);
+    }
+  }, []);
 
   const loadMetricas = useCallback(async () => {
     try {
@@ -69,18 +82,18 @@ export function InventarioPage() {
     }
   }, []);
 
-  const loadProductos = useCallback(async (q, p, bajo, cat) => {
+  const loadProductos = useCallback(async (q, p, bajo, cat, iva, costoVenta) => {
     setLoading(true);
     try {
       const params = { page: p, limit: LIMIT };
       if (q) params.q = q;
       if (bajo) params.stockBajo = 'true';
       if (cat) params.categoria = cat;
+      if (iva) params.alertaIva = 'true';
+      if (costoVenta) params.alertaCostoVenta = 'true';
       const data = await API.getProductos(params);
       setProductos(data.data || []);
       setTotal(data.total || 0);
-      
-      // Auto-actualizar categorías disponibles
       setCategorias(prev => {
         const nuevas = new Set(prev);
         (data.data || []).forEach(p => {
@@ -95,17 +108,24 @@ export function InventarioPage() {
     }
   }, []);
 
-  useEffect(() => { 
-    loadProductos(search, page, soloStockBajo, categoriaFiltro); 
+  const recargar = useCallback(() => {
+    loadProductos(search, page, soloStockBajo, categoriaFiltro, filtroIva, filtroCostoVenta);
     loadMetricas();
-  }, [page, soloStockBajo, categoriaFiltro]);
+    loadAlertas();
+  }, [search, page, soloStockBajo, categoriaFiltro, filtroIva, filtroCostoVenta, loadProductos, loadMetricas, loadAlertas]);
+
+  useEffect(() => {
+    loadProductos(search, page, soloStockBajo, categoriaFiltro, filtroIva, filtroCostoVenta);
+    loadMetricas();
+    loadAlertas();
+  }, [page, soloStockBajo, categoriaFiltro, filtroIva, filtroCostoVenta]);
 
   const handleSearchChange = (e) => {
     const val = e.target.value;
     setSearch(val);
     setPage(1);
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => loadProductos(val, 1, soloStockBajo, categoriaFiltro), 350);
+    debounceRef.current = setTimeout(() => loadProductos(val, 1, soloStockBajo, categoriaFiltro, filtroIva, filtroCostoVenta), 350);
   };
 
   const openCreate = async () => {
@@ -191,7 +211,7 @@ export function InventarioPage() {
         showToast('Producto creado exitosamente', 'success');
       }
       setShowModal(false);
-      loadProductos(search, page, soloStockBajo, categoriaFiltro);
+      recargar();
     } catch (err) {
       if (err.fields) setFieldErrors(err.fields);
       const errorMessage = getErrorMessage(err, 'Error al guardar el producto');
@@ -204,7 +224,7 @@ export function InventarioPage() {
     try {
       await API.eliminarProducto(p.id);
       showToast('Producto desactivado', 'success');
-      loadProductos(search, page, soloStockBajo, categoriaFiltro);
+      recargar();
     } catch (err) { showToast(err.message, 'error'); }
   };
 
@@ -220,7 +240,7 @@ export function InventarioPage() {
       await API.ajustarStock(stockTarget.id, cantidad, stockForm.operacion, stockForm.unidadMedida);
       showToast('Stock ajustado', 'success');
       setShowStockModal(false);
-      loadProductos(search, page, soloStockBajo, categoriaFiltro);
+      recargar();
     } catch (err) { showToast(err.message, 'error'); }
     finally { setSaving(false); }
   };
@@ -272,14 +292,45 @@ export function InventarioPage() {
           </div>
         </div>
 
+        {alertas && (alertas.conIva.length > 0 || alertas.costoMayorAVenta.length > 0) && (
+          <div className="card" style={{
+            padding: '1rem 1.25rem',
+            marginBottom: '1rem',
+            border: '1px solid var(--warning-border, #f59e0b)',
+            background: 'var(--warning-bg, #fffbeb)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Icon icon="mdi:alert-circle" style={{ color: 'var(--warning, #f59e0b)', fontSize: '1.5rem' }} />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.9375rem' }}>
+                  {alertas.conIva.length + alertas.costoMayorAVenta.length} producto(s) requieren atencion
+                </div>
+                <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                  {alertas.conIva.length > 0 && <span>{alertas.conIva.length} con IVA</span>}
+                  {alertas.conIva.length > 0 && alertas.costoMayorAVenta.length > 0 && <span> · </span>}
+                  {alertas.costoMayorAVenta.length > 0 && <span>{alertas.costoMayorAVenta.length} con costo mayor a venta</span>}
+                </div>
+              </div>
+            </div>
+            <button onClick={() => setShowAlertModal(true)} className="btn btn-secondary btn-sm">
+              Ver detalles
+            </button>
+          </div>
+        )}
+
         <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem' }}>
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <input type="text" className="form-control" placeholder="Buscar por nombre, SKU, categoría..."
               value={search} onChange={handleSearchChange} style={{ flex: 1, minWidth: '220px' }} />
-            <select 
-              className="form-select" 
+            <select
+              className="form-select"
               style={{ width: 'auto', minWidth: '150px' }}
-              value={categoriaFiltro} 
+              value={categoriaFiltro}
               onChange={(e) => { setCategoriaFiltro(e.target.value); setPage(1); }}
             >
               <option value="">Todas las categorías</option>
@@ -291,7 +342,15 @@ export function InventarioPage() {
               <input type="checkbox" checked={soloStockBajo} onChange={(e) => { setSoloStockBajo(e.target.checked); setPage(1); }} style={{ accentColor: 'var(--danger)' }} />
               Solo stock bajo
             </label>
-            <button onClick={() => loadProductos(search, page, soloStockBajo, categoriaFiltro)} className="btn btn-secondary btn-sm inline-flex items-center gap-1">
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={filtroIva} onChange={(e) => { setFiltroIva(e.target.checked); setPage(1); }} style={{ accentColor: 'var(--warning, #f59e0b)' }} />
+              Con IVA
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={filtroCostoVenta} onChange={(e) => { setFiltroCostoVenta(e.target.checked); setPage(1); }} style={{ accentColor: 'var(--danger)' }} />
+              Costo &gt; Venta
+            </label>
+            <button onClick={recargar} className="btn btn-secondary btn-sm inline-flex items-center gap-1">
               <Icon icon="mdi:refresh" className="h-4 w-4" /> Recargar
             </button>
           </div>
@@ -335,8 +394,30 @@ export function InventarioPage() {
                     </td>
                     <td style={{ fontWeight: 700, color: 'var(--accent)' }}>{Utils.formatMoney(p.precioVenta)}</td>
                     <td style={{ color: 'var(--text-secondary)' }}>{Utils.formatMoney(p.costoCompra)}</td>
-                    <td style={{ fontWeight: 600, color: 'var(--success)' }}>{Utils.formatMoney(p.precioVenta - p.costoCompra)}</td>
-                    <td>{p.tasaImpuesto}%</td>
+                    <td style={{
+                      fontWeight: 600,
+                      color: p.costoCompra > p.precioVenta ? 'var(--danger)' : 'var(--success)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}>
+                      {Utils.formatMoney(p.precioVenta - p.costoCompra)}
+                      {p.costoCompra > p.precioVenta && (
+                        <Icon icon="mdi:alert-circle" style={{ color: 'var(--danger)', fontSize: '0.85em' }} />
+                      )}
+                    </td>
+                    <td style={{
+                      fontWeight: p.tasaImpuesto > 0 ? 700 : 400,
+                      color: p.tasaImpuesto > 0 ? 'var(--warning, #f59e0b)' : 'var(--text-secondary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}>
+                      {p.tasaImpuesto}%
+                      {p.tasaImpuesto > 0 && (
+                        <Icon icon="mdi:receipt" style={{ color: 'var(--warning, #f59e0b)', fontSize: '0.85em' }} />
+                      )}
+                    </td>
                     <td>
                       <span style={{ fontWeight: 700, color: p.stockBajoMinimo ? 'var(--danger)' : 'var(--success)' }}>
                         {p.stockActual}
@@ -376,6 +457,89 @@ export function InventarioPage() {
           )}
         </div>
       </div>
+
+      {/* Modal Detalle de Alertas */}
+      {showAlertModal && alertas && (
+        <div className="modal-overlay open" onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setShowAlertModal(false);
+          }
+        }}>
+          <div className="modal" style={{ maxWidth: '600px', width: '95%', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div className="modal-header">
+              <h3 className="modal-title">Alertas de Inventario</h3>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setShowAlertModal(false)}>
+                <Icon icon="mdi:close" className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="modal-body">
+              {alertas.conIva.length > 0 && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--warning, #f59e0b)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Icon icon="mdi:receipt" className="h-4 w-4" />
+                    Productos con IVA ({alertas.conIva.length})
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {alertas.conIva.map(p => (
+                      <div key={p.id} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '0.75rem',
+                        background: 'var(--surface3, #f8f9fc)',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                      }}>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{p.sku}</div>
+                        </div>
+                        <span style={{ fontWeight: 700, color: 'var(--warning, #f59e0b)' }}>{p.tasaImpuesto}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {alertas.costoMayorAVenta.length > 0 && (
+                <div>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--danger)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Icon icon="mdi:alert-circle" className="h-4 w-4" />
+                    Costo mayor a venta ({alertas.costoMayorAVenta.length})
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {alertas.costoMayorAVenta.map(p => (
+                      <div key={p.id} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '0.75rem',
+                        background: 'var(--surface3, #f8f9fc)',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                      }}>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            Costo: {Utils.formatMoney(p.costoCompra)} &gt; Venta: {Utils.formatMoney(p.precioVenta)}
+                          </div>
+                        </div>
+                        <span style={{ fontWeight: 700, color: 'var(--danger)', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
+                          -{Utils.formatMoney(p.diferencia)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {alertas.conIva.length === 0 && alertas.costoMayorAVenta.length === 0 && (
+                <div className="empty-state">No hay alertas activas</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Crear/Editar Producto */}
       {showModal && (
@@ -530,7 +694,7 @@ export function InventarioPage() {
                     <div className="form-group">
                       <label className="form-label">
                         Costo de Compra (USD)
-                        <span className="help-icon" title="Precio al que se adquirió el producto del proveedor. Se usa para calcular la ganancia bruta.">?</span>
+                        <span className="help-icon" title="Precio al que se adquirió el producto del proveedor. Se usa para calcular la ganancia.">?</span>
                       </label>
                       <input type="number" step="0.01" min="0" className="form-control" value={form.costoCompra}
                         onChange={e => setForm(f => ({ ...f, costoCompra: e.target.value }))} />

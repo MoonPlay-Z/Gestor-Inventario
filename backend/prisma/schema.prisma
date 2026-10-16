@@ -222,6 +222,13 @@ model Factura {
   observaciones    String?
   anuladoPor       String?
   motivoAnulacion  String?
+
+  // ── Idempotencia de emisión ──
+  // Clave enviada por el cliente (POS) para impedir que un doble clic, una
+  // recarga o un reintento del proxy generen dos facturas. NULL en las facturas
+  // históricas y en las creadas por otros flujos (cotizaciones, pruebas).
+  requestId        String?       @unique
+
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 

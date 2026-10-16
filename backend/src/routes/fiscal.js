@@ -1,6 +1,5 @@
 const express = require('express');
 const prisma   = require('../db/prisma');
-const { Decimal } = require('decimal.js');
 const { authMiddleware, requireRole } = require('../middleware/auth');
 const { getFiscalMachine } = require('../services/fiscalMachine');
 
@@ -87,13 +86,13 @@ router.post('/imprimir/:facturaId', async (req, res) => {
     }
 
     const fm = getFiscalMachine();
+    // La alícuota se resuelve por línea en imprimirVenta desde
+    // items[].tasaImpuestoAplicada (congelada al facturar). No se envía una tasa
+    // única a nivel de factura: el IVA se liquida por línea y puede variar
+    // entre productos de una misma factura.
     const result = await fm.imprimirVenta({
       cliente:       factura.cliente,
       items:         factura.items,
-      subtotal:      new Decimal(factura.subtotal.toString()).toNumber(),
-      impuesto:      new Decimal(factura.impuestoTotal.toString()).toNumber(),
-      total:         new Decimal(factura.total.toString()).toNumber(),
-      tasaIva:       factura.tasaIva ? new Decimal(factura.tasaIva.toString()).toNumber() : 16,
       numeroFactura: factura.numeroFactura,
     });
 

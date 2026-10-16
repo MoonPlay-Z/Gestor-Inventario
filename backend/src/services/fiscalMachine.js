@@ -26,8 +26,8 @@ const EPSON_CMDS = {
   STATUS:        '\x10\x04\x01',     // Estado de la impresora
   OPEN_FISCAL:   'S',                // Abrir documento fiscal de venta
   CLOSE_FISCAL:  'T',                // Cerrar / subtotalizar documento
-  ADD_ITEM:      (desc, qty, price, taxId) =>
-    `@${qty.toFixed(0)};${price.toFixed(2)};${taxId};${desc.substring(0, 20)}\n`,
+  ADD_ITEM:      (desc, qty, price, taxId, qtyDecimals = 3) =>
+    `@${Number(qty).toFixed(qtyDecimals)};${Number(price).toFixed(2)};${taxId};${desc.substring(0, 20)}\n`,
   REPORT_X:      '\x1B\x76\x00',     // Reporte X (no cierra período)
   REPORT_Z:      '\x1B\x76\x01',     // Reporte Z (cierra período fiscal del día)
   CUT_PAPER:     '\x1D\x56\x42\x00', // Corte total de papel
@@ -39,6 +39,29 @@ class FiscalMachine {
     this.connected  = false;
     this.config     = this._loadConfig();
     this.lastStatus = null;
+  }
+
+  /**
+   * Mapea la tasa de IVA de una línea al código de alícuota que entiende la
+   * impresora. El mapeo por defecto cubre las alícuotasBye Venezuelan más
+   * comunes; se puede sobrescribir por empresa vía `fiscal.json`
+   * (clave `mapaAlicuotas`: { "0": "0", "16": "1", "8": "2" }).
+   *
+   * El código de alícuota NO es una tasa: es el índice que la impresora tiene
+   * cargado en su tabla de impuestos. Si el equipo no la reconoce, hay que
+   * configurarla en la impresora o mapearla aquí.
+   */
+  _codigoAlicuota(tasaIva) {
+    const tasa = Number(tasaIva);
+    const mapa = this.config?.mapaAlicuotas || {};
+    const codigo = mapa[String(tasa)];
+    if (codigo != null) return String(codigo);
+
+    // Fallback: alícuota general 16% → código 1 (convención de uso común).
+    if (Number.isFinite(tasa) && tasa !== 16) {
+      console.warn(`[Fiscal] Tasa de IVA ${tasa}% sin código de alícuota configurado; se usa el general (1). Configura "mapaAlicuotas" en fiscal.json.`);
+    }
+    return '1';
   }
 
   _loadConfig() {
@@ -163,7 +186,12 @@ class FiscalMachine {
 
   /**
    * Imprime un documento fiscal de venta.
-   * @param {Object} factura - Datos de la factura { cliente, items, subtotal, impuesto, total, tasaIva }
+   * @param {Object} factura - { cliente, items, subtotal, impuesto, total, numeroFactura }
+   *
+   * La alícuota se resuelve POR LÍNEA desde `item.tasaImpuestoAplicada`, que es
+   * el valor congelado al facturar. No se usa una tasa única a nivel de factura:
+   * el IVA en Venezuela se liquida por línea y puede variar entre productos de
+   * una misma factura (exento 0%, reducido 8%, general 16%).
    */
   async imprimirVenta(factura) {
     if (!this.connected) throw new Error('Máquina fiscal no conectada. Configure el puerto en Ajustes → Máquina Fiscal.');
@@ -171,14 +199,8 @@ class FiscalMachine {
     const {
       cliente,
       items = [],
-      subtotal = 0,
-      impuesto = 0,
-      total    = 0,
-      tasaIva  = 16,
       numeroFactura,
     } = factura;
-
-    const taxId = '1'; // ID de alícuota de IVA en la máquina
 
     // 1. Encabezado fiscal (datos del cliente)
     const rif = cliente?.rifCedula || '00000000';
@@ -193,12 +215,19 @@ class FiscalMachine {
     for (const item of items) {
       const desc  = (item.descripcionHistorica || item.nombre || 'Producto').substring(0, 20);
       const qty   = parseFloat(item.cantidad) || 1;
-      const price = parseFloat(item.precioUnitarioHistorico || item.precioUnitario) || 0;
-      cmds += `@${qty.toFixed(0)};${price.toFixed(2)};${taxId};${desc}\n`;
+      // El precio unitario registrado es SIN impuesto; la impresora aplica la
+      // alícuota indicada por línea al calcular el total.
+      const price = parseFloat(item.precioUnitarioHistorico ?? item.precioUnitario) || 0;
+      const tasaLinea = item.tasaImpuestoAplicada ?? 16;
+      const taxId = this._codigoAlicuota(tasaLinea);
+
+      // Preservar decimales: la venta por peso registra cantidades fraccionarias
+      // (500 g → 0.5 kg) y truncar a entero las convertiría en 0.
+      cmds += EPSON_CMDS.ADD_ITEM(desc, qty, price, taxId, 3);
     }
 
     // Cerrar documento y subtotalizar
-    cmds += 'T\n';
+    cmds += EPSON_CMDS.CLOSE_FISCAL + '\n';
 
     // Cortar papel
     cmds += EPSON_CMDS.CUT_PAPER;

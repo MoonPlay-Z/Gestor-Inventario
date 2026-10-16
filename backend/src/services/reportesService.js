@@ -213,7 +213,11 @@ async function getProductosConPerdida(inicio, fin, tenantFilter) {
     THEN item."subtotalLinea" / f."tasaCambio"
     ELSE item."subtotalLinea"
   END)`;
-  const perdidaUSD = `(${ventaUSD} - (item."cantidad" * item."costoUnitarioHistoricoUSD"))`;
+  const gananciaUSD = `(CASE
+    WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+    THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad" / f."tasaCambio"
+    ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad"
+  END)`;
 
   const rows = await prisma.$queryRaw`
     SELECT
@@ -224,23 +228,17 @@ async function getProductosConPerdida(inicio, fin, tenantFilter) {
       item."cantidad" AS cantidad,
       item."unidadMedida" AS unidad,
       ${Prisma.raw(ventaUSD)} AS subtotal_usd,
-      (item."cantidad" * item."costoUnitarioHistoricoUSD") AS costo_usd,
-      ${Prisma.raw(perdidaUSD)} AS perdida_usd
+      ${Prisma.raw(gananciaUSD)} AS ganancia_usd
     FROM items_factura item
     INNER JOIN facturas f ON f.id = item."facturaId"
     INNER JOIN clientes cliente ON cliente.id = f."clienteId"
+    LEFT JOIN productos p ON p.id = item."productoId"
     WHERE f."fechaEmision" >= ${tsFrag(inicio)}
       AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
-      AND item."costoUnitarioHistoricoUSD" IS NOT NULL
+      AND item."productoId" IS NOT NULL
       ${whereClause}
-      AND ${Prisma.raw(perdidaUSD)} < 0
-      AND NOT EXISTS (
-        SELECT 1
-        FROM items_factura item_sin_costo
-        WHERE item_sin_costo."facturaId" = f.id
-          AND item_sin_costo."costoUnitarioHistoricoUSD" IS NULL
-      )
+      AND ${Prisma.raw(gananciaUSD)} < 0
     ORDER BY f."fechaEmision" ASC, f."numeroFactura" ASC
   `;
 
@@ -252,8 +250,7 @@ async function getProductosConPerdida(inicio, fin, tenantFilter) {
     cantidad: row.cantidad.toString(),
     unidad: row.unidad,
     subtotal: new Decimal(row.subtotal_usd.toString()).toFixed(2),
-    costo: new Decimal(row.costo_usd.toString()).toFixed(2),
-    perdida: new Decimal(row.perdida_usd.toString()).toFixed(2),
+    ganancia: new Decimal(row.ganancia_usd.toString()).toFixed(2),
   }));
 }
 
@@ -416,8 +413,14 @@ async function getGananciasReporte(req) {
   const tenantFilter = getTenantFilter(req);
   const whereClause = buildTenantSql(tenantFilter);
 
-  // El ingreso reportado es el total facturado; la ganancia se calcula sin impuestos.
-  const [ingresos, cogs, costosHistoricosFaltantes] = await Promise.all([
+  const ETIQUETA_GANANCIA = {
+    diario: 'Ganancia del Día',
+    semanal: 'Ganancia de la Semana',
+    mensual: 'Ganancia del Mes',
+    anual: 'Ganancia del Año',
+  };
+
+  const [ingresos, cogsData, productosSinCosto] = await Promise.all([
     prisma.$queryRaw`
     SELECT
       COALESCE(SUM(
@@ -434,31 +437,38 @@ async function getGananciasReporte(req) {
       ${whereClause}
     `,
 
-    // Los costos actuales no representan el costo histórico de ventas anteriores a su registro.
-    // Se excluyen del cálculo de ganancia las facturas sin costo histórico en todos sus artículos.
     prisma.$queryRaw`
     SELECT
       COUNT(DISTINCT f.id) AS facturas_con_costo,
-      COALESCE(SUM(item."cantidad" * item."costoUnitarioHistoricoUSD"), 0) AS costo_vendido,
+      COALESCE(SUM(
+        CASE
+          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+          THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad" / f."tasaCambio"
+          ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad"
+        END
+      ), 0) AS ganancia_total,
       COALESCE(SUM(
         CASE
           WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
           THEN item."subtotalLinea" / f."tasaCambio"
           ELSE item."subtotalLinea"
         END
-      ), 0) AS subtotal_vendido
+      ), 0) AS subtotal_vendido,
+      COALESCE(SUM(
+        CASE
+          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+          THEN COALESCE(p."costoCompra", 0) * item."cantidad" / f."tasaCambio"
+          ELSE COALESCE(p."costoCompra", 0) * item."cantidad"
+        END
+      ), 0) AS costo_vendido
     FROM items_factura item
     INNER JOIN facturas f ON f.id = item."facturaId"
+    LEFT JOIN productos p ON p.id = item."productoId"
     WHERE f."fechaEmision" >= ${tsFrag(inicio)}
       AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
       ${whereClause}
-      AND NOT EXISTS (
-        SELECT 1
-        FROM items_factura item_sin_costo
-        WHERE item_sin_costo."facturaId" = f.id
-          AND item_sin_costo."costoUnitarioHistoricoUSD" IS NULL
-      )
+      AND item."productoId" IS NOT NULL
     `,
 
     prisma.$queryRaw`
@@ -469,75 +479,172 @@ async function getGananciasReporte(req) {
         AND f."fechaEmision" <= ${tsFrag(fin)}
         AND f."estado" != 'VOIDED'
         ${whereClause}
-        AND EXISTS (
-          SELECT 1
-          FROM items_factura item_sin_costo
-          WHERE item_sin_costo."facturaId" = f.id
-            AND item_sin_costo."costoUnitarioHistoricoUSD" IS NULL
-        )
+        AND item."productoId" IS NULL
     `,
   ]);
 
   const ingresosTotal = new Decimal(ingresos[0]?.total_usd || 0);
-  const costoVendido = new Decimal(cogs[0]?.costo_vendido || 0);
-  const subtotalVentas = new Decimal(cogs[0]?.subtotal_vendido || 0);
-  const gananciaBruta = subtotalVentas.minus(costoVendido);
-  const facturasConCosto = Number(cogs[0]?.facturas_con_costo || 0);
-  const facturasSinCosto = Number(costosHistoricosFaltantes[0]?.facturas_sin_costo || 0);
+  const gananciaTotal = new Decimal(cogsData[0]?.ganancia_total || 0);
+  const subtotalVentas = new Decimal(cogsData[0]?.subtotal_vendido || 0);
+  const costoVendido = new Decimal(cogsData[0]?.costo_vendido || 0);
+  const facturasConCosto = Number(cogsData[0]?.facturas_con_costo || 0);
+  const facturasSinCosto = Number(productosSinCosto[0]?.facturas_sin_costo || 0);
   const gananciaDisponible = facturasConCosto > 0 || facturasSinCosto === 0;
   const margen = gananciaDisponible && ingresosTotal.gt(0)
-    ? gananciaBruta.dividedBy(ingresosTotal).times(100)
+    ? gananciaTotal.dividedBy(ingresosTotal).times(100)
     : null;
   const productosConPerdida = await getProductosConPerdida(inicio, fin, tenantFilter);
 
-  // Comparación
   let comparacion = null;
   if (comparar === 'true') {
     const cogsAnterior = await prisma.$queryRaw`
       SELECT
-        COALESCE(SUM(item."cantidad" * item."costoUnitarioHistoricoUSD"), 0) AS costo_vendido,
         COALESCE(SUM(
           CASE
             WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-            THEN item."subtotalLinea" / f."tasaCambio"
-            ELSE item."subtotalLinea"
+            THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad" / f."tasaCambio"
+            ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad"
           END
-        ), 0) AS subtotal_vendido
+        ), 0) AS ganancia_total
       FROM items_factura item
       INNER JOIN facturas f ON f.id = item."facturaId"
+      LEFT JOIN productos p ON p.id = item."productoId"
       WHERE f."fechaEmision" >= ${tsFrag(inicioAnterior)}
         AND f."fechaEmision" <= ${tsFrag(finAnterior)}
         AND f."estado" != 'VOIDED'
         ${whereClause}
-        AND NOT EXISTS (
-          SELECT 1
-          FROM items_factura item_sin_costo
-          WHERE item_sin_costo."facturaId" = f.id
-            AND item_sin_costo."costoUnitarioHistoricoUSD" IS NULL
-        )
+        AND item."productoId" IS NOT NULL
     `;
 
-    const gananciaAnterior = new Decimal(cogsAnterior[0]?.subtotal_vendido || 0)
-      .minus(new Decimal(cogsAnterior[0]?.costo_vendido || 0));
+    const gananciaAnterior = new Decimal(cogsAnterior[0]?.ganancia_total || 0);
 
     comparacion = {
-      ...calcularComparacion(gananciaBruta.toNumber(), gananciaAnterior.toNumber()),
+      ...calcularComparacion(gananciaTotal.toNumber(), gananciaAnterior.toNumber()),
       gananciaAnterior: gananciaAnterior.toFixed(2),
     };
   }
 
+  const gananciaPorProducto = await getGananciaPorProducto(inicio, fin, tenantFilter);
+
   return {
     periodo,
     etiqueta,
+    etiquetaGanancia: ETIQUETA_GANANCIA[periodo] || 'Ganancia',
     ingresosTotales: ingresosTotal.toFixed(2),
     costoVendido: costoVendido.toFixed(2),
-    gananciaBruta: gananciaDisponible ? gananciaBruta.toFixed(2) : null,
+    gananciaBruta: gananciaDisponible ? gananciaTotal.toFixed(2) : null,
     margen: margen?.toFixed(2) ?? null,
     facturasConCosto,
     facturasSinCosto,
     productosConPerdida,
+    gananciaPorProducto,
     comparacion,
   };
+}
+
+async function getGananciaPorProducto(inicio, fin, tenantFilter) {
+  const whereClause = buildTenantSql(tenantFilter);
+
+  const rows = await prisma.$queryRaw`
+    SELECT
+      p.id AS producto_id,
+      p.nombre,
+      p.sku,
+      p."unidadMedida" AS unidad_medida,
+      SUM(item."cantidad") AS cantidad_vendida,
+      COALESCE(SUM(
+        CASE
+          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+          THEN item."subtotalLinea" / f."tasaCambio"
+          ELSE item."subtotalLinea"
+        END
+      ), 0) AS ingresos_usd,
+      COALESCE(SUM(
+        CASE
+          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+          THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad" / f."tasaCambio"
+          ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad"
+        END
+      ), 0) AS ganancia_usd,
+      COALESCE(SUM(
+        CASE
+          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+          THEN COALESCE(p."costoCompra", 0) * item."cantidad" / f."tasaCambio"
+          ELSE COALESCE(p."costoCompra", 0) * item."cantidad"
+        END
+      ), 0) AS costo_usd
+    FROM items_factura item
+    INNER JOIN facturas f ON f.id = item."facturaId"
+    LEFT JOIN productos p ON p.id = item."productoId"
+    WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+      AND f."fechaEmision" <= ${tsFrag(fin)}
+      AND f."estado" != 'VOIDED'
+      ${whereClause}
+    GROUP BY p.id, p.nombre, p.sku, p."unidadMedida"
+    ORDER BY ganancia_usd DESC
+  `;
+
+  const productosData = rows.map(row => ({
+    productoId: row.producto_id,
+    nombre: row.nombre,
+    sku: row.sku,
+    unidad: row.unidad_medida,
+    cantidadVendida: Number(row.cantidad_vendida).toFixed(2),
+    ingresos: new Decimal(row.ingresos_usd.toString()).toFixed(2),
+    costo: new Decimal(row.costo_usd.toString()).toFixed(2),
+    ganancia: new Decimal(row.ganancia_usd.toString()).toFixed(2),
+  }));
+
+  const itemsSinProducto = await prisma.$queryRaw`
+    SELECT
+      COALESCE(SUM(
+        CASE
+          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+          THEN item."subtotalLinea" / f."tasaCambio"
+          ELSE item."subtotalLinea"
+        END
+      ), 0) AS ingresos_usd,
+      COALESCE(SUM(
+        CASE
+          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+          THEN (item."precioUnitarioHistorico" - 0) * item."cantidad" / f."tasaCambio"
+          ELSE (item."precioUnitarioHistorico" - 0) * item."cantidad"
+        END
+      ), 0) AS ganancia_usd,
+      COALESCE(SUM(
+        CASE
+          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+          THEN 0 * item."cantidad" / f."tasaCambio"
+          ELSE 0 * item."cantidad"
+        END
+      ), 0) AS costo_usd,
+      COALESCE(SUM(item."cantidad"), 0) AS cantidad_vendida
+    FROM items_factura item
+    INNER JOIN facturas f ON f.id = item."facturaId"
+    WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+      AND f."fechaEmision" <= ${tsFrag(fin)}
+      AND f."estado" != 'VOIDED'
+      AND item."productoId" IS NULL
+      ${whereClause}
+  `;
+
+  const sinProducto = itemsSinProducto[0];
+  const tieneSinProducto = Number(sinProducto?.ingresos_usd) > 0 || Number(sinProducto?.ganancia_usd) > 0;
+
+  if (tieneSinProducto) {
+    productosData.push({
+      productoId: null,
+      nombre: 'Productos sin clasificar',
+      sku: '—',
+      unidad: '—',
+      cantidadVendida: Number(sinProducto.cantidad_vendida || 0).toFixed(2),
+      ingresos: new Decimal(sinProducto.ingresos_usd.toString()).toFixed(2),
+      costo: new Decimal(sinProducto.costo_usd.toString()).toFixed(2),
+      ganancia: new Decimal(sinProducto.ganancia_usd.toString()).toFixed(2),
+    });
+  }
+
+  return productosData;
 }
 
 async function getDetalleVentasReporte(req) {
@@ -595,7 +702,8 @@ async function getDetalleVentasReporte(req) {
   let facturasSinCosto = 0;
   let facturasConCosto = 0;
 
-  const detalle = facturas.map((factura) => {
+  const detalle = [];
+  for (const factura of facturas) {
     const tasaCambio = factura.tasaCambio;
     const totalFacturaUSD = normalizarAUSD(factura.total, factura.moneda, tasaCambio);
     totalIngresos = totalIngresos.plus(totalFacturaUSD);
@@ -605,15 +713,23 @@ async function getDetalleVentasReporte(req) {
 
     if (puedeVerGanancia) {
       for (const item of factura.items) {
-        const subtotalUSD = normalizarAUSD(item.subtotalLinea, factura.moneda, tasaCambio);
-        const costoUnitario = item.costoUnitarioHistoricoUSD;
-        if (costoUnitario === null || costoUnitario === undefined) {
+        if (!item.productoId) {
           costoDesconocido = true;
           continue;
         }
-        ganancia = ganancia.plus(subtotalUSD.minus(
-          new Decimal(item.cantidad.toString()).times(costoUnitario.toString())
-        ));
+        const producto = await prisma.producto.findUnique({
+          where: { id: item.productoId },
+          select: { costoCompra: true },
+        });
+        const costoCompra = producto?.costoCompra;
+        if (costoCompra === null || costoCompra === undefined) {
+          costoDesconocido = true;
+          continue;
+        }
+        const precioUnitario = new Decimal(item.precioUnitarioHistorico.toString());
+        const costo = new Decimal(costoCompra.toString());
+        const cantidad = new Decimal(item.cantidad.toString());
+        ganancia = ganancia.plus(precioUnitario.minus(costo).times(cantidad));
       }
       if (costoDesconocido) {
         facturasSinCosto += 1;
@@ -630,7 +746,7 @@ async function getDetalleVentasReporte(req) {
       factura.items.map((item) => item.descripcionHistorica || item.producto?.nombre).filter(Boolean)
     )];
 
-    return {
+    detalle.push({
       facturaId: factura.numeroFactura,
       referencia: referencias.join(', ') || '—',
       cliente: factura.cliente?.razonSocial || '—',
@@ -639,8 +755,8 @@ async function getDetalleVentasReporte(req) {
       montoTotal: totalFacturaUSD.toFixed(2),
       ganancia: puedeVerGanancia && !costoDesconocido ? ganancia.toFixed(2) : null,
       costoDesconocido: puedeVerGanancia && costoDesconocido,
-    };
-  });
+    });
+  }
 
   return {
     periodo,
@@ -751,6 +867,7 @@ async function getProductosTop(req) {
     SELECT
       p.nombre,
       p.sku,
+      p."unidadMedida" AS unidad_medida,
       SUM(if."cantidad") AS cantidad_vendida,
       COALESCE(SUM(
         CASE
@@ -766,7 +883,7 @@ async function getProductosTop(req) {
       AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
       ${whereClause}
-    GROUP BY p.id, p.nombre, p.sku
+    GROUP BY p.id, p.nombre, p.sku, p."unidadMedida"
     ORDER BY cantidad_vendida DESC
     LIMIT ${limitNum}
   `;
@@ -774,6 +891,7 @@ async function getProductosTop(req) {
   return productos.map(p => ({
     nombre: p.nombre,
     sku: p.sku,
+    unidad: p.unidad_medida,
     cantidadVendida: Number(p.cantidad_vendida),
     ingresos: Number(p.ingresos_usd || 0).toFixed(2),
   }));

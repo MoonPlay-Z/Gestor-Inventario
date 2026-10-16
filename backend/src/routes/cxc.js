@@ -34,14 +34,14 @@ const cxcTenantFilter = (req) => {
 };
 
 // CuentaPorCobrar SIEMPRE almacena montos en USD (ver POST /api/facturas).
-// Normaliza cualquier pago (USD o VES) a USD usando la tasa efectiva de la
-// factura: la de la factura si fue emitida en VES, o la tasa vigente del
-// sistema si fue emitida en USD (su tasaCambio=1 no aporta tasa VES).
-const pagoAUsd = (pago, factura) => convertirMontoMoneda(
+// Normaliza cualquier pago (USD o VES) a USD. Para facturas USD la tasa se
+// resuelve por EMPRESA (Empresa.tasaDolar), no la global: en multi-tenant
+// mezclar una tasa de otra empresa desvirtúa el saldo y el monto cobrado.
+const pagoAUsd = async (pago, factura, empresaId) => convertirMontoMoneda(
   pago.monto,
   pago.monedaPago || factura?.moneda || 'USD',
   'USD',
-  tasaCambioEfectiva(factura)
+  await tasaCambioEfectiva(factura, empresaId)
 );
 
 // Traduce `cxcTenantFilter` a SQL para las consultas crudas del resumen.
@@ -274,16 +274,26 @@ router.get('/:id', async (req, res, next) => {
     const venc = new Date(cuenta.fechaVencimiento);
     const diasVencido = Math.ceil((hoy - venc) / (1000 * 60 * 60 * 24));
 
-    // Calcular pagos totales
+    // Calcular pagos totales. La conversión usa la tasa por empresa para que el
+    // detalle coincida con lo que se cobró, no con la tasa global.
     const factura = cuenta.factura;
-    const totalPagado = factura.pagos.reduce(
-      (acc, p) => acc.add(pagoAUsd(p, factura)),
-      new Decimal(0)
-    );
+    const empresaRefIdDetalle = await getEmpresaRefId(req);
+    let totalPagado = new Decimal(0);
+    for (const pago of factura.pagos) {
+      totalPagado = totalPagado.add(await pagoAUsd(pago, factura, empresaRefIdDetalle));
+    }
+    const tasaUsada = await tasaCambioEfectiva(factura, empresaRefIdDetalle);
 
     res.json({
       ...cuenta,
       diasVencido,
+      // Tasa efectiva que el backend aplica para convertir Bs→USD en esta
+      // cuenta. El frontend la usa solo para mostrar, nunca para decidir.
+      tasaConversion: {
+        tasa: tasaUsada.toNumber(),
+        monedaFactura: factura.moneda || 'USD',
+        tasaDeFactura: factura.moneda === 'VES' ? Number(factura.tasaCambio) : null,
+      },
       montoPendiente: new Decimal(cuenta.montoPendiente.toString()).toFixed(2),
       montoOriginal: new Decimal(cuenta.montoOriginal.toString()).toFixed(2),
       montoCobrado: new Decimal(cuenta.montoCobrado.toString()).toFixed(2),
@@ -295,6 +305,61 @@ router.get('/:id', async (req, res, next) => {
         totalPagado: totalPagado.toFixed(2)
       }
     });
+  } catch (err) { next(err); }
+});
+
+// ─── GET /api/cxc/:id/conversion — Cotiza un abono sin cobrarlo ────────────────
+// El frontend NO convierte montos: pregunta cuánto valdría un abono en Bs y
+// devuelve el equivalente y la tasa que el backend aplicaría realmente.
+// Evita que la tasa del cliente (empresa.tasaDolar del login) difiera de la del
+// servidor y provoque recálculos contradictorios.
+router.get('/:id/conversion', async (req, res, next) => {
+  try {
+    const { monto, moneda = 'USD' } = req.query;
+
+    if (!['USD', 'VES'].includes(moneda)) {
+      return res.status(400).json({ error: 'Moneda inválida. Valores permitidos: USD, VES' });
+    }
+
+    const cuenta = await prisma.cuentaPorCobrar.findFirst({
+      where: { id: req.params.id, ...cxcTenantFilter(req) },
+      select: { montoPendiente: true, factura: { select: { moneda: true, tasaCambio: true } } },
+    });
+    if (!cuenta) return res.status(404).json({ error: 'Cuenta por cobrar no encontrada' });
+
+    const empresaRefIdConv = await getEmpresaRefId(req);
+    const tasaUsada = await tasaCambioEfectiva(cuenta.factura, empresaRefIdConv);
+    const pendienteUSD = new Decimal(cuenta.montoPendiente.toString());
+
+    // Tope aceptable en la moneda consultada, para que el frontend ofrezca un
+    // monto por defecto que nunca dispare el error de sobrepago.
+    const maximoEnMoneda = moneda === 'VES'
+      ? pendienteUSD.mul(tasaUsada)
+      : pendienteUSD;
+
+    const respuesta = {
+      cuentaId: req.params.id,
+      moneda,
+      pendienteUsd: pendienteUSD.toFixed(2),
+      tasaUsada: tasaUsada.toNumber(),
+      tasaDeFactura: cuenta.factura.moneda === 'VES' ? Number(cuenta.factura.tasaCambio) : null,
+      maximoAceptable: maximoEnMoneda.toDecimalPlaces(2).toFixed(2),
+    };
+
+    // El monto es opcional: sin él solo devuelve tasa y máximo para la moneda.
+    if (monto !== undefined && monto !== null && monto !== '') {
+      const montoRaw = new Decimal(monto);
+      if (!montoRaw.isFinite() || montoRaw.lte(0)) {
+        return res.status(400).json({ error: 'El monto debe ser mayor a 0' });
+      }
+      const montoUSD = await pagoAUsd({ monto: montoRaw, monedaPago: moneda }, cuenta.factura, empresaRefIdConv);
+      respuesta.montoUsd = montoUSD.toFixed(4);
+      respuesta.excedePendiente = montoUSD.gt(pendienteUSD.plus(new Decimal('0.005')));
+      // Tope de lo que se aplicaría realmente (colapsa el excedente de redondeo).
+      respuesta.usdAplicable = (montoUSD.gt(pendienteUSD) ? pendienteUSD : montoUSD).toFixed(2);
+    }
+
+    res.json(respuesta);
   } catch (err) { next(err); }
 });
 
@@ -332,7 +397,12 @@ router.post('/:id/pago', async (req, res, next) => {
     // efectiva VES→USD: la de la factura si fue emitida en VES, o la tasa
     // vigente del sistema si fue emitida en USD (tasaCambio=1 no sirve).
     const monedaDelPago = monedaPago || monedaFactura;
-    const montoPagoUSD = pagoAUsd({ monto: montoPagoRaw, monedaPago: monedaDelPago }, factura);
+    if (!['USD', 'VES'].includes(monedaDelPago)) {
+      throw createValidationError('Moneda de pago inválida. Valores permitidos: USD, VES');
+    }
+    const empresaRefIdPago = await getEmpresaRefId(req);
+    const tasaUsada = await tasaCambioEfectiva(factura, empresaRefIdPago);
+    const montoPagoUSD = await pagoAUsd({ monto: montoPagoRaw, monedaPago: monedaDelPago }, factura, empresaRefIdPago);
     const pendienteUSD = new Decimal(cuenta.montoPendiente.toString());
 
     // Convertir un abono en Bs a USD puede dejar un excedente de redondeo mínimo
@@ -341,8 +411,12 @@ router.post('/:id/pago', async (req, res, next) => {
     // necesario para saldar la cuenta.
     const TOLERANCIA_REDONDEO = new Decimal('0.005');
     if (montoPagoUSD.gt(pendienteUSD.plus(TOLERANCIA_REDONDEO))) {
+      // Se informa en ambas monedas para que el usuario vea la conversión que
+      // el servidor aplicó, no la que él calculó.
       throw createBusinessError(
-        `El monto (${montoPagoUSD.toFixed(4)} USD) excede el pendiente (${pendienteUSD.toFixed(2)} USD)`
+        `El monto (${montoPagoRaw.toFixed(2)} ${monedaDelPago}` +
+        (monedaDelPago === 'VES' ? ` = ${montoPagoUSD.toFixed(4)} USD` : '') +
+        `) excede el pendiente (${pendienteUSD.toFixed(2)} USD)`
       );
     }
     const montoAplicarUSD = montoPagoUSD.gt(pendienteUSD) ? pendienteUSD : montoPagoUSD;
@@ -404,6 +478,16 @@ router.post('/:id/pago', async (req, res, next) => {
 
     res.status(201).json({
       pago,
+      // Conversión realmente aplicada. Permite que el frontend muestre el
+      // equivalente sin recalcularlo (y por tanto sin divergir del backend).
+      conversion: {
+        montoIngresado: montoPagoRaw.toFixed(2),
+        monedaIngresada: monedaDelPago,
+        montoUsd: montoPagoUSD.toFixed(4),
+        montoUsdAplicado: montoAplicarUSD.toFixed(2),
+        tasaUsada: tasaUsada.toNumber(),
+        tasaDeFactura: factura.moneda === 'VES' ? Number(factura.tasaCambio) : null,
+      },
       cuenta: {
         ...cuentaActualizada,
         montoPendiente: new Decimal(cuentaActualizada.montoPendiente.toString()).toFixed(2),

@@ -65,36 +65,54 @@ function leerTasaSistema() {
  * schema) y no aporta información de tasa, por lo que usarlo convertiría
  * "1000 Bs" en "1000 USD" y dispararía falsos errores de sobrepago.
  *
- * Se usa además la tasa vigente del sistema (config.json → moneda.tasaDolar,
- * actualizable desde DolarWidget), manteniendo la coherencia con el
- * `montoOriginal` de CuentaPorCobrar, que también se normaliza a USD.
+ * Cuando la factura es USD se usa la tasa de la EMPRESA (`Empresa.tasaDolar`,
+ * cacheada 60s) para no mezclar monedas entre tenants; si no se conoce la
+ * empresa se cae a la tasa global del sistema.
+ *
+ * Es async porque la tasa por empresa requiere I/O a la base de datos.
+ *
+ * @param {Object} factura
+ * @param {string|null} empresaId - id en `empresas` (ver resolverEmpresaRefId)
  */
-function tasaCambioEfectiva(factura) {
+async function tasaCambioEfectiva(factura, empresaId = null) {
   const moneda = factura?.moneda || 'USD';
   const tasaFactura = factura?.tasaCambio != null && factura.tasaCambio !== ''
     ? new Decimal(factura.tasaCambio.toString())
     : null;
 
   if (moneda === 'VES' && esTasaValida(tasaFactura)) return tasaFactura;
-  return leerTasaSistema();
+  return getTasaSistemaPorEmpresa(empresaId);
 }
 
 /** Convierte un monto exprés en la moneda de la factura usando la tasa efectiva. */
-function convertirAFactura(monto, monedaOrigen, factura) {
+async function convertirAFactura(monto, monedaOrigen, factura, empresaId = null) {
   return convertirMontoMoneda(
     monto,
     monedaOrigen,
     factura?.moneda || 'USD',
-    tasaCambioEfectiva(factura)
+    await tasaCambioEfectiva(factura, empresaId)
   );
 }
 
-function normalizarPagoAFactura(pago, factura) {
+async function normalizarPagoAFactura(pago, factura, empresaId = null) {
   return convertirAFactura(
     pago.monto,
     pago.monedaPago || factura.moneda || 'USD',
-    factura
+    factura,
+    empresaId
   );
+}
+
+/**
+ * Suma los pagos normalizados a la moneda de la factura.
+ * Sustituye a `pagos.reduce(...)` porque la conversión ahora es async.
+ */
+async function sumarPagosNormalizados(pagos, factura, empresaId = null) {
+  let total = new Decimal(0);
+  for (const pago of pagos || []) {
+    total = total.add(await normalizarPagoAFactura(pago, factura, empresaId));
+  }
+  return total;
 }
 
 /**
@@ -135,6 +153,7 @@ module.exports = {
   convertirAFactura,
   tasaCambioEfectiva,
   normalizarPagoAFactura,
+  sumarPagosNormalizados,
   getTasaSistema: leerTasaSistema,
   getTasaSistemaPorEmpresa
 };

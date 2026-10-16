@@ -131,6 +131,7 @@ CREATE TABLE "facturas" (
     "observaciones" TEXT,
     "anuladoPor" TEXT,
     "motivoAnulacion" TEXT,
+    "requestId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -351,6 +352,9 @@ CREATE UNIQUE INDEX "productos_empresaId_sku_key" ON "productos"("empresaId", "s
 
 -- CreateIndex
 CREATE UNIQUE INDEX "facturas_numeroFactura_key" ON "facturas"("numeroFactura");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "facturas_requestId_key" ON "facturas"("requestId");
 
 -- CreateIndex
 CREATE INDEX "facturas_fechaEmision_idx" ON "facturas"("fechaEmision");

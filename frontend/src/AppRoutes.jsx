@@ -31,6 +31,8 @@ import { UsuariosPage }     from './pages/UsuariosPage';
 import { ActivacionesPage } from './pages/ActivacionesPage';
 import { AdminPage }         from './pages/AdminPage';
 import { ReportesPage }       from './pages/ReportesPage';
+import { GananciasPage }      from './pages/GananciasPage';
+import { GananciasReportPage } from './pages/GananciasReportPage';
 import { PruebasFacturasPage } from './pages/PruebasFacturasPage';
 import { CxcPage }            from './pages/CxcPage';
 import { CxcDetailPage }      from './pages/CxcDetailPage';
@@ -98,6 +100,18 @@ export default function AppRoutes() {
             <CajaPage />
           </ProtectedRoute>
         } />
+        <Route path="/ganancias" element={
+          <ProtectedRoute>
+            <GananciasPage />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/ganancias-report" element={
+          <ProtectedRoute>
+            <GananciasReportPage />
+          </ProtectedRoute>
+        } />
+
         <Route path="/reportes" element={
           <ProtectedRoute allowedRoles={ROLE_GROUPS.REPORTES}>
             <ReportesPage />

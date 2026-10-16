@@ -6,7 +6,7 @@ const { createValidationError, createBusinessError } = require('../middleware/er
 const { invalidarCacheVentas } = require('../services/reportesService');
 const { requireRole } = require('../middleware/auth');
 const { obtenerSiguienteNumeroFactura } = require('../utils/numeracionFacturas');
-const { MONEDAS_PAGO, convertirMontoMoneda, normalizarPagoAFactura } = require('../utils/paymentCurrency');
+const { MONEDAS_PAGO, convertirMontoMoneda, sumarPagosNormalizados, normalizarPagoAFactura } = require('../utils/paymentCurrency');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
 const configRouter = require('./config');
@@ -122,9 +122,11 @@ router.get('/', async (req, res, next) => {
         })
       : [];
     const pagosMap = new Map();
+    const empresaRefIdListado = await getEmpresaRefId(req);
     for (const pago of pagos) {
       const pagado = pagosMap.get(pago.facturaId) || new Decimal(0);
-      pagosMap.set(pago.facturaId, pagado.add(normalizarPagoAFactura(pago, pago.factura)));
+      const normalizado = await normalizarPagoAFactura(pago, pago.factura, empresaRefIdListado);
+      pagosMap.set(pago.facturaId, pagado.add(normalizado));
     }
 
     // Agregar campos derivados (estaVencida y saldoPendiente)
@@ -207,10 +209,7 @@ router.get('/:id', async (req, res, next) => {
     });
 
     // Calcular balance pendiente
-    const totalPagado = factura.pagos.reduce(
-      (acc, p) => acc.add(normalizarPagoAFactura(p, factura)),
-      new Decimal(0)
-    );
+    const totalPagado = await sumarPagosNormalizados(factura.pagos, factura, await getEmpresaRefId(req));
     const balancePendiente = new Decimal(factura.total.toString()).sub(totalPagado);
     const hoy = new Date();
 
@@ -229,7 +228,7 @@ router.post('/', async (req, res, next) => {
     const {
       clienteId, items, fechaVencimiento, observaciones, metodoPago,
       referenciaTransaccion, cuotas, moneda = 'USD', tasaCambio,
-      monedaPago = 'USD',
+      monedaPago = 'USD', requestId,
     } = req.body;
     const empresaId = req.user?.empresaId || req.user?.id;
     const empresaRefId = await getEmpresaRefId(req);
@@ -247,6 +246,31 @@ router.post('/', async (req, res, next) => {
     }
     if (metodoPago === 'CASH' && !MONEDAS_PAGO.includes(monedaPago)) {
       throw createValidationError('La moneda del efectivo debe ser USD o VES');
+    }
+
+    // ── Idempotencia ──────────────────────────────────────────────────────────
+    // Si esta clave ya emitió una factura, se devuelve esa misma factura en
+    // lugar de crear otra. Cierra la ventana que deja el guard del frontend:
+    // recarga de página, doble toque móvil y reintentos del proxy repiten el
+    // POST, y sin esto cada repetición generaba una venta completa (factura,
+    //CxC, pago y descuento de stock).
+    const requestIdLimpio = typeof requestId === 'string' ? requestId.trim() : '';
+    if (requestIdLimpio) {
+      if (requestIdLimpio.length > 120) {
+        throw createValidationError('El requestId es demasiado largo');
+      }
+      const existente = await prisma.factura.findUnique({
+        where: { requestId: requestIdLimpio },
+        include: {
+          cliente: { select: { razonSocial: true } },
+          pagos: { select: { metodoPago: true, monedaPago: true, monto: true, referenciaTransaccion: true, fechaPago: true } },
+          items: true,
+        },
+      });
+      if (existente) {
+        console.log(`[facturas] requestId duplicado ${requestIdLimpio} → devuelve factura #${existente.numeroFactura}`);
+        return res.status(200).json({ ...existente, idempotent: true });
+      }
     }
 
     // ── Validaciones básicas ──────────────────────────────────────────────────
@@ -383,7 +407,9 @@ router.post('/', async (req, res, next) => {
     }
 
     // ── Transacción atómica ───────────────────────────────────────────────────
-    const factura = await prisma.$transaction(async (tx) => {
+    let factura;
+    try {
+      factura = await prisma.$transaction(async (tx) => {
       const numeroFactura = await obtenerSiguienteNumeroFactura(tx);
 
       // 1. Crear factura con ítems
@@ -406,6 +432,7 @@ router.post('/', async (req, res, next) => {
           tasaCambio:    tasaFacturacion.toNumber(),
           cuotasTotales: cuotasTotales,
           observaciones: observaciones?.trim() || null,
+          requestId: requestIdLimpio || null,
           items: {
             create: itemsCalculados.map(({ _productoId, _cantidad, ...item }) => item),
           },
@@ -535,6 +562,27 @@ router.post('/', async (req, res, next) => {
 
       return nuevaFactura;
     });
+    } catch (txErr) {
+      // Carrera real: dos peticiones con la misma clave pueden pasar la
+      // verificación anterior si llegan lo bastante cerca. El índice único
+      // hace que una sola gane; la perdedora recupera la factura ganadora en
+      // lugar de reportar un error al cajero.
+      if (requestIdLimpio && txErr?.code === 'P2002') {
+        const yaEmitida = await prisma.factura.findUnique({
+          where: { requestId: requestIdLimpio },
+          include: {
+            cliente: { select: { razonSocial: true } },
+            pagos: { select: { metodoPago: true, monedaPago: true, monto: true, referenciaTransaccion: true, fechaPago: true } },
+            items: true,
+          },
+        });
+        if (yaEmitida) {
+          console.log(`[facturas] carrera de requestId ${requestIdLimpio} → devuelve factura #${yaEmitida.numeroFactura}`);
+          return res.status(200).json({ ...yaEmitida, idempotent: true });
+        }
+      }
+      throw txErr;
+    }
 
     // Calcular información de cuotas para la respuesta
     const montoCuota = esFinanciada

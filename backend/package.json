@@ -15,7 +15,11 @@
     "db:verify:sqlite": "node scripts/verificar-integridad-sqlite.js",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force && node prisma/seed.js",
-    "setup": "npm install && npx prisma generate && npx prisma migrate dev --name init && node prisma/seed.js"
+    "setup": "npm install && npx prisma generate && npx prisma migrate dev --name init && node prisma/seed.js",
+    "lint": "eslint src scripts",
+    "lint:fix": "eslint src scripts --fix",
+    "verify": "node scripts/verificar-request-id-facturas.js",
+    "prisma_validate": "prisma validate"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -32,7 +36,9 @@
     "uuid": "^10.0.0"
   },
   "devDependencies": {
+    "eslint": "^9.39.5",
     "nodemon": "^3.1.7",
-    "prisma": "^5.22.0"
+    "prisma": "^5.22.0",
+    "typescript-eslint": "^8.71.2"
   }
 }
