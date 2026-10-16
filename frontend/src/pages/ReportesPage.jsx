@@ -381,10 +381,12 @@ export function ReportesPage() {
         doc.text('Detalle de ventas con pérdida', 14, perdidasY);
         doc.setTextColor(0, 0, 0);
         doc.setFontSize(8);
-        doc.text('Cada línea aparece porque el costo histórico del producto supera el subtotal de venta sin impuestos.', 14, perdidasY + 5);
+        doc.text('Cada línea aparece porque el costo del producto supera el precio de venta sin impuestos. La cantidad se normaliza a kg.', 14, perdidasY + 5);
         autoTable(doc, {
           startY: perdidasY + 9,
-          head: [['Factura', 'Fecha y hora', 'Cliente', 'Producto', 'Cantidad', 'Subtotal sin impuestos (USD)', 'Costo histórico (USD)', 'Pérdida (USD)']],
+          // 7 columnas = 7 valores. Antes el header declaraba 8 y el cuerpo
+          // enviaba 7, dejando la última celda vacía y desalineando la tabla.
+          head: [['Factura', 'Fecha y hora', 'Cliente', 'Producto', 'Cantidad', 'Subtotal sin impuestos (USD)', 'Ganancia (USD)']],
           body: perdidas.map(item => [
             `#${item.facturaId}`,
             new Date(item.fechaHora).toLocaleString('es-VE'),
@@ -403,8 +405,7 @@ export function ReportesPage() {
             3: { cellWidth: 48 },
             4: { cellWidth: 20 },
             5: { cellWidth: 32, halign: 'right' },
-            6: { cellWidth: 32, halign: 'right' },
-            7: { cellWidth: 28, halign: 'right' },
+            6: { cellWidth: 28, halign: 'right' },
           },
         });
       }
@@ -473,7 +474,7 @@ export function ReportesPage() {
         rows.push([]);
         if (ganancias.productosConPerdida?.length > 0) {
           rows.push(['Ventas con pérdida: el costo histórico superó el subtotal de venta sin impuestos']);
-          rows.push(['Factura', 'Fecha y hora', 'Cliente', 'Producto', 'Cantidad', 'Subtotal USD', 'Costo histórico USD', 'Pérdida USD']);
+          rows.push(['Factura', 'Fecha y hora', 'Cliente', 'Producto', 'Cantidad', 'Subtotal USD', 'Ganancia USD']);
           ganancias.productosConPerdida.forEach(item => {
             rows.push([
               item.facturaId,
@@ -482,8 +483,10 @@ export function ReportesPage() {
               item.producto,
               `${item.cantidad} ${item.unidad || ''}`.trim(),
               item.subtotal,
-              item.costo,
-              item.perdida,
+              // El backend expone `ganancia` (negativa en estas líneas), no
+              // `perdida` ni `costo`: se referenciaban campos inexistentes y
+              // el CSV salía con columnas vacías.
+              item.ganancia,
             ]);
           });
           rows.push([]);

@@ -397,26 +397,27 @@ export function InventarioPage() {
                     <td style={{
                       fontWeight: 600,
                       color: p.costoCompra > p.precioVenta ? 'var(--danger)' : 'var(--success)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
                     }}>
-                      {Utils.formatMoney(p.precioVenta - p.costoCompra)}
-                      {p.costoCompra > p.precioVenta && (
-                        <Icon icon="mdi:alert-circle" style={{ color: 'var(--danger)', fontSize: '0.85em' }} />
-                      )}
+                      {/* El flex va en un span interno: aplicar display:flex al
+                          <td> lo saca del layout de tabla y desalinea todas las
+                          columnas siguientes. */}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        {Utils.formatMoney(p.precioVenta - p.costoCompra)}
+                        {p.costoCompra > p.precioVenta && (
+                          <Icon icon="mdi:alert-circle" style={{ color: 'var(--danger)', fontSize: '0.85em' }} />
+                        )}
+                      </span>
                     </td>
                     <td style={{
                       fontWeight: p.tasaImpuesto > 0 ? 700 : 400,
                       color: p.tasaImpuesto > 0 ? 'var(--warning, #f59e0b)' : 'var(--text-secondary)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
                     }}>
-                      {p.tasaImpuesto}%
-                      {p.tasaImpuesto > 0 && (
-                        <Icon icon="mdi:receipt" style={{ color: 'var(--warning, #f59e0b)', fontSize: '0.85em' }} />
-                      )}
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        {p.tasaImpuesto}%
+                        {p.tasaImpuesto > 0 && (
+                          <Icon icon="mdi:receipt" style={{ color: 'var(--warning, #f59e0b)', fontSize: '0.85em' }} />
+                        )}
+                      </span>
                     </td>
                     <td>
                       <span style={{ fontWeight: 700, color: p.stockBajoMinimo ? 'var(--danger)' : 'var(--success)' }}>

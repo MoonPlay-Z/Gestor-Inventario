@@ -183,7 +183,13 @@ router.post('/import', async (req, res, next) => {
             productoId: item.productoId,
             descripcionHistorica: item.descripcionHistorica,
             cantidad: item.cantidad,
+            // Antes el restore omitía estos campos: las líneas de venta por
+            // peso quedaban sin unidad registrada, lo que hacía imposible
+            // distinguir gramos de kilos en los reportes restaurados.
+            unidadMedida: item.unidadMedida || 'UNIDAD',
+            pesoReal: item.pesoReal ?? null,
             precioUnitarioHistorico: item.precioUnitarioHistorico,
+            costoUnitarioHistoricoUSD: item.costoUnitarioHistoricoUSD ?? null,
             tasaImpuestoAplicada: item.tasaImpuestoAplicada,
             subtotalLinea: item.subtotalLinea,
             impuestoLinea: item.impuestoLinea,

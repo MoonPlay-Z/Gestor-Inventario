@@ -213,10 +213,18 @@ async function getProductosConPerdida(inicio, fin, tenantFilter) {
     THEN item."subtotalLinea" / f."tasaCambio"
     ELSE item."subtotalLinea"
   END)`;
+  // Cantidad normalizada a la unidad del producto (g → kg). Sin esto, una
+  // línea de 675 g se evaluaría contra el costo por kilo usando 675 "kg".
+  const cantidadKg = `(CASE
+    WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+    WHEN item."unidadMedida" = 'UNIDAD' AND p."esVentaPorPeso"
+                                      THEN item."cantidad" / 1000
+    ELSE item."cantidad"
+  END)`;
   const gananciaUSD = `(CASE
     WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-    THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad" / f."tasaCambio"
-    ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad"
+    THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * ${cantidadKg} / f."tasaCambio"
+    ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * ${cantidadKg}
   END)`;
 
   const rows = await prisma.$queryRaw`
@@ -225,8 +233,11 @@ async function getProductosConPerdida(inicio, fin, tenantFilter) {
       f."fechaEmision" AS fecha_hora,
       cliente."razonSocial" AS cliente,
       item."descripcionHistorica" AS producto,
-      item."cantidad" AS cantidad,
-      item."unidadMedida" AS unidad,
+      ${Prisma.raw(cantidadKg)} AS cantidad,
+      CASE
+        WHEN item."unidadMedida" = 'GRAMO' THEN 'KILOGRAMO'
+        ELSE item."unidadMedida"
+      END AS unidad,
       ${Prisma.raw(ventaUSD)} AS subtotal_usd,
       ${Prisma.raw(gananciaUSD)} AS ganancia_usd
     FROM items_factura item
@@ -440,11 +451,22 @@ async function getGananciasReporte(req) {
     prisma.$queryRaw`
     SELECT
       COUNT(DISTINCT f.id) AS facturas_con_costo,
+      -- Cantidad normalizada a la unidad del producto (g → kg) antes de
+      -- multiplicar por el margen unitario. Sin esto, una línea de 675 g
+      -- contaba como 675 kg y disparaba la ganancia del período.
       COALESCE(SUM(
         CASE
           WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad" / f."tasaCambio"
-          ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad"
+          THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) *
+               (CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                     WHEN item."unidadMedida" = 'UNIDAD' AND p."esVentaPorPeso"
+                                           THEN item."cantidad" / 1000
+                     ELSE item."cantidad" END) / f."tasaCambio"
+          ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) *
+               (CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                     WHEN item."unidadMedida" = 'UNIDAD' AND p."esVentaPorPeso"
+                                           THEN item."cantidad" / 1000
+                     ELSE item."cantidad" END)
         END
       ), 0) AS ganancia_total,
       COALESCE(SUM(
@@ -457,8 +479,16 @@ async function getGananciasReporte(req) {
       COALESCE(SUM(
         CASE
           WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN COALESCE(p."costoCompra", 0) * item."cantidad" / f."tasaCambio"
-          ELSE COALESCE(p."costoCompra", 0) * item."cantidad"
+          THEN COALESCE(p."costoCompra", 0) *
+               (CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                     WHEN item."unidadMedida" = 'UNIDAD' AND p."esVentaPorPeso"
+                                           THEN item."cantidad" / 1000
+                     ELSE item."cantidad" END) / f."tasaCambio"
+          ELSE COALESCE(p."costoCompra", 0) *
+               (CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                     WHEN item."unidadMedida" = 'UNIDAD' AND p."esVentaPorPeso"
+                                           THEN item."cantidad" / 1000
+                     ELSE item."cantidad" END)
         END
       ), 0) AS costo_vendido
     FROM items_factura item
@@ -502,8 +532,16 @@ async function getGananciasReporte(req) {
         COALESCE(SUM(
           CASE
             WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-            THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad" / f."tasaCambio"
-            ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad"
+            THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) *
+                 (CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                       WHEN item."unidadMedida" = 'UNIDAD' AND p."esVentaPorPeso"
+                                             THEN item."cantidad" / 1000
+                       ELSE item."cantidad" END) / f."tasaCambio"
+            ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) *
+                 (CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                       WHEN item."unidadMedida" = 'UNIDAD' AND p."esVentaPorPeso"
+                                             THEN item."cantidad" / 1000
+                       ELSE item."cantidad" END)
           END
         ), 0) AS ganancia_total
       FROM items_factura item
@@ -551,7 +589,19 @@ async function getGananciaPorProducto(inicio, fin, tenantFilter) {
       p.nombre,
       p.sku,
       p."unidadMedida" AS unidad_medida,
-      SUM(item."cantidad") AS cantidad_vendida,
+      -- Normaliza a la unidad del producto antes de sumar. Una línea guardada
+      -- en GRAMO (p. ej. 675 g) y otra en KILOGRAMO (p. ej. 2 kg) no son
+      -- sumables: sin esta conversión el reporte reportaba 6250 "kg" de tomate
+      -- cuando en realidad se vendieron 6.25 kg. El precio del subtotal siempre
+      -- se cobró bien por kilo; el defecto estaba solo en la agregación.
+      SUM(
+        CASE
+          WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+          WHEN item."unidadMedida" = 'UNIDAD' AND p."esVentaPorPeso"
+                                        THEN item."cantidad" / 1000
+          ELSE item."cantidad"
+        END
+      ) AS cantidad_vendida,
       COALESCE(SUM(
         CASE
           WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
@@ -559,18 +609,36 @@ async function getGananciaPorProducto(inicio, fin, tenantFilter) {
           ELSE item."subtotalLinea"
         END
       ), 0) AS ingresos_usd,
+      -- Misma normalización que en cantidad_vendida: costo y ganancia se
+      -- calculan por kilogramo vendido, no por la unidad cruda de la línea.
       COALESCE(SUM(
         CASE
           WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad" / f."tasaCambio"
-          ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * item."cantidad"
+          THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) *
+               CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                    WHEN item."unidadMedida" = 'UNIDAD' AND p."esVentaPorPeso"
+                                          THEN item."cantidad" / 1000
+                    ELSE item."cantidad" END / f."tasaCambio"
+          ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) *
+               CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                    WHEN item."unidadMedida" = 'UNIDAD' AND p."esVentaPorPeso"
+                                          THEN item."cantidad" / 1000
+                    ELSE item."cantidad" END
         END
       ), 0) AS ganancia_usd,
       COALESCE(SUM(
         CASE
           WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN COALESCE(p."costoCompra", 0) * item."cantidad" / f."tasaCambio"
-          ELSE COALESCE(p."costoCompra", 0) * item."cantidad"
+          THEN COALESCE(p."costoCompra", 0) *
+               CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                    WHEN item."unidadMedida" = 'UNIDAD' AND p."esVentaPorPeso"
+                                          THEN item."cantidad" / 1000
+                    ELSE item."cantidad" END / f."tasaCambio"
+          ELSE COALESCE(p."costoCompra", 0) *
+               CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                    WHEN item."unidadMedida" = 'UNIDAD' AND p."esVentaPorPeso"
+                                          THEN item."cantidad" / 1000
+                    ELSE item."cantidad" END
         END
       ), 0) AS costo_usd
     FROM items_factura item
@@ -607,18 +675,27 @@ async function getGananciaPorProducto(inicio, fin, tenantFilter) {
       COALESCE(SUM(
         CASE
           WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN (item."precioUnitarioHistorico" - 0) * item."cantidad" / f."tasaCambio"
-          ELSE (item."precioUnitarioHistorico" - 0) * item."cantidad"
+          THEN (item."precioUnitarioHistorico" - 0) *
+               (CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                     ELSE item."cantidad" END) / f."tasaCambio"
+          ELSE (item."precioUnitarioHistorico" - 0) *
+               (CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                     ELSE item."cantidad" END)
         END
       ), 0) AS ganancia_usd,
       COALESCE(SUM(
         CASE
           WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN 0 * item."cantidad" / f."tasaCambio"
-          ELSE 0 * item."cantidad"
+          THEN 0 * (CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                         ELSE item."cantidad" END) / f."tasaCambio"
+          ELSE 0 * (CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+                         ELSE item."cantidad" END)
         END
       ), 0) AS costo_usd,
-      COALESCE(SUM(item."cantidad"), 0) AS cantidad_vendida
+      COALESCE(SUM(
+        CASE WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
+             ELSE item."cantidad" END
+      ), 0) AS cantidad_vendida
     FROM items_factura item
     INNER JOIN facturas f ON f.id = item."facturaId"
     WHERE f."fechaEmision" >= ${tsFrag(inicio)}
@@ -685,11 +762,27 @@ async function getDetalleVentasReporte(req) {
         pagos: { select: { referenciaTransaccion: true } },
         items: {
           select: {
+            // productoId es necesario: el cálculo de ganancia lo consulta.
+            // Antes faltaba en el select, llegaba undefined y TODA factura se
+            // marcaba como "sin costo", dejando gananciaTotal en null.
+            productoId: true,
             descripcionHistorica: true,
             cantidad: true,
+            unidadMedida: true,
+            // precioUnitarioHistorico es necesario para el margen unitario;
+            // sin él en el select, la ganancia por factura lanzaba TypeError.
+            precioUnitarioHistorico: true,
             subtotalLinea: true,
             costoUnitarioHistoricoUSD: true,
-            producto: { select: { nombre: true } },
+            producto: {
+              select: {
+                nombre: true,
+                esVentaPorPeso: true,
+                // Se trae el costo en el mismo select para evitar una consulta
+                // por ítem (N+1). Antes se hacía findUnique dentro del bucle.
+                costoCompra: true,
+              },
+            },
           },
         },
       },
@@ -713,22 +806,19 @@ async function getDetalleVentasReporte(req) {
 
     if (puedeVerGanancia) {
       for (const item of factura.items) {
-        if (!item.productoId) {
-          costoDesconocido = true;
-          continue;
-        }
-        const producto = await prisma.producto.findUnique({
-          where: { id: item.productoId },
-          select: { costoCompra: true },
-        });
-        const costoCompra = producto?.costoCompra;
-        if (costoCompra === null || costoCompra === undefined) {
+        const costoCompra = item.producto?.costoCompra;
+        if (!item.productoId || costoCompra === null || costoCompra === undefined) {
           costoDesconocido = true;
           continue;
         }
         const precioUnitario = new Decimal(item.precioUnitarioHistorico.toString());
         const costo = new Decimal(costoCompra.toString());
-        const cantidad = new Decimal(item.cantidad.toString());
+        // Normaliza gramos a kilos para no inflar la ganancia 1000x.
+        const esGramos = item.unidadMedida === 'GRAMO'
+          || (item.producto?.esVentaPorPeso && item.unidadMedida === 'UNIDAD');
+        const cantidad = esGramos
+          ? new Decimal(item.cantidad.toString()).div(1000)
+          : new Decimal(item.cantidad.toString());
         ganancia = ganancia.plus(precioUnitario.minus(costo).times(cantidad));
       }
       if (costoDesconocido) {
