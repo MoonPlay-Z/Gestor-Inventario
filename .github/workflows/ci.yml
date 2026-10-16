@@ -125,3 +125,40 @@ jobs:
         run: |
           test -f dist/index.html || { echo "::error::No se generó dist/index.html"; exit 1; }
           echo "OK: dist/ generado ($(du -sh dist | cut -f1))"
+
+  # ── 5. Invariantes de venta por peso ────────────────────────────────
+  # Detecta que una cantidad en gramos se sume como si fueran kilos, el
+  # defecto que infló los reportes 1000x. Es SOLO LECTURA.
+  invariantes:
+    name: Invariantes de venta por peso
+    runs-on: ubuntu-latest
+    # Si falta el secret, el job se omite en lugar de fallar: permite seguir
+    # usando CI sin exponer credenciales de la base de producción.
+    if: ${{ vars.ENABLE_DB_INVARIANTS == 'true' }}
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+      - run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Verificar unidades y coherencia de montos
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: node scripts/test-invariante-venta-por-peso.js
+
+      - name: Verificar integridad de facturas
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        # No bloquea el pipeline: reporta los hallazgos sin fallar, porque
+        # puede haber deuda histórica known que corregir aparte.
+        run: node scripts/verificar-integridad-bd.js || echo "::warning::Integridad con hallazgos; revisar salida"

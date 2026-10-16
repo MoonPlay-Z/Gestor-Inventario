@@ -19,7 +19,9 @@
     "lint": "eslint src scripts",
     "lint:fix": "eslint src scripts --fix",
     "verify": "node scripts/verificar-request-id-facturas.js",
-    "prisma_validate": "prisma validate"
+    "prisma_validate": "prisma validate",
+    "test:unidades": "node scripts/test-invariante-venta-por-peso.js",
+    "test:integridad": "node scripts/verificar-integridad-bd.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
