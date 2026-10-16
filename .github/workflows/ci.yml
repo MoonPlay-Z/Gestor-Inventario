@@ -78,8 +78,19 @@ jobs:
           cache-dependency-path: backend/package-lock.json
 
       - run: npm ci
-      - run: npx prisma validate
-      - run: npx prisma generate
+
+      # `prisma validate` y `prisma generate` no abren conexión: solo leen el
+      # datasource del esquema. Exigen que DATABASE_URL esté definida, así que
+      # se inyecta una URL ficticia. Jamás se expone aquí la real de Neon.
+      - name: Validar schema (URL ficticia, sin conexión)
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+        run: npx prisma validate
+
+      - name: Generar cliente Prisma
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?schema=public
+        run: npx prisma generate
 
       # Comprueba que cada carpeta de migración tenga su .sql y que el historial
       # esté ordenado (una migración editada rompe la reproducibilidad).
