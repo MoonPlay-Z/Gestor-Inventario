@@ -132,10 +132,17 @@ async function main() {
   if (!empresa) {
     console.log('    (omitido: no hay usuario EMPRESA con facturas)');
   } else {
-    const top = await getProductosTop({
-      query: { periodo: 'anual', fecha: String(new Date().getFullYear()), limit: '50' },
+    // getProductosTop ahora pagina: devuelve {data, total, totalPages}
+    const r = await getProductosTop({
+      query: { periodo: 'anual', fecha: String(new Date().getFullYear()), page: '1', limit: '100' },
       user: empresa,
     });
+    const top = r?.data || [];
+
+    if (!Array.isArray(r?.data) || typeof r?.totalPages !== 'number') {
+      console.log('    ✗ La respuesta no sigue el formato paginado {data, total, totalPages}');
+      fallos++;
+    }
 
     // Referencia calculada de forma independiente, sin usar el helper.
     const referencia = new Map();

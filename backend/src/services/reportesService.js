@@ -21,6 +21,7 @@ const {
   unidadNormalizadaSQL,
   cantidadEnKg,
 } = require('./unidades');
+const { paginate, paginatedResponse } = require('../utils/pagination');
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CACHÉ EN MEMORIA
@@ -905,12 +906,12 @@ async function getInversionReporte(req) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function getProductosTop(req) {
-  const { periodo = 'mensual', fecha, limit = '10' } = req.query;
+  const { periodo = 'mensual', fecha } = req.query;
   validarParametros(periodo, fecha);
   const { inicio, fin } = getFechasPeriodo(periodo, fecha);
   const tenantFilter = getTenantFilter(req);
   const whereClause = buildTenantSql(tenantFilter);
-  const limitNum = Math.min(parseInt(limit) || 10, 50);
+  const { skip, take, page, limit } = paginate(req.query, { limit: 10, maxLimit: 100 });
 
   // Normaliza gramos→kilos antes de sumar. Sin esto, un producto con líneas
   // en gramos dominaba el ranking por volumen y desplazaba a los realmente
@@ -942,16 +943,36 @@ async function getProductosTop(req) {
     -- duplicaría entradas en el ranking.
     GROUP BY p.id, p.nombre, p.sku, p."unidadMedida"
     ORDER BY cantidad_vendida DESC
-    LIMIT ${limitNum}
+    LIMIT ${take} OFFSET ${skip}
   `;
 
-  return productos.map(p => ({
-    nombre: p.nombre,
-    sku: p.sku,
-    unidad: p.unidad_medida,
-    cantidadVendida: Number(p.cantidad_vendida),
-    ingresos: Number(p.ingresos_usd || 0).toFixed(2),
-  }));
+  const total = await prisma.$queryRaw`
+    SELECT COUNT(*)::int AS n
+    FROM (
+      SELECT p.id
+      FROM items_factura if
+      INNER JOIN productos p ON p.id = if."productoId"
+      INNER JOIN facturas f ON f.id = if."facturaId"
+      WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+        AND f."fechaEmision" <= ${tsFrag(fin)}
+        AND f."estado" != 'VOIDED'
+        ${whereClause}
+      GROUP BY p.id
+    ) t
+  `;
+
+  return paginatedResponse(
+    productos.map(p => ({
+      nombre: p.nombre,
+      sku: p.sku,
+      unidad: p.unidad_medida,
+      cantidadVendida: Number(p.cantidad_vendida),
+      ingresos: Number(p.ingresos_usd || 0).toFixed(2),
+    })),
+    Number(total[0]?.n || 0),
+    page,
+    limit
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -959,12 +980,12 @@ async function getProductosTop(req) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 async function getClientesTop(req) {
-  const { periodo = 'mensual', fecha, limit = '10' } = req.query;
+  const { periodo = 'mensual', fecha } = req.query;
   validarParametros(periodo, fecha);
   const { inicio, fin } = getFechasPeriodo(periodo, fecha);
   const tenantFilter = getTenantFilter(req);
   const whereClause = buildTenantSql(tenantFilter);
-  const limitNum = Math.min(parseInt(limit) || 10, 50);
+  const { skip, take, page, limit } = paginate(req.query, { limit: 10, maxLimit: 100 });
 
   const clientes = await prisma.$queryRaw`
     SELECT
@@ -986,15 +1007,34 @@ async function getClientesTop(req) {
       ${whereClause}
     GROUP BY c.id, c."razonSocial", c."rifCedula"
     ORDER BY total_compras_usd DESC
-    LIMIT ${limitNum}
+    LIMIT ${take} OFFSET ${skip}
   `;
 
-  return clientes.map(c => ({
-    nombre: c.nombre,
-    rif: c.rif,
-    cantidadFacturas: Number(c.cantidad_facturas),
-    totalCompras: Number(c.total_compras_usd || 0).toFixed(2),
-  }));
+  const total = await prisma.$queryRaw`
+    SELECT COUNT(*)::int AS n
+    FROM (
+      SELECT c.id
+      FROM facturas f
+      INNER JOIN clientes c ON c.id = f."clienteId"
+      WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+        AND f."fechaEmision" <= ${tsFrag(fin)}
+        AND f."estado" != 'VOIDED'
+        ${whereClause}
+      GROUP BY c.id
+    ) t
+  `;
+
+  return paginatedResponse(
+    clientes.map(c => ({
+      nombre: c.nombre,
+      rif: c.rif,
+      cantidadFacturas: Number(c.cantidad_facturas),
+      totalCompras: Number(c.total_compras_usd || 0).toFixed(2),
+    })),
+    Number(total[0]?.n || 0),
+    page,
+    limit
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -81,8 +81,6 @@ export function ReportesPage() {
   const [ventas, setVentas] = useState(null);
   const [ganancias, setGanancias] = useState(null);
   const [inversion, setInversion] = useState(null);
-  const [productosTop, setProductosTop] = useState([]);
-  const [clientesTop, setClientesTop] = useState([]);
   const [caja, setCaja] = useState(null);
   const [impuestos, setImpuestos] = useState(null);
   const [currencySymbol, setCurrencySymbol] = useState('$');
@@ -94,6 +92,9 @@ export function ReportesPage() {
   const [paginaProductosTop, setPaginaProductosTop] = useState(1);
   const [paginaClientesTop, setPaginaClientesTop] = useState(1);
   const POR_PAGINA = 10;
+  // Productos y clientes se paginan en el backend; guardan {data, total, totalPages}
+  const [topProductos, setTopProductos] = useState({ data: [], total: 0, totalPages: 1 });
+  const [topClientes, setTopClientes] = useState({ data: [], total: 0, totalPages: 1 });
 
   const puedeVerGanancias = rol === 'EMPRESA' || rol === 'SUPER_ADMIN';
   const puedeVerInversion = rol === 'EMPRESA' || rol === 'SUPER_ADMIN';
@@ -117,20 +118,6 @@ export function ReportesPage() {
             const errorMessage = getErrorMessage(err, 'Error cargando ventas');
             setErrors(prev => ({ ...prev, ventas: errorMessage }));
             setVentas(null);
-          }),
-        API.getReportesProductosTop(params)
-          .then(setProductosTop)
-          .catch(err => {
-            const errorMessage = getErrorMessage(err, 'Error cargando productos top');
-            setErrors(prev => ({ ...prev, productosTop: errorMessage }));
-            setProductosTop([]);
-          }),
-        API.getReportesClientesTop(params)
-          .then(setClientesTop)
-          .catch(err => {
-            const errorMessage = getErrorMessage(err, 'Error cargando clientes top');
-            setErrors(prev => ({ ...prev, clientesTop: errorMessage }));
-            setClientesTop([]);
           }),
         API.getReportesCaja(params)
           .then(setCaja)
@@ -179,6 +166,50 @@ export function ReportesPage() {
       setLoading(false);
     }
   }, [periodo, fecha, comparar, rol, showToast]);
+
+  // Productos y clientes se cargan por separado: al cambiar de página solo se
+  // recarga esa tabla, sin repetir los 5 reportes pesados.
+  const loadTopProductos = useCallback(async (pagina) => {
+    try {
+      const params = new URLSearchParams({
+        periodo, fecha, page: String(pagina), limit: String(POR_PAGINA),
+      });
+      const data = await API.getReportesProductosTop(params);
+      setTopProductos({
+        data: data?.data || [],
+        total: data?.total || 0,
+        totalPages: data?.totalPages || 1,
+      });
+    } catch (err) {
+      setErrors(prev => ({ ...prev, productosTop: getErrorMessage(err, 'Error cargando productos top') }));
+      setTopProductos({ data: [], total: 0, totalPages: 1 });
+    }
+  }, [periodo, fecha]);
+
+  const loadTopClientes = useCallback(async (pagina) => {
+    try {
+      const params = new URLSearchParams({
+        periodo, fecha, page: String(pagina), limit: String(POR_PAGINA),
+      });
+      const data = await API.getReportesClientesTop(params);
+      setTopClientes({
+        data: data?.data || [],
+        total: data?.total || 0,
+        totalPages: data?.totalPages || 1,
+      });
+    } catch (err) {
+      setErrors(prev => ({ ...prev, clientesTop: getErrorMessage(err, 'Error cargando clientes top') }));
+      setTopClientes({ data: [], total: 0, totalPages: 1 });
+    }
+  }, [periodo, fecha]);
+
+  useEffect(() => {
+    loadTopProductos(paginaProductosTop);
+  }, [loadTopProductos, paginaProductosTop]);
+
+  useEffect(() => {
+    loadTopClientes(paginaClientesTop);
+  }, [loadTopClientes, paginaClientesTop]);
 
   useEffect(() => {
     setPaginaPerdidas(1);
@@ -458,8 +489,24 @@ export function ReportesPage() {
     }
   };
 
-  const exportarCSV = () => {
+  const exportarCSV = async () => {
     try {
+      // Productos y clientes se paginan en pantalla; para el CSV se piden
+      // completos, si no el archivo contendría solo la página visible.
+      let todosProductos = topProductos.data;
+      let todosClientes = topClientes.data;
+      try {
+        const full = new URLSearchParams({ periodo, fecha, page: '1', limit: '100' });
+        const [rp, rc] = await Promise.all([
+          API.getReportesProductosTop(full),
+          API.getReportesClientesTop(full),
+        ]);
+        todosProductos = rp?.data || todosProductos;
+        todosClientes = rc?.data || todosClientes;
+      } catch {
+        showToast('CSV limitado a la página visible', 'error');
+      }
+
       // Crear contenido CSV
       const rows = [];
       
@@ -508,20 +555,20 @@ export function ReportesPage() {
       }
       
       // Productos Top
-      if (productosTop.length > 0) {
+      if (todosProductos.length > 0) {
         rows.push(['Productos Más Vendidos']);
-        rows.push(['Nombre', 'SKU', 'Cantidad', 'Ingresos']);
-        productosTop.forEach(p => {
-          rows.push([p.nombre, p.sku || '', p.cantidadVendida, p.ingresos]);
+        rows.push(['Nombre', 'SKU', 'Unidad', 'Cantidad', 'Ingresos']);
+        todosProductos.forEach(p => {
+          rows.push([p.nombre, p.sku || '', p.unidad || '', p.cantidadVendida, p.ingresos]);
         });
         rows.push([]);
       }
-      
+
       // Clientes Top
-      if (clientesTop.length > 0) {
+      if (todosClientes.length > 0) {
         rows.push(['Clientes Principales']);
         rows.push(['Nombre', 'RIF', 'Facturas', 'Total Compras']);
-        clientesTop.forEach(c => {
+        todosClientes.forEach(c => {
           rows.push([c.nombre, c.rif || '', c.cantidadFacturas, c.totalCompras]);
         });
       }
@@ -1071,14 +1118,12 @@ export function ReportesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {productosTop.length === 0 ? (
+                      {topProductos.data.length === 0 ? (
                         <tr>
-                          <td colSpan={3} className="empty-state">No hay datos</td>
+                          <td colSpan={4} className="empty-state">No hay datos</td>
                         </tr>
                       ) : (
-                        productosTop
-                          .slice((paginaProductosTop - 1) * POR_PAGINA, paginaProductosTop * POR_PAGINA)
-                          .map((p, i) => (
+                        topProductos.data.map((p, i) => (
                           <tr key={i}>
                             <td>
                               <div style={{ fontWeight: 500 }}>{p.nombre}</div>
@@ -1093,11 +1138,11 @@ export function ReportesPage() {
                     </tbody>
                   </table>
                 </div>
-                {productosTop.length > POR_PAGINA && (
+                {topProductos.totalPages > 1 && (
                   <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
                     <button className="btn btn-sm btn-secondary" disabled={paginaProductosTop === 1} onClick={() => setPaginaProductosTop(p => p - 1)}>Anterior</button>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Página {paginaProductosTop} de {Math.ceil(productosTop.length / POR_PAGINA)}</span>
-                    <button className="btn btn-sm btn-secondary" disabled={paginaProductosTop >= Math.ceil(productosTop.length / POR_PAGINA)} onClick={() => setPaginaProductosTop(p => p + 1)}>Siguiente</button>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Página {paginaProductosTop} de {topProductos.totalPages}</span>
+                    <button className="btn btn-sm btn-secondary" disabled={paginaProductosTop >= topProductos.totalPages} onClick={() => setPaginaProductosTop(p => p + 1)}>Siguiente</button>
                   </div>
                 )}
               </div>
@@ -1117,12 +1162,12 @@ export function ReportesPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {clientesTop.length === 0 ? (
+                      {topClientes.data.length === 0 ? (
                         <tr>
                           <td colSpan={3} className="empty-state">No hay datos</td>
                         </tr>
                       ) : (
-                        clientesTop.map((c, i) => (
+                        topClientes.data.map((c, i) => (
                           <tr key={i}>
                             <td>
                               <div style={{ fontWeight: 500 }}>{c.nombre}</div>
@@ -1136,6 +1181,13 @@ export function ReportesPage() {
                     </tbody>
                   </table>
                 </div>
+                {topClientes.totalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+                    <button className="btn btn-sm btn-secondary" disabled={paginaClientesTop === 1} onClick={() => setPaginaClientesTop(p => p - 1)}>Anterior</button>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Página {paginaClientesTop} de {topClientes.totalPages}</span>
+                    <button className="btn btn-sm btn-secondary" disabled={paginaClientesTop >= topClientes.totalPages} onClick={() => setPaginaClientesTop(p => p + 1)}>Siguiente</button>
+                  </div>
+                )}
               </div>
             </div>
           </>
