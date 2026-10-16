@@ -220,11 +220,22 @@ async function getProductosConPerdida(inicio, fin, tenantFilter) {
     ELSE item."subtotalLinea"
   END)`;
   const cantidadKg = cantidadEnKgSQL('item');
-  const gananciaUSD = `(CASE
+  // Misma base que la ganancia por producto: lo realmente cobrado en la línea
+  // menos su costo de inventario. Antes se usaba
+  // (precioUnitarioHistorico - costo) * cantidad, que no coincide con el
+  // subtotal cobrado cuando la línea tuvo descuento o redondeo, y hacía que el
+  // total de pérdidas no correspondiera con la ganancia del reporte.
+  const costoUSD = `(CASE
     WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-    THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * ${cantidadKg} / f."tasaCambio"
-    ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) * ${cantidadKg}
+    THEN COALESCE(p."costoCompra", 0) * ${cantidadKg} / f."tasaCambio"
+    ELSE COALESCE(p."costoCompra", 0) * ${cantidadKg}
   END)`;
+  const gananciaUSD = `(${ventaUSD} - ${costoUSD})`;
+  // Tolerancia de medio cent, la misma que cxc.js y pagos.js aplican al cerrar
+  // saldos. Sin ella, una línea que pierde $0.0006 aparece en la tabla de
+  // pérdidas impresa como "-$0.00": ruido que hace creer que el reporte está
+  // roto y que no cuadra con la ganancia del producto, que es positiva.
+  const TOLERANCIA_PERDIDA = -0.005;
 
   const rows = await prisma.$queryRaw`
     SELECT
@@ -245,9 +256,16 @@ async function getProductosConPerdida(inicio, fin, tenantFilter) {
       AND f."estado" != 'VOIDED'
       AND item."productoId" IS NOT NULL
       ${whereClause}
-      AND ${Prisma.raw(gananciaUSD)} < 0
+      AND ${Prisma.raw(gananciaUSD)} < ${TOLERANCIA_PERDIDA}
     ORDER BY f."fechaEmision" ASC, f."numeroFactura" ASC
   `;
+
+  // Redondea a 2 decimales y evita el "-0.00" que produce Decimal en valores
+  // negativos que caen por debajo del medio cent.
+  const a2 = (valor) => {
+    const redondeado = new Decimal(valor.toString()).toDecimalPlaces(2);
+    return (redondeado.isZero() ? new Decimal(0) : redondeado).toFixed(2);
+  };
 
   return rows.map(row => ({
     facturaId: Number(row.factura_id),
@@ -256,8 +274,8 @@ async function getProductosConPerdida(inicio, fin, tenantFilter) {
     producto: row.producto || '—',
     cantidad: row.cantidad.toString(),
     unidad: row.unidad,
-    subtotal: new Decimal(row.subtotal_usd.toString()).toFixed(2),
-    ganancia: new Decimal(row.ganancia_usd.toString()).toFixed(2),
+    subtotal: a2(row.subtotal_usd),
+    ganancia: a2(row.ganancia_usd),
   }));
 }
 
@@ -427,66 +445,34 @@ async function getGananciasReporte(req) {
     anual: 'Ganancia del Año',
   };
 
-  const [ingresos, cogsData, productosSinCosto] = await Promise.all([
-    prisma.$queryRaw`
-    SELECT
-      COALESCE(SUM(
-        CASE
-          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN f."total" / f."tasaCambio"
-          ELSE f."total"
-        END
-      ), 0) AS total_usd
-    FROM facturas f
-    WHERE f."fechaEmision" >= ${tsFrag(inicio)}
-      AND f."fechaEmision" <= ${tsFrag(fin)}
-      AND f."estado" != 'VOIDED'
-      ${whereClause}
-    `,
+  const gananciaPorProducto = await getGananciaPorProducto(inicio, fin, tenantFilter);
 
-    prisma.$queryRaw`
-    SELECT
-      COUNT(DISTINCT f.id) AS facturas_con_costo,
-      -- Cantidad normalizada a la unidad del producto (g → kg) antes de
-      -- multiplicar por el margen unitario. Sin esto, una línea de 675 g
-      -- contaba como 675 kg y disparaba la ganancia del período.
-      COALESCE(SUM(
-        CASE
-          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) *
-               ${Prisma.raw(cantidadEnKgSQL('item'))} / f."tasaCambio"
-          ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) *
-               ${Prisma.raw(cantidadEnKgSQL('item'))}
-        END
-      ), 0) AS ganancia_total,
-      COALESCE(SUM(
-        CASE
-          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN item."subtotalLinea" / f."tasaCambio"
-          ELSE item."subtotalLinea"
-        END
-      ), 0) AS subtotal_vendido,
-      COALESCE(SUM(
-        CASE
-          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN COALESCE(p."costoCompra", 0) *
-               ${Prisma.raw(cantidadEnKgSQL('item'))} / f."tasaCambio"
-          ELSE COALESCE(p."costoCompra", 0) *
-               ${Prisma.raw(cantidadEnKgSQL('item'))}
-        END
-      ), 0) AS costo_vendido
-    FROM items_factura item
-    INNER JOIN facturas f ON f.id = item."facturaId"
-    LEFT JOIN productos p ON p.id = item."productoId"
-    WHERE f."fechaEmision" >= ${tsFrag(inicio)}
-      AND f."fechaEmision" <= ${tsFrag(fin)}
-      AND f."estado" != 'VOIDED'
-      ${whereClause}
-      AND item."productoId" IS NOT NULL
-    `,
+  // Suma de la agregación por producto: una sola definición de ingresos,
+  // costo y ganancia para el resumen y para la tabla.
+  const sumaPorProducto = (campo) => gananciaPorProducto.reduce(
+    (acc, p) => acc.plus(new Decimal(p[campo] || 0)),
+    new Decimal(0)
+  );
+  const ingresosTotal = sumaPorProducto('ingresos');
+  const costoVendido = sumaPorProducto('costo');
+  const gananciaTotal = sumaPorProducto('ganancia');
 
+  // Conteo de facturas con y sin costo histórico. Son conteos, no sumas: no
+  // dependen de la agregación por producto y deben seguir contando solo las
+  // facturas cuyas líneas tienen producto (las otras no tienen costo conocido).
+  const [facturasConCostoData, facturasSinCostoData] = await Promise.all([
     prisma.$queryRaw`
-      SELECT COUNT(DISTINCT f.id) AS facturas_sin_costo
+      SELECT COUNT(DISTINCT f.id) AS n
+      FROM facturas f
+      INNER JOIN items_factura item ON item."facturaId" = f.id
+      WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+        AND f."fechaEmision" <= ${tsFrag(fin)}
+        AND f."estado" != 'VOIDED'
+        ${whereClause}
+        AND item."productoId" IS NOT NULL
+    `,
+    prisma.$queryRaw`
+      SELECT COUNT(DISTINCT f.id) AS n
       FROM facturas f
       INNER JOIN items_factura item ON item."facturaId" = f.id
       WHERE f."fechaEmision" >= ${tsFrag(inicio)}
@@ -497,50 +483,26 @@ async function getGananciasReporte(req) {
     `,
   ]);
 
-  const ingresosTotal = new Decimal(ingresos[0]?.total_usd || 0);
-  const gananciaTotal = new Decimal(cogsData[0]?.ganancia_total || 0);
-  const subtotalVentas = new Decimal(cogsData[0]?.subtotal_vendido || 0);
-  const costoVendido = new Decimal(cogsData[0]?.costo_vendido || 0);
-  const facturasConCosto = Number(cogsData[0]?.facturas_con_costo || 0);
-  const facturasSinCosto = Number(productosSinCosto[0]?.facturas_sin_costo || 0);
+  const facturasConCosto = Number(facturasConCostoData[0]?.n || 0);
+  const facturasSinCosto = Number(facturasSinCostoData[0]?.n || 0);
   const gananciaDisponible = facturasConCosto > 0 || facturasSinCosto === 0;
-  const margen = gananciaDisponible && ingresosTotal.gt(0)
-    ? gananciaTotal.dividedBy(ingresosTotal).times(100)
-    : null;
   const productosConPerdida = await getProductosConPerdida(inicio, fin, tenantFilter);
 
   let comparacion = null;
   if (comparar === 'true') {
-    const cogsAnterior = await prisma.$queryRaw`
-      SELECT
-        COALESCE(SUM(
-          CASE
-            WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-            THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) *
-                 ${Prisma.raw(cantidadEnKgSQL('item'))} / f."tasaCambio"
-            ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) *
-                 ${Prisma.raw(cantidadEnKgSQL('item'))}
-          END
-        ), 0) AS ganancia_total
-      FROM items_factura item
-      INNER JOIN facturas f ON f.id = item."facturaId"
-      LEFT JOIN productos p ON p.id = item."productoId"
-      WHERE f."fechaEmision" >= ${tsFrag(inicioAnterior)}
-        AND f."fechaEmision" <= ${tsFrag(finAnterior)}
-        AND f."estado" != 'VOIDED'
-        ${whereClause}
-        AND item."productoId" IS NOT NULL
-    `;
-
-    const gananciaAnterior = new Decimal(cogsAnterior[0]?.ganancia_total || 0);
+    // El período anterior se agrega con la MISMA función, para que la
+    // comparación no mezcle dos fórmulas distintas de ganancia.
+    const porProductoAnterior = await getGananciaPorProducto(inicioAnterior, finAnterior, tenantFilter);
+    const gananciaAnterior = porProductoAnterior.reduce(
+      (acc, p) => acc.plus(new Decimal(p.ganancia || 0)),
+      new Decimal(0)
+    );
 
     comparacion = {
       ...calcularComparacion(gananciaTotal.toNumber(), gananciaAnterior.toNumber()),
       gananciaAnterior: gananciaAnterior.toFixed(2),
     };
   }
-
-  const gananciaPorProducto = await getGananciaPorProducto(inicio, fin, tenantFilter);
 
   return {
     periodo,
@@ -549,7 +511,9 @@ async function getGananciasReporte(req) {
     ingresosTotales: ingresosTotal.toFixed(2),
     costoVendido: costoVendido.toFixed(2),
     gananciaBruta: gananciaDisponible ? gananciaTotal.toFixed(2) : null,
-    margen: margen?.toFixed(2) ?? null,
+    margen: gananciaDisponible && ingresosTotal.gt(0)
+      ? gananciaTotal.dividedBy(ingresosTotal).times(100).toFixed(2)
+      : null,
     facturasConCosto,
     facturasSinCosto,
     productosConPerdida,
@@ -561,127 +525,75 @@ async function getGananciasReporte(req) {
 async function getGananciaPorProducto(inicio, fin, tenantFilter) {
   const whereClause = buildTenantSql(tenantFilter);
 
-  const rows = await prisma.$queryRaw`
+  // Cada línea se convierte UNA vez a su valor en USD y a su costo, y las tres
+  // cifras del reporte salen de esa misma fila base. Antes la ganancia se
+  // calculaba aparte con (precioUnitarioHistorico - costoCompra) * cantidad,
+  // que no siempre reproduce subtotalLinea (descuentos y redondeos de la
+  // línea): por eso "ingresos - costo" y "ganancia" no cuadraban y la fila
+  // TOTAL del PDF contradecía a la tarjeta de resumen.
+  const lineasBase = Prisma.sql`
     SELECT
       p.id AS producto_id,
       p.nombre,
       p.sku,
       p."unidadMedida" AS unidad_medida,
-      -- Normaliza a la unidad del producto antes de sumar. Una línea guardada
-      -- en GRAMO (p. ej. 675 g) y otra en KILOGRAMO (p. ej. 2 kg) no son
-      -- sumables: sin esta conversión el reporte reportaba 6250 "kg" de tomate
-      -- cuando en realidad se vendieron 6.25 kg. El precio del subtotal siempre
-      -- se cobró bien por kilo; el defecto estaba solo en la agregación.
-      SUM(
-        ${Prisma.raw(cantidadEnKgSQL('item'))}
-      ) AS cantidad_vendida,
-      COALESCE(SUM(
-        CASE
-          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN item."subtotalLinea" / f."tasaCambio"
-          ELSE item."subtotalLinea"
-        END
-      ), 0) AS ingresos_usd,
-      -- Misma normalización que en cantidad_vendida: costo y ganancia se
-      -- calculan por kilogramo vendido, no por la unidad cruda de la línea.
-      COALESCE(SUM(
-        CASE
-          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) *
-               ${Prisma.raw(cantidadEnKgSQL('item'))} / f."tasaCambio"
-          ELSE (item."precioUnitarioHistorico" - COALESCE(p."costoCompra", 0)) *
-               ${Prisma.raw(cantidadEnKgSQL('item'))}
-        END
-      ), 0) AS ganancia_usd,
-      COALESCE(SUM(
-        CASE
-          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN COALESCE(p."costoCompra", 0) *
-               ${Prisma.raw(cantidadEnKgSQL('item'))} / f."tasaCambio"
-          ELSE COALESCE(p."costoCompra", 0) *
-               ${Prisma.raw(cantidadEnKgSQL('item'))}
-        END
-      ), 0) AS costo_usd
+      CASE WHEN item."productoId" IS NULL THEN 1 ELSE 0 END AS sin_producto,
+      ${Prisma.raw(cantidadEnKgSQL('item'))} AS cantidad,
+      CASE
+        WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+        THEN item."subtotalLinea" / f."tasaCambio"
+        ELSE item."subtotalLinea"
+      END AS ingresos_usd,
+      -- Una línea sin producto no tiene costo de inventario conocido: se deja
+      -- en 0 y no se inventa un sustituto.
+      CASE
+        WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+        THEN COALESCE(p."costoCompra", 0) *
+             ${Prisma.raw(cantidadEnKgSQL('item'))} / f."tasaCambio"
+        ELSE COALESCE(p."costoCompra", 0) * ${Prisma.raw(cantidadEnKgSQL('item'))}
+      END AS costo_usd
     FROM items_factura item
     INNER JOIN facturas f ON f.id = item."facturaId"
     LEFT JOIN productos p ON p.id = item."productoId"
     WHERE f."fechaEmision" >= ${tsFrag(inicio)}
       AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
-      ${whereClause}
-    GROUP BY p.id, p.nombre, p.sku, p."unidadMedida"
+      ${whereClause}`;
+
+  // LEFT JOIN + filtro posterior: las líneas sin producto llegan agrupadas en
+  // un único grupo con producto_id NULL. El bucket "Productos sin clasificar"
+  // se arma desde ese mismo grupo, no con una segunda consulta, para no
+  // contar dos veces las mismas líneas.
+  const rows = await prisma.$queryRaw`
+    WITH lineas AS (${lineasBase})
+    SELECT
+      producto_id,
+      nombre,
+      sku,
+      unidad_medida,
+      SUM(cantidad) AS cantidad_vendida,
+      COALESCE(SUM(ingresos_usd), 0) AS ingresos_usd,
+      COALESCE(SUM(costo_usd), 0) AS costo_usd,
+      COALESCE(SUM(ingresos_usd), 0) - COALESCE(SUM(costo_usd), 0) AS ganancia_usd,
+      MAX(sin_producto) AS sin_producto
+    FROM lineas
+    GROUP BY producto_id, nombre, sku, unidad_medida
     ORDER BY ganancia_usd DESC
   `;
 
-  const productosData = rows.map(row => ({
-    productoId: row.producto_id,
-    nombre: row.nombre,
-    sku: row.sku,
-    unidad: row.unidad_medida,
-    cantidadVendida: Number(row.cantidad_vendida).toFixed(2),
-    ingresos: new Decimal(row.ingresos_usd.toString()).toFixed(2),
-    costo: new Decimal(row.costo_usd.toString()).toFixed(2),
-    ganancia: new Decimal(row.ganancia_usd.toString()).toFixed(2),
-  }));
-
-  // Este query NO hace JOIN a productos (filtra productoId IS NULL), así que
-  // no puede consultar p."esVentaPorPeso". Solo normaliza GRAMO -> kg.
-  const cantidadSinProducto = `(CASE
-    WHEN item."unidadMedida" = 'GRAMO' THEN item."cantidad" / 1000
-    ELSE item."cantidad"
-  END)`;
-
-  const itemsSinProducto = await prisma.$queryRaw`
-    SELECT
-      COALESCE(SUM(
-        CASE
-          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN item."subtotalLinea" / f."tasaCambio"
-          ELSE item."subtotalLinea"
-        END
-      ), 0) AS ingresos_usd,
-      COALESCE(SUM(
-        CASE
-          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN (item."precioUnitarioHistorico" - 0) *
-               ${Prisma.raw(cantidadSinProducto)} / f."tasaCambio"
-          ELSE (item."precioUnitarioHistorico" - 0) * ${Prisma.raw(cantidadSinProducto)}
-        END
-      ), 0) AS ganancia_usd,
-      COALESCE(SUM(
-        CASE
-          WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN 0 * ${Prisma.raw(cantidadSinProducto)} / f."tasaCambio"
-          ELSE 0 * ${Prisma.raw(cantidadSinProducto)}
-        END
-      ), 0) AS costo_usd,
-      COALESCE(SUM(${Prisma.raw(cantidadSinProducto)}), 0) AS cantidad_vendida
-    FROM items_factura item
-    INNER JOIN facturas f ON f.id = item."facturaId"
-    WHERE f."fechaEmision" >= ${tsFrag(inicio)}
-      AND f."fechaEmision" <= ${tsFrag(fin)}
-      AND f."estado" != 'VOIDED'
-      AND item."productoId" IS NULL
-      ${whereClause}
-  `;
-
-  const sinProducto = itemsSinProducto[0];
-  const tieneSinProducto = Number(sinProducto?.ingresos_usd) > 0 || Number(sinProducto?.ganancia_usd) > 0;
-
-  if (tieneSinProducto) {
-    productosData.push({
-      productoId: null,
-      nombre: 'Productos sin clasificar',
-      sku: '—',
-      unidad: '—',
-      cantidadVendida: Number(sinProducto.cantidad_vendida || 0).toFixed(2),
-      ingresos: new Decimal(sinProducto.ingresos_usd.toString()).toFixed(2),
-      costo: new Decimal(sinProducto.costo_usd.toString()).toFixed(2),
-      ganancia: new Decimal(sinProducto.ganancia_usd.toString()).toFixed(2),
-    });
-  }
-
-  return productosData;
+  return rows.map(row => {
+    const esSinProducto = Number(row.sin_producto) === 1;
+    return {
+      productoId: esSinProducto ? null : row.producto_id,
+      nombre: esSinProducto ? 'Productos sin clasificar' : row.nombre,
+      sku: esSinProducto ? '—' : row.sku,
+      unidad: esSinProducto ? '—' : row.unidad_medida,
+      cantidadVendida: Number(row.cantidad_vendida).toFixed(2),
+      ingresos: new Decimal(row.ingresos_usd.toString()).toFixed(2),
+      costo: new Decimal(row.costo_usd.toString()).toFixed(2),
+      ganancia: new Decimal(row.ganancia_usd.toString()).toFixed(2),
+    };
+  });
 }
 
 async function getDetalleVentasReporte(req) {
@@ -771,7 +683,6 @@ async function getDetalleVentasReporte(req) {
           costoDesconocido = true;
           continue;
         }
-        const precioUnitario = new Decimal(item.precioUnitarioHistorico.toString());
         const costo = new Decimal(costoCompra.toString());
         // Normaliza gramos a kilos para no inflar la ganancia 1000x.
         const cantidad = cantidadEnKg(
@@ -779,7 +690,13 @@ async function getDetalleVentasReporte(req) {
           item.unidadMedida,
           item.producto?.esVentaPorPeso
         );
-        ganancia = ganancia.plus(precioUnitario.minus(costo).times(cantidad));
+        // Misma base que la ganancia por producto y la de pérdidas: lo que se
+        // cobró en la línea menos su costo. Usar (precioUnitarioHistorico -
+        // costo) * cantidad daba un tercer total, distinto al del resumen y al
+        // de la tabla por producto, y las dos cifras se contradecían dentro
+        // del mismo PDF.
+        const cobradoUSD = normalizarAUSD(item.subtotalLinea, factura.moneda, tasaCambio);
+        ganancia = ganancia.plus(cobradoUSD.minus(costo.times(cantidad)));
       }
       if (costoDesconocido) {
         facturasSinCosto += 1;

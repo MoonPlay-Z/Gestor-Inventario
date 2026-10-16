@@ -171,6 +171,127 @@ async function main() {
     }
   }
 
+  // ── 5. Las tres cifras de ganancia deben usar la misma base ─────────────────
+  // El PDF/CSV muestran la ganancia en tres sitios: la tarjeta de resumen, la
+  // fila TOTAL de la tabla por producto y el total del detalle por factura.
+  // Cada unochnet de ellos tenía su propia fórmula y se contradecían. Aquí se
+  // comprueba que hoy salen de la misma agregación.
+  console.log(`\n[5] Coherencia entre las tres cifras de ganancia del reporte`);
+  const { getGananciasReporte, getDetalleVentasReporte } = require('../src/services/reportesService');
+  const conFacturas = await prisma.usuario.findFirst({
+    where: { rol: 'EMPRESA', facturas: { some: {} } },
+    select: { id: true, rol: true, empresaRefId: true },
+  });
+
+  if (!conFacturas) {
+    console.log('    (omitido: no hay usuario EMPRESA con facturas)');
+  } else {
+    const anio = String(new Date().getFullYear());
+    for (const [periodo, fecha] of [['anual', anio], ['mensual', `${anio}-10`]]) {
+      const g = await getGananciasReporte({ query: { periodo, fecha }, user: conFacturas });
+      if (g.gananciaBruta === null) {
+        console.log(`    (${periodo}: sin costo histórico, omitido)`);
+        continue;
+      }
+
+      const suma = (campo) => g.gananciaPorProducto.reduce((a, p) => a.plus(d(p[campo])), new Decimal(0));
+      const descuadresResumen = [
+        ['ingresos tarjeta vs tabla', d(g.ingresosTotales).minus(suma('ingresos'))],
+        ['costo tarjeta vs tabla', d(g.costoVendido).minus(suma('costo'))],
+        ['ganancia tarjeta vs tabla', d(g.gananciaBruta).minus(suma('ganancia'))],
+        // Identidad aritmética: ingresos = costo + ganancia.
+        ['ingresos - costo - ganancia',
+          d(g.ingresosTotales).minus(g.costoVendido).minus(g.gananciaBruta)],
+      ].filter(([, dif]) => dif.abs().gt(TOL));
+
+      if (descuadresResumen.length === 0) {
+        console.log(`    ✓ ${periodo}: ingresos, costo y ganancia de la tarjeta cuadran con la tabla por producto` +
+          ` ($${g.ingresosTotales} / $${g.costoVendido} / $${g.gananciaBruta})`);
+      } else {
+        for (const [nombre, dif] of descuadresResumen) {
+          console.log(`    ✗ ${periodo}: ${nombre} difiere en $${dif.toFixed(2)}`);
+        }
+        fallos += descuadresResumen.length;
+      }
+
+      // El detalle por factura: se recorre entero y se compara factura por
+      // factura contra un cálculo de referencia hecho en SQL con la definición
+      // correcta (subtotalLinea − costo). Comparar solo el total exigiría una
+      // tolerancia de medio cent por factura y dejaría pasar cualquier fórmula
+      // que se desvíe poco en agregado. Factura por factura la tolerancia es de
+      // un centavo y sí detecta el cambio.
+      let lineas = [];
+      const primera = await getDetalleVentasReporte({
+        query: { periodo, fecha, page: '1', limit: '200' }, user: conFacturas,
+      });
+      lineas = [...primera.detalle];
+      for (let p = 2; p <= (primera.paginacion?.totalPages || 1); p++) {
+        const r = await getDetalleVentasReporte({
+          query: { periodo, fecha, page: String(p), limit: '200' }, user: conFacturas,
+        });
+        lineas = lineas.concat(r.detalle);
+      }
+
+      const { getFechasPeriodo } = require('../src/utils/reportesHelpers');
+      const { tsFrag } = require('../src/utils/sql');
+      const { Prisma } = require('../src/db/prisma');
+      const { cantidadEnKgSQL } = require('../src/services/unidades');
+      const { inicio, fin } = getFechasPeriodo(periodo, fecha);
+      // La referencia debe normalizar gramos a kilos igual que el servicio;
+      // sin esto el costo de una línea de 675 g saldría 1000 veces mayor.
+      const cantidadKg = Prisma.raw(cantidadEnKgSQL('it'));
+      {
+        const referencia = await prisma.$queryRaw`
+          SELECT f."numeroFactura" AS numero,
+                 COALESCE(SUM(
+                   CASE
+                     WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+                     THEN it."subtotalLinea" / f."tasaCambio"
+                     ELSE it."subtotalLinea"
+                   END
+                 ), 0)
+                 - COALESCE(SUM(
+                   CASE
+                     WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+                     THEN COALESCE(p."costoCompra",0) * ${cantidadKg} / f."tasaCambio"
+                     ELSE COALESCE(p."costoCompra",0) * ${cantidadKg}
+                   END
+                 ), 0) AS ganancia_ref
+          FROM facturas f
+          JOIN items_factura it ON it."facturaId" = f.id
+          LEFT JOIN productos p ON p.id = it."productoId"
+          WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+            AND f."fechaEmision" <= ${tsFrag(fin)}
+            AND f."estado" <> 'VOIDED'
+            AND it."productoId" IS NOT NULL
+            AND p."costoCompra" IS NOT NULL
+          GROUP BY f."numeroFactura"`;
+
+        const refMap = new Map(referencia.map(r => [Number(r.numero), d(r.ganancia_ref)]));
+        const toleranciaFactura = new Decimal('0.015');
+        let descuadradas = [];
+        for (const l of lineas) {
+          if (l.costoDesconocido || l.ganancia === null) continue;
+          const esp = refMap.get(Number(l.facturaId));
+          if (esp === undefined) continue;
+          if (d(l.ganancia).minus(esp).abs().gt(toleranciaFactura)) {
+            descuadradas.push({ id: l.facturaId, api: d(l.ganancia), esp });
+          }
+        }
+
+        if (descuadradas.length === 0) {
+          console.log(`    ✓ ${periodo}: las ${lineas.length} facturas del detalle cuadran con la referencia (subtotalLinea − costo)`);
+        } else {
+          console.log(`    ✗ ${periodo}: ${descuadradas.length} facturas del detalle no cuadran con la referencia:`);
+          for (const x of descuadradas.slice(0, 5)) {
+            console.log(`        #${x.id}: API $${x.api.toFixed(2)} vs referencia $${x.esp.toFixed(2)}`);
+          }
+          fallos += descuadradas.length;
+        }
+      }
+    }
+  }
+
   console.log(`\n${fallos === 0 ? '✓ TODAS LAS INVARIANTES SE CUMPLEN' : `✗ ${fallos} violaciones`}\n`);
 
   await prisma.$disconnect();

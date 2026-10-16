@@ -63,6 +63,73 @@ const desgloseUnidadesPorProducto = (productos) => {
     .join(' + ');
 };
 
+// El detalle por factura llega paginado con tope de 200 por página. Una
+// exportación que solo pida la primera mostraría una fracción del período
+// sin avisar, así que se recorren todas las páginas.
+const LIMIT_DETALLE = 200;
+const cargarDetalleCompleto = async (periodo, fecha) => {
+  const primera = await API.getReportesVentasDetalle(
+    new URLSearchParams({ periodo, fecha, page: '1', limit: String(LIMIT_DETALLE) })
+  );
+  const paginas = primera?.paginacion?.totalPages || 1;
+  if (paginas <= 1) return primera;
+  const resto = await Promise.all(
+    Array.from({ length: paginas - 1 }, (_, i) =>
+      API.getReportesVentasDetalle(
+        new URLSearchParams({ periodo, fecha, page: String(i + 2), limit: String(LIMIT_DETALLE) })
+      )
+    )
+  );
+  return {
+    ...primera,
+    detalle: [...(primera.detalle || []), ...resto.flatMap(r => r.detalle || [])],
+  };
+};
+
+// Igual para productos y clientes, que el backend pagina con tope de 100.
+const cargarListadoCompleto = async (fn, periodo, fecha) => {
+  const primera = await fn(new URLSearchParams({ periodo, fecha, page: '1', limit: '100' }));
+  const paginas = primera?.totalPages || 1;
+  if (paginas <= 1) return primera?.data || [];
+  const resto = await Promise.all(
+    Array.from({ length: paginas - 1 }, (_, i) =>
+      fn(new URLSearchParams({ periodo, fecha, page: String(i + 2), limit: '100' }))
+    )
+  );
+  return [...(primera.data || []), ...resto.flatMap(r => r.data || [])];
+};
+
+// Anchos de columna del PDF. jsPDF trabaja en milímetros y, en A4 horizontal,
+// el ancho útil de una tabla es 269: si la suma de los anchos no da 269 la
+// tabla deja espacio en blanco (y jspdf-autotable avisa por consola, aunque no
+// haya recorte real). Todas las sumas de abajo dan 269.
+const ANCHOS_PRODUCTOS = {
+  0: { cellWidth: 62 },
+  1: { cellWidth: 44 },
+  2: { cellWidth: 27 },
+  3: { cellWidth: 30, halign: 'right' },
+  4: { cellWidth: 34, halign: 'right' },
+  5: { cellWidth: 34, halign: 'right' },
+  6: { cellWidth: 38, halign: 'right' },
+};
+const ANCHOS_DETALLE = {
+  0: { cellWidth: 22 },
+  1: { cellWidth: 40 },
+  2: { cellWidth: 62 },
+  3: { cellWidth: 46 },
+  4: { cellWidth: 48, halign: 'right' },
+  5: { cellWidth: 51, halign: 'right' },
+};
+const ANCHOS_PERDIDAS = {
+  0: { cellWidth: 22 },
+  1: { cellWidth: 44 },
+  2: { cellWidth: 50 },
+  3: { cellWidth: 62 },
+  4: { cellWidth: 26 },
+  5: { cellWidth: 33, halign: 'right' },
+  6: { cellWidth: 32, halign: 'right' },
+};
+
 export function ReportesPage() {
   const { toggleSidebar } = useOutletContext();
   const { showToast } = useToast();
@@ -265,9 +332,10 @@ export function ReportesPage() {
     ],
   } : null;
 
-  // Gráfico de ganancias
+  // Gráfico de ganancias. Las tres cifras salen de la misma agregación por
+  // producto del backend, así que Ingresos = Costo + Ganancia sin ajuste manual.
   const gananciasChartData = ganancias && ganancias.gananciaBruta !== null ? {
-    labels: ['Ingresos', 'Costo Vendido', 'Ganancia'],
+    labels: ['Ingresos s/imp.', 'Costo vendido', 'Ganancia'],
     datasets: [{
       data: [
         parseFloat(ganancias.ingresosTotales),
@@ -362,127 +430,269 @@ export function ReportesPage() {
       const { jsPDF } = await import('jspdf');
       const autoTable = (await import('jspdf-autotable')).default;
       const params = new URLSearchParams({ periodo, fecha });
-      const reporte = await API.getReportesVentasDetalle(params);
+      const verGanancias = puedeVerGanancias;
+      const [reporte, detalle] = await Promise.all([
+        // El endpoint de ganancias está restringido a EMPRESA / SUPER_ADMIN;
+        // pedirlo para otros roles solo produciría un error.
+        verGanancias
+          ? API.getReportesGanancias(params)
+          : Promise.resolve(null),
+        cargarDetalleCompleto(periodo, fecha),
+      ]);
       const doc = new jsPDF({ orientation: 'landscape' });
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const m = (v) => Utils.formatMoney(v, '$');
 
+      // ── Encabezado ────────────────────────────────────────────────────────
       doc.setFontSize(18);
-      doc.text('Reporte de Ingresos y Ganancias por Ventas', pageWidth / 2, 15, { align: 'center' });
-      doc.setFontSize(11);
-      doc.text(`Período: ${reporte.etiqueta}`, 14, 24);
-      doc.text(`Fecha de generación: ${new Date().toLocaleString('es-VE')}`, 14, 31);
-      doc.text('Montos en USD · Período aplicado por fecha y hora de emisión de la factura', 14, 38);
+      doc.text(
+        verGanancias ? 'Reporte de Ganancias por Producto' : 'Reporte de Ventas por Producto',
+        pageWidth / 2, 15, { align: 'center' }
+      );
+      doc.setFontSize(10);
+      doc.text(`Período: ${reporte?.etiqueta || detalle.etiqueta || 'N/A'}`, 14, 23);
+      doc.text(`Generado: ${new Date().toLocaleString('es-VE')}`, 14, 29);
+      doc.text('Montos en USD · Cantidades en la unidad del producto (gramos convertidos a kg)', 14, 35);
 
-      const verGanancias = puedeVerGanancias;
-      const columnas = [
-        'Factura ID',
-        'Referencia',
-        'Cliente',
-        'Producto',
-        'Fecha y hora',
-        'Monto total (USD)',
-        ...(verGanancias ? ['Ganancia (USD)'] : []),
-      ];
-      const filas = reporte.detalle.map(item => [
-        `#${item.facturaId}`,
-        item.referencia,
-        item.cliente,
-        item.producto,
-        new Date(item.fechaHora).toLocaleString('es-VE'),
-        Utils.formatMoney(item.montoTotal, '$'),
-        ...(verGanancias ? [
-          item.costoDesconocido
-            ? 'No disponible'
-            : `${item.costoEstimado ? '* ' : ''}${Utils.formatMoney(item.ganancia, '$')}`,
-        ] : []),
-      ]);
+      let y = 43;
 
-      autoTable(doc, {
-        startY: 44,
-        head: [columnas],
-        body: filas,
-        styles: { fontSize: 8, cellPadding: 2, overflow: 'linebreak' },
-        headStyles: { fillColor: [99, 102, 241] },
-        columnStyles: {
-          0: { cellWidth: 22 },
-          1: { cellWidth: 35 },
-          2: { cellWidth: 38 },
-          3: { cellWidth: 62 },
-          4: { cellWidth: 35 },
-          5: { cellWidth: 34, halign: 'right' },
-          ...(verGanancias ? { 6: { cellWidth: 34, halign: 'right' } } : {}),
-        },
-      });
+      // ── Resumen ejecutivo ─────────────────────────────────────────────────
+      if (verGanancias && reporte) {
+        const tarjetas = [
+          ['Ingresos s/imp.', m(reporte.ingresosTotales), [16, 185, 129]],
+          ['Costo vendido', m(reporte.costoVendido), [245, 158, 11]],
+          [reporte.etiquetaGanancia || 'Ganancia',
+            reporte.gananciaBruta === null ? 'No disponible' : m(reporte.gananciaBruta),
+            reporte.gananciaBruta !== null && Number(reporte.gananciaBruta) < 0
+              ? [220, 38, 38] : [5, 150, 105]],
+          ['Margen', reporte.margen === null ? 'No disponible' : `${reporte.margen}%`, [90, 90, 100]],
+        ];
+        const ancho = 62;
+        tarjetas.forEach(([titulo, valor, color], i) => {
+          const x = 14 + i * (ancho + 4);
+          doc.setDrawColor(220, 223, 228);
+          doc.setFillColor(249, 250, 252);
+          doc.roundedRect(x, y, ancho, 20, 2, 2, 'FD');
+          doc.setFontSize(7);
+          doc.setTextColor(110, 116, 128);
+          doc.text(titulo.toUpperCase(), x + 4, y + 6);
+          doc.setFontSize(11);
+          doc.setTextColor(...color);
+          doc.text(String(valor), x + 4, y + 15);
+        });
+        y += 26;
+      }
 
-      const perdidas = verGanancias ? (reporte.productosConPerdida || []) : [];
-      if (perdidas.length > 0) {
-        let perdidasY = (doc.lastAutoTable?.finalY || 44) + 12;
-        if (perdidasY > doc.internal.pageSize.getHeight() - 35) {
-          doc.addPage();
-          perdidasY = 20;
-        }
-        doc.setFontSize(12);
-        doc.setTextColor(180, 35, 24);
-        doc.text('Detalle de ventas con pérdida', 14, perdidasY);
+      // ── Ganancia por producto ─────────────────────────────────────────────
+      const porProducto = reporte?.gananciaPorProducto || [];
+      if (porProducto.length > 0) {
+        doc.setFontSize(11);
         doc.setTextColor(0, 0, 0);
-        doc.setFontSize(8);
-        doc.text('Cada línea aparece porque el costo del producto supera el precio de venta sin impuestos. La cantidad se normaliza a kg.', 14, perdidasY + 5);
+        doc.text(`Ganancia por producto (${porProducto.length})`, 14, y);
+        y += 4;
+
+        const columnasProd = verGanancias
+          ? ['Producto', 'SKU', 'Unidad', 'Cantidad', 'Ingresos s/imp.', 'Costo', 'Ganancia']
+          : ['Producto', 'SKU', 'Unidad', 'Cantidad', 'Ingresos s/imp.'];
+
+        const cuerpoProd = porProducto.map(p => {
+          const base = [
+            p.nombre,
+            p.sku || '—',
+            p.unidad || '—',
+            Number(p.cantidadVendida).toLocaleString('es-VE', { maximumFractionDigits: 3 }),
+            m(p.ingresos),
+          ];
+          return verGanancias
+            ? [...base, m(p.costo), m(p.ganancia)]
+            : base;
+        });
+
+        // Fila de totales: la cantidad NO se suma entre unidades distintas.
+        const porUnidad = {};
+        for (const p of porProducto) {
+          const u = p.unidad || '—';
+          porUnidad[u] = (porUnidad[u] || 0) + Number(p.cantidadVendida || 0);
+        }
+        const suma = (campo) => porProducto.reduce((a, p) => a + Number(p[campo] || 0), 0);
+        const totalesProd = [
+          'Total General',
+          '',
+          '',
+          Object.entries(porUnidad).map(([u, v]) => `${v.toFixed(2)} ${u}`).join(' + '),
+          m(suma('ingresos')),
+        ];
+        if (verGanancias) totalesProd.push(m(suma('costo')), m(suma('ganancia')));
+
         autoTable(doc, {
-          startY: perdidasY + 9,
-          // 7 columnas = 7 valores. Antes el header declaraba 8 y el cuerpo
-          // enviaba 7, dejando la última celda vacía y desalineando la tabla.
-          head: [['Factura', 'Fecha y hora', 'Cliente', 'Producto', 'Cantidad', 'Subtotal sin impuestos (USD)', 'Ganancia (USD)']],
+          startY: y,
+          head: [columnasProd],
+          body: cuerpoProd,
+          foot: [totalesProd],
+          styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+          headStyles: { fillColor: [99, 102, 241] },
+          footStyles: { fillColor: [240, 242, 247], fontStyle: 'bold', fontSize: 7 },
+          columnStyles: verGanancias
+            ? ANCHOS_PRODUCTOS
+            : { 0: ANCHOS_PRODUCTOS[0], 1: ANCHOS_PRODUCTOS[1], 2: ANCHOS_PRODUCTOS[2],
+                3: ANCHOS_PRODUCTOS[3], 4: ANCHOS_PRODUCTOS[4] },
+        });
+        y = (doc.lastAutoTable?.finalY || y) + 8;
+      }
+
+      // ── Detalle por factura ───────────────────────────────────────────────
+      const lineasFactura = detalle.detalle || [];
+      if (lineasFactura.length > 0) {
+        constTitulo = (texto, subtitulo, color) => {
+          const espacio = 22;
+          if (y + espacio > pageHeight - 24) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.setFontSize(11);
+          doc.setTextColor(...color);
+          doc.text(texto, 14, y);
+          y += 5;
+          if (subtitulo) {
+            doc.setFontSize(7);
+            doc.setTextColor(110, 116, 128);
+            doc.text(subtitulo, 14, y, { maxWidth: pageWidth - 28 });
+            y += 3;
+          }
+          doc.setTextColor(0, 0, 0);
+          y += 2;
+        };
+
+        titulo(
+          `Detalle por factura (${lineasFactura.length} de ${detalle.paginacion?.total ?? lineasFactura.length})`,
+          'Una fila por factura emitida en el período. La ganancia usa el costo histórico de cada producto en el momento de la venta.',
+          [0, 0, 0]
+        );
+
+        const columnasDet = verGanancias
+          ? ['Factura', 'Referencia', 'Cliente', 'Fecha y hora', 'Total (USD)', 'Ganancia (USD)']
+          : ['Factura', 'Referencia', 'Cliente', 'Fecha y hora', 'Total (USD)'];
+
+        autoTable(doc, {
+          startY: y,
+          head: [columnasDet],
+          body: lineasFactura.map(item => [
+            `#${item.facturaId}`,
+            item.referencia,
+            item.cliente,
+            new Date(item.fechaHora).toLocaleString('es-VE'),
+            m(item.montoTotal),
+            ...(verGanancias ? [
+              item.costoDesconocido
+                ? 'No disponible'
+                : `${item.costoEstimado ? '* ' : ''}${m(item.ganancia)}`,
+            ] : []),
+          ]),
+          foot: [[
+            'Total facturado', '', '', '',
+            m(detalle.totalIngresos),
+            ...(verGanancias ? [
+              detalle.gananciaTotal === null
+                ? 'No disponible'
+                : m(detalle.gananciaTotal),
+            ] : []),
+          ]],
+          styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
+          headStyles: { fillColor: [99, 102, 241] },
+          footStyles: { fillColor: [240, 242, 247], fontStyle: 'bold', fontSize: 7 },
+          columnStyles: verGanancias
+            ? ANCHOS_DETALLE
+            : { 0: ANCHOS_DETALLE[0], 1: ANCHOS_DETALLE[1], 2: ANCHOS_DETALLE[2],
+                3: ANCHOS_DETALLE[3], 4: ANCHOS_DETALLE[4] },
+        });
+        y = (doc.lastAutoTable?.finalY || y) + 8;
+      }
+
+      // ── Pérdidas ──────────────────────────────────────────────────────────
+      const perdidas = verGanancias ? (reporte?.productosConPerdida || []) : [];
+      if (perdidas.length > 0) {
+        titulo(
+          `Líneas de venta con pérdida (${perdidas.length})`,
+          'Cada línea aparece porque el costo histórico del producto supera el precio de venta sin impuestos.',
+          [180, 35, 24]
+        );
+
+        autoTable(doc, {
+          startY: y,
+          head: [['Factura', 'Fecha y hora', 'Cliente', 'Producto', 'Cantidad', 'Subtotal s/imp. (USD)', 'Ganancia (USD)']],
           body: perdidas.map(item => [
             `#${item.facturaId}`,
             new Date(item.fechaHora).toLocaleString('es-VE'),
             item.cliente,
             item.producto,
             `${Number(item.cantidad).toLocaleString('es-VE')} ${item.unidad || ''}`.trim(),
-            Utils.formatMoney(item.subtotal, '$'),
-            Utils.formatMoney(item.ganancia, '$'),
+            m(item.subtotal),
+            m(item.ganancia),
           ]),
+          foot: [[
+            'Total pérdidas', '', '', '',
+            m(perdidas.reduce((a, i) => a + Number(i.subtotal || 0), 0)),
+            m(perdidas.reduce((a, i) => a + Number(i.ganancia || 0), 0)),
+          ]],
           styles: { fontSize: 7, cellPadding: 2, overflow: 'linebreak' },
           headStyles: { fillColor: [180, 35, 24] },
-          columnStyles: {
-            0: { cellWidth: 18 },
-            1: { cellWidth: 30 },
-            2: { cellWidth: 30 },
-            3: { cellWidth: 48 },
-            4: { cellWidth: 20 },
-            5: { cellWidth: 32, halign: 'right' },
-            6: { cellWidth: 28, halign: 'right' },
-          },
+          footStyles: { fillColor: [253, 242, 242], fontStyle: 'bold', fontSize: 7 },
+          columnStyles: ANCHOS_PERDIDAS,
         });
+        y = (doc.lastAutoTable?.finalY || y) + 8;
       }
 
+      // ── Notas y cierre ────────────────────────────────────────────────────
       const notas = [];
-      if (verGanancias && reporte.facturasSinCosto > 0) {
+      if (verGanancias && reporte && reporte.facturasSinCosto > 0) {
         notas.push(reporte.facturasConCosto === 0
           ? `No fue posible calcular la ganancia: ${reporte.facturasSinCosto} factura(s) no tienen costo histórico completo. No se usó el costo actual del inventario como sustituto.`
           : `${reporte.facturasSinCosto} factura(s) sin costo histórico completo se excluyeron de la ganancia total; no se usó el costo actual del inventario como sustituto.`);
       }
-      if (verGanancias && Number(reporte.gananciaTotal) < 0) {
-        notas.push('La ganancia neta del período es negativa porque las pérdidas detalladas superan las ganancias de las demás ventas con costo histórico completo.');
+      if (verGanancias && reporte && reporte.gananciaBruta !== null && Number(reporte.gananciaBruta) < 0) {
+        notas.push('La ganancia del período es negativa porque las pérdidas detalladas superan las ganancias de las demás ventas con costo histórico completo.');
       }
-      const notasLineas = notas.length > 0
-        ? doc.splitTextToSize(notas.join(' '), pageWidth - 28)
-        : [];
-      let summaryY = (doc.lastAutoTable?.finalY || 44) + 10;
-      const requiredSpace = (verGanancias ? 20 : 12) + (notasLineas.length > 0 ? 5 + notasLineas.length * 4 : 0);
-      if (summaryY + requiredSpace > doc.internal.pageSize.getHeight() - 10) {
-        doc.addPage();
-        summaryY = 20;
-      }
-      doc.setFontSize(12);
-      doc.text(`Monto total facturado: ${Utils.formatMoney(reporte.totalIngresos, '$')}`, 14, summaryY);
-      if (verGanancias) {
-        doc.text(`Ganancia total: ${reporte.gananciaTotal === null ? 'No disponible por falta de costo histórico' : Utils.formatMoney(reporte.gananciaTotal, '$')}`, 14, summaryY + 8);
-        doc.setFontSize(9);
-        doc.text('Ganancia = suma del subtotal vendido por producto (sin impuestos) menos su costo histórico; usa las ventas emitidas en el período seleccionado.', 14, summaryY + 16, { maxWidth: pageWidth - 28 });
-        if (notasLineas.length > 0) doc.text(notasLineas, 14, summaryY + 22);
+      if (detalle.paginacion && detalle.paginacion.total > lineasFactura.length) {
+        notas.push(`El detalle por factura está limitado a ${lineasFactura.length} de ${detalle.paginacion.total} facturas del período. El resumen por producto y las pérdidas cubren la totalidad.`);
       }
 
-      doc.save(`reporte_ventas_${periodo}_${fecha}.pdf`);
+      const notasLineas = notas.length > 0
+        ? doc.splitTextToSize(notas.join('  ·  '), pageWidth - 28)
+        : [];
+      const cierre = [
+        `Monto total facturado: ${m(detalle.totalIngresos)}`,
+        ...(verGanancias && reporte ? [`${reporte.etiquetaGanancia || 'Ganancia'}: ${reporte.gananciaBruta === null ? 'No disponible por falta de costo histórico' : m(reporte.gananciaBruta)}`] : []),
+        'La cantidad se normaliza a la unidad del producto: las líneas guardadas en GRAMO se convierten a kg. Las cantidades de unidades distintas no se suman entre sí.',
+      ];
+      const cierreLineas = doc.splitTextToSize(cierre.join('  ·  '), pageWidth - 28);
+
+      const altoNecesario = cierreLineas.length * 4 + (notasLineas.length ? notasLineas.length * 4 + 4 : 0) + 14;
+      if (y + altoNecesario > pageHeight - 24) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.setFontSize(8);
+      doc.setTextColor(60, 64, 72);
+      doc.text(cierreLineas, 14, y);
+      y += cierreLineas.length * 4 + 2;
+      if (notasLineas.length > 0) {
+        doc.setFontSize(7);
+        doc.setTextColor(130, 135, 145);
+        doc.text(notasLineas, 14, y);
+      }
+
+      // ── Pie de página ─────────────────────────────────────────────────────
+      const totalPaginas = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= totalPaginas; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7);
+        doc.setTextColor(150, 155, 165);
+        doc.text(`Página ${i} de ${totalPaginas}`, pageWidth - 14, pageHeight - 8, { align: 'right' });
+        doc.text(`Reporte de Ganancias por Producto · ${reporte?.etiqueta || detalle.etiqueta || ''}`, 14, pageHeight - 8);
+      }
+
+      doc.save(`reporte_ganancias_${periodo}_${fecha}.pdf`);
       showToast('Reporte PDF exportado correctamente', 'success');
     } catch (err) {
       showToast('Error exportando PDF: ' + err.message, 'error');
@@ -491,104 +701,196 @@ export function ReportesPage() {
 
   const exportarCSV = async () => {
     try {
-      // Productos y clientes se paginan en pantalla; para el CSV se piden
-      // completos, si no el archivo contendría solo la página visible.
-      let todosProductos = topProductos.data;
-      let todosClientes = topClientes.data;
-      try {
-        const full = new URLSearchParams({ periodo, fecha, page: '1', limit: '100' });
-        const [rp, rc] = await Promise.all([
-          API.getReportesProductosTop(full),
-          API.getReportesClientesTop(full),
-        ]);
-        todosProductos = rp?.data || todosProductos;
-        todosClientes = rc?.data || todosClientes;
-      } catch {
-        showToast('CSV limitado a la página visible', 'error');
-      }
+      // El archivo debe cubrir el período completo, no solo lo que hay en
+      // pantalla: se piden todas las páginas de cada listado paginado.
+      const verGanancias = puedeVerGanancias;
+      const [reporte, detalle, todosProductos, todosClientes] = await Promise.all([
+        // El endpoint de ganancias está restringido a EMPRESA / SUPER_ADMIN;
+        // pedirlo para otros roles solo produciría un error.
+        verGanancias
+          ? API.getReportesGanancias(new URLSearchParams({ periodo, fecha }))
+          : Promise.resolve(null),
+        cargarDetalleCompleto(periodo, fecha),
+        cargarListadoCompleto(API.getReportesProductosTop, periodo, fecha).catch(() => topProductos.data),
+        cargarListadoCompleto(API.getReportesClientesTop, periodo, fecha).catch(() => topClientes.data),
+      ]);
 
-      // Crear contenido CSV
       const rows = [];
-      
-      // Encabezado
-      rows.push(['Reporte de Ventas']);
+      const suma = (lista, campo) =>
+        lista.reduce((a, p) => a + (parseFloat(p[campo]) || 0), 0);
+
+      // ── Encabezado ────────────────────────────────────────────────────────
+      rows.push([verGanancias ? 'Reporte de Ganancias por Producto' : 'Reporte de Ventas por Producto']);
       rows.push(['Período', ventas?.etiqueta || 'N/A']);
       rows.push(['Fecha de generación', new Date().toLocaleString('es-VE')]);
+      rows.push(['Moneda', 'USD']);
+      rows.push(['Nota sobre unidades', 'Cantidades en la unidad del producto; las líneas en GRAMO se convierten a kg.']);
       rows.push([]);
-      
-      // Métricas
-      rows.push(['Métricas']);
-      rows.push(['Ingresos del período', ventas?.total || '0']);
-      rows.push(['Impuestos', ventas?.impuestos || '0']);
-      rows.push(['Subtotal', ventas?.subtotal || '0']);
-      rows.push(['Cantidad de Facturas', ventas?.cantidadFacturas || '0']);
-      rows.push(['Promedio por Venta', ventas?.promedioVenta || '0']);
-      rows.push([]);
-      
-      // Ganancias
-      if (ganancias) {
-        rows.push(['Ganancias']);
-        rows.push(['Ingresos Totales', ganancias.ingresosTotales]);
-        rows.push(['Costo Vendido', ganancias.costoVendido]);
-        rows.push(['Ganancia', ganancias.gananciaBruta ?? 'No disponible por falta de costo histórico']);
-        rows.push(['Margen (%)', ganancias.margen ?? 'No disponible']);
-        rows.push([]);
-        if (ganancias.productosConPerdida?.length > 0) {
-          rows.push(['Ventas con pérdida: el costo histórico superó el subtotal de venta sin impuestos']);
-          rows.push(['Factura', 'Fecha y hora', 'Cliente', 'Producto', 'Cantidad', 'Subtotal USD', 'Ganancia USD']);
-          ganancias.productosConPerdida.forEach(item => {
-            rows.push([
-              item.facturaId,
-              new Date(item.fechaHora).toLocaleString('es-VE'),
-              item.cliente,
-              item.producto,
-              `${item.cantidad} ${item.unidad || ''}`.trim(),
-              item.subtotal,
-              // El backend expone `ganancia` (negativa en estas líneas), no
-              // `perdida` ni `costo`: se referenciaban campos inexistentes y
-              // el CSV salía con columnas vacías.
-              item.ganancia,
-            ]);
-          });
-          rows.push([]);
-        }
+
+      // ── Resumen ───────────────────────────────────────────────────────────
+      rows.push(['RESUMEN']);
+      if (ventas) {
+        rows.push(['Ingresos del período (con impuestos)', ventas.total || '0']);
+        rows.push(['Impuestos', ventas.impuestos || '0']);
+        rows.push(['Subtotal (sin impuestos)', ventas.subtotal || '0']);
+        rows.push(['Cantidad de facturas', ventas.cantidadFacturas || '0']);
+        rows.push(['Promedio por venta', ventas.promedioVenta || '0']);
       }
-      
-      // Productos Top
-      if (todosProductos.length > 0) {
-        rows.push(['Productos Más Vendidos']);
-        rows.push(['Nombre', 'SKU', 'Unidad', 'Cantidad', 'Ingresos']);
-        todosProductos.forEach(p => {
-          rows.push([p.nombre, p.sku || '', p.unidad || '', p.cantidadVendida, p.ingresos]);
-        });
+      if (verGanancias && reporte) {
+        rows.push(['Ingresos sin impuestos', reporte.ingresosTotales]);
+        rows.push(['Costo vendido', reporte.costoVendido]);
+        rows.push([reporte.etiquetaGanancia || 'Ganancia',
+          reporte.gananciaBruta ?? 'No disponible por falta de costo histórico']);
+        rows.push(['Margen (%)', reporte.margen ?? 'No disponible']);
+        rows.push(['Facturas con costo histórico', reporte.facturasConCosto]);
+        rows.push(['Facturas sin costo histórico', reporte.facturasSinCosto]);
+      }
+      rows.push([]);
+
+      // ── Ganancia por producto ─────────────────────────────────────────────
+      const porProducto = reporte?.gananciaPorProducto || [];
+      rows.push([
+        verGanancias
+          ? `GANANCIA POR PRODUCTO (${porProducto.length})`
+          : `INGRESOS POR PRODUCTO (${porProducto.length})`,
+      ]);
+      rows.push(verGanancias
+        ? ['Producto', 'SKU', 'Unidad', 'Cantidad vendida', 'Ingresos sin impuestos', 'Costo histórico', 'Ganancia']
+        : ['Producto', 'SKU', 'Unidad', 'Cantidad vendida', 'Ingresos sin impuestos']);
+      for (const p of porProducto) {
+        rows.push([
+          p.nombre,
+          p.sku || '',
+          p.unidad || '',
+          p.cantidadVendida,
+          p.ingresos,
+          ...(verGanancias ? [p.costo, p.ganancia] : []),
+        ]);
+      }
+      if (porProducto.length > 0) {
+        rows.push([
+          'TOTAL',
+          '',
+          // No se pueden sumar cantidades de unidades distintas: se listan aparte.
+          desgloseUnidadesPorProducto(porProducto),
+          suma(porProducto, 'ingresos').toFixed(2),
+          ...(verGanancias ? [
+            suma(porProducto, 'costo').toFixed(2),
+            suma(porProducto, 'ganancia').toFixed(2),
+          ] : []),
+        ]);
+      }
+      rows.push([]);
+
+      // ── Detalle por factura ───────────────────────────────────────────────
+      const lineasFactura = detalle.detalle || [];
+      if (lineasFactura.length > 0) {
+        rows.push([`DETALLE POR FACTURA (${lineasFactura.length})`]);
+        rows.push([
+          'Factura', 'Referencia', 'Cliente', 'Fecha y hora',
+          'Monto total', ...(verGanancias ? ['Ganancia'] : []),
+        ]);
+        for (const item of lineasFactura) {
+          rows.push([
+            item.facturaId,
+            item.referencia,
+            item.cliente,
+            new Date(item.fechaHora).toLocaleString('es-VE'),
+            item.montoTotal,
+            ...(verGanancias ? [
+              // El backend expone `ganancia` y marca `costoDesconocido` cuando
+              // la línea no tiene costo histórico: no se inventa un valor.
+              item.costoDesconocido ? 'No disponible' : item.ganancia,
+            ] : []),
+          ]);
+        }
+        rows.push([
+          'TOTAL FACTURADO', '', '', '',
+          detalle.totalIngresos,
+          ...(verGanancias ? [detalle.gananciaTotal ?? 'No disponible'] : []),
+        ]);
         rows.push([]);
       }
 
-      // Clientes Top
-      if (todosClientes.length > 0) {
-        rows.push(['Clientes Principales']);
-        rows.push(['Nombre', 'RIF', 'Facturas', 'Total Compras']);
-        todosClientes.forEach(c => {
-          rows.push([c.nombre, c.rif || '', c.cantidadFacturas, c.totalCompras]);
-        });
+      // ── Pérdidas ──────────────────────────────────────────────────────────
+      const perdidas = verGanancias ? (reporte?.productosConPerdida || []) : [];
+      if (perdidas.length > 0) {
+        rows.push([`LÍNEAS DE VENTA CON PÉRDIDA (${perdidas.length})`]);
+        rows.push([
+          'Factura', 'Fecha y hora', 'Cliente', 'Producto',
+          'Cantidad', 'Unidad', 'Subtotal sin impuestos', 'Ganancia',
+        ]);
+        for (const item of perdidas) {
+          rows.push([
+            item.facturaId,
+            new Date(item.fechaHora).toLocaleString('es-VE'),
+            item.cliente,
+            item.producto,
+            item.cantidad,
+            item.unidad || '',
+            item.subtotal,
+            item.ganancia,
+          ]);
+        }
+        rows.push([
+          'TOTAL PÉRDIDAS', '', '', '', '', '',
+          perdidas.reduce((a, i) => a + (parseFloat(i.subtotal) || 0), 0).toFixed(2),
+          perdidas.reduce((a, i) => a + (parseFloat(i.ganancia) || 0), 0).toFixed(2),
+        ]);
+        rows.push([]);
       }
-      
-      // Convertir a CSV
-      const csvContent = rows.map(row => 
-        row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
-      ).join('\n');
-      
-      // Descargar
+
+      // ── Productos más vendidos ────────────────────────────────────────────
+      if (todosProductos.length > 0) {
+        rows.push([`PRODUCTOS MÁS VENDIDOS (${todosProductos.length})`]);
+        rows.push(['Nombre', 'SKU', 'Unidad', 'Cantidad', 'Ingresos']);
+        for (const p of todosProductos) {
+          rows.push([p.nombre, p.sku || '', p.unidad || '', p.cantidadVendida, p.ingresos]);
+        }
+        rows.push([]);
+      }
+
+      // ── Clientes principales ──────────────────────────────────────────────
+      if (todosClientes.length > 0) {
+        rows.push([`CLIENTES PRINCIPALES (${todosClientes.length})`]);
+        rows.push(['Nombre', 'RIF', 'Facturas', 'Total compras']);
+        for (const c of todosClientes) {
+          rows.push([c.nombre, c.rif || '', c.cantidadFacturas, c.totalCompras]);
+        }
+        rows.push([]);
+      }
+
+      // ── Notas ─────────────────────────────────────────────────────────────
+      const notas = [];
+      if (verGanancias && reporte && reporte.facturasSinCosto > 0) {
+        notas.push(reporte.facturasConCosto === 0
+          ? `No fue posible calcular la ganancia: ${reporte.facturasSinCosto} factura(s) no tienen costo histórico completo. No se usó el costo actual del inventario como sustituto.`
+          : `${reporte.facturasSinCosto} factura(s) sin costo histórico completo se excluyeron de la ganancia total; no se usó el costo actual del inventario como sustituto.`);
+      }
+      if (verGanancias && reporte && reporte.gananciaBruta !== null && Number(reporte.gananciaBruta) < 0) {
+        notas.push('La ganancia del período es negativa porque las pérdidas detalladas superan las ganancias de las demás ventas con costo histórico completo.');
+      }
+      if (notas.length > 0) {
+        rows.push(['NOTAS']);
+        for (const n of notas) rows.push([n]);
+      }
+
+      // ── Descarga ──────────────────────────────────────────────────────────
+      // BOM para que Excel reconozca UTF-8 y no rompa los acentos.
+      const csvContent = '\uFEFF' + rows
+        .map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+        .join('\r\n');
+
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `reporte_ventas_${periodo}_${fecha}.csv`;
+      a.download = `reporte_ganancias_${periodo}_${fecha}.csv`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      
+
       showToast('Reporte CSV exportado correctamente', 'success');
     } catch (err) {
       showToast('Error exportando CSV: ' + err.message, 'error');
@@ -979,7 +1281,7 @@ export function ReportesPage() {
                         <Icon icon={chartPieIcon} className="h-5 w-5" style={{ verticalAlign: 'middle', marginRight: '8px' }} />
                         Distribución de Ganancias
                       </h3>
-                      <p className="card-subtitle">Costo de unidades vendidas e ingreso del período; excluye el inventario disponible</p>
+                      <p className="card-subtitle">Ingresos sin impuestos = costo de lo vendido + ganancia; excluye el inventario disponible</p>
                     </div>
                   </div>
                   <div style={{ height: '250px', width: '100%' }}>
