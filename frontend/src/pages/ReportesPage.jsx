@@ -49,6 +49,20 @@ ChartJS.register(
   Filler
 );
 
+// Agrupa cantidades por unidad: sumar kilogramos con unidades daría un total
+// sin significado físico.
+const desgloseUnidadesPorProducto = (productos) => {
+  if (!productos?.length) return '—';
+  const porUnidad = {};
+  for (const p of productos) {
+    const u = p.unidad || '—';
+    porUnidad[u] = (porUnidad[u] || 0) + (parseFloat(p.cantidadVendida) || 0);
+  }
+  return Object.entries(porUnidad)
+    .map(([u, v]) => `${v.toFixed(2)} ${u}`)
+    .join(' + ');
+};
+
 export function ReportesPage() {
   const { toggleSidebar } = useOutletContext();
   const { showToast } = useToast();
@@ -848,7 +862,12 @@ export function ReportesPage() {
                     <tfoot>
                       <tr style={{ fontWeight: 700, background: isDark ? '#1e2130' : '#f8f9fc', borderTop: '2px solid var(--border-color)' }}>
                         <td colSpan={3}>Total General</td>
-                        <td>{ganancias.gananciaPorProducto.reduce((acc, p) => acc + Number(p.cantidadVendida), 0).toFixed(2)}</td>
+                        {/* No se suman las cantidades entre unidades distintas
+                            (kg, unidad, litro): daría un número sin sentido.
+                            Se muestra el desglose por unidad. */}
+                        <td title={desgloseUnidadesPorProducto(ganancias?.gananciaPorProducto)}>
+                          {desgloseUnidadesPorProducto(ganancias?.gananciaPorProducto)}
+                        </td>
                         <td>{Utils.formatMoney(ganancias.gananciaPorProducto.reduce((acc, p) => acc + parseFloat(p.ingresos), 0), currencySymbol)}</td>
                         <td>{Utils.formatMoney(ganancias.gananciaPorProducto.reduce((acc, p) => acc + parseFloat(p.costo), 0), currencySymbol)}</td>
                         <td style={{ color: Number(ganancias.gananciaBruta) < 0 ? '#b42318' : '#10b981' }}>

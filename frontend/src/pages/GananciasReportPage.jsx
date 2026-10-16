@@ -93,12 +93,23 @@ export function GananciasReportPage() {
 
   const totales = useMemo(() => {
     if (!datos?.gananciaPorProducto?.length) return null;
-    return datos.gananciaPorProducto.reduce((acc, p) => ({
-      cantidad: acc.cantidad + (parseFloat(p.cantidadVendida) || 0),
-      ingresos: acc.ingresos + (parseFloat(p.ingresos) || 0),
-      costo: acc.costo + (parseFloat(p.costo) || 0),
-      ganancia: acc.ganancia + (parseFloat(p.ganancia) || 0),
-    }), { cantidad: 0, ingresos: 0, costo: 0, ganancia: 0 });
+    // La cantidad NO se puede sumar entre unidades distintas: sumar
+    // kilogramos con unidades da un número sin significado físico. Se agrupa
+    // por unidad para que el total sea interpretable.
+    const porUnidad = {};
+    for (const p of datos.gananciaPorProducto) {
+      const u = p.unidad || '—';
+      porUnidad[u] = (porUnidad[u] || 0) + (parseFloat(p.cantidadVendida) || 0);
+    }
+    return {
+      porUnidad,
+      desgloseUnidades: Object.entries(porUnidad)
+        .map(([u, v]) => `${v.toFixed(2)} ${u}`)
+        .join(' + '),
+      ingresos: datos.gananciaPorProducto.reduce((a, p) => a + (parseFloat(p.ingresos) || 0), 0),
+      costo: datos.gananciaPorProducto.reduce((a, p) => a + (parseFloat(p.costo) || 0), 0),
+      ganancia: datos.gananciaPorProducto.reduce((a, p) => a + (parseFloat(p.ganancia) || 0), 0),
+    };
   }, [datos]);
 
   const maxGanancia = useMemo(() => {
@@ -311,7 +322,9 @@ export function GananciasReportPage() {
                   <tfoot>
                     <tr className={styles.totalRow}>
                       <td colSpan={3}>Total General</td>
-                      <td className={styles.tdRight}>{totales.cantidad.toFixed(2)}</td>
+                      <td className={styles.tdRight} title={totales.desgloseUnidades}>
+                        {totales.desgloseUnidades}
+                      </td>
                       <td className={styles.tdRight}>{formatMoney(totales.ingresos, currencySymbol)}</td>
                       <td className={styles.tdRight}>{formatMoney(totales.costo, currencySymbol)}</td>
                       <td className={`${styles.tdRight} ${totales.ganancia < 0 ? styles.textDanger : styles.textSuccess}`}>

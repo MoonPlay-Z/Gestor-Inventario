@@ -912,12 +912,17 @@ async function getProductosTop(req) {
   const whereClause = buildTenantSql(tenantFilter);
   const limitNum = Math.min(parseInt(limit) || 10, 50);
 
+  // Normaliza gramos→kilos antes de sumar. Sin esto, un producto con líneas
+  // en gramos dominaba el ranking por volumen y desplazaba a los realmente
+  // más vendidos (huevos, con 206 unidades, quedaba octavo).
+  const cantidadVendida = cantidadEnKgSQL('if');
+
   const productos = await prisma.$queryRaw`
     SELECT
       p.nombre,
       p.sku,
       p."unidadMedida" AS unidad_medida,
-      SUM(if."cantidad") AS cantidad_vendida,
+      SUM(${Prisma.raw(cantidadVendida)}) AS cantidad_vendida,
       COALESCE(SUM(
         CASE
           WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
@@ -932,6 +937,9 @@ async function getProductosTop(req) {
       AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
       ${whereClause}
+    -- Un solo grupo por producto. No se debe agregar if."unidadMedida" al
+    -- GROUP BY: partiría el producto en varias filas (una por unidad) y
+    -- duplicaría entradas en el ranking.
     GROUP BY p.id, p.nombre, p.sku, p."unidadMedida"
     ORDER BY cantidad_vendida DESC
     LIMIT ${limitNum}

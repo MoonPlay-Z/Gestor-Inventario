@@ -121,6 +121,49 @@ async function main() {
     fallos += sospechoso.length;
   }
 
+  // ── 4. getProductosTop debe devolver cantidades normalizadas ───────────────
+  console.log(`\n[4] Coherencia de getProductosTop (productos más vendidos)`);
+  const { getProductosTop } = require('../src/services/reportesService');
+  const empresa = await prisma.usuario.findFirst({
+    where: { rol: 'EMPRESA', facturas: { some: {} } },
+    select: { id: true, rol: true },
+  });
+
+  if (!empresa) {
+    console.log('    (omitido: no hay usuario EMPRESA con facturas)');
+  } else {
+    const top = await getProductosTop({
+      query: { periodo: 'anual', fecha: String(new Date().getFullYear()), limit: '50' },
+      user: empresa,
+    });
+
+    // Referencia calculada de forma independiente, sin usar el helper.
+    const referencia = new Map();
+    for (const a of agregados) {
+      referencia.set(a.nombre, d(a.cantidad));
+    }
+
+    let topIncoherentes = 0;
+    for (const p of top) {
+      const esp = referencia.get(p.nombre);
+      if (!esp) continue;
+      const dif = d(p.cantidadVendida).minus(esp).abs();
+      if (dif.gt(new Decimal('0.05'))) {
+        if (topIncoherentes < 8) {
+          console.log(`    ✗ ${p.nombre}: getProductosTop dice ${d(p.cantidadVendida).toFixed(2)} ${p.unidad}, correcto ${esp.toFixed(2)}`);
+        }
+        topIncoherentes++;
+      }
+    }
+
+    if (topIncoherentes === 0) {
+      console.log(`    ✓ Los ${top.length} productos del ranking cuadran con la cantidad normalizada`);
+    } else {
+      console.log(`    ✗ ${topIncoherentes} productos del ranking con cantidad sin normalizar`);
+      fallos += topIncoherentes;
+    }
+  }
+
   console.log(`\n${fallos === 0 ? '✓ TODAS LAS INVARIANTES SE CUMPLEN' : `✗ ${fallos} violaciones`}\n`);
 
   await prisma.$disconnect();
