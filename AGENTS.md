@@ -6,7 +6,7 @@ Sistema POS y Gestor de Inventario (Venezuela). Backend: Node.js + Express + Pri
 
 - `backend/src/routes/` — 18 Express routers (auth, usuarios, roles, clientes, productos, facturas, facturasPruebas, pagos, config, backup, caja, cotizaciones, activaciones, b2b, fiscal, reportes, cxc); mounted in `backend/src/app.js`
 - `backend/src/middleware/` — `auth.js` (JWT), `subscriptionGuard.js` (SaaS subscription), `errorHandler.js` (Prisma codes → friendly), `rateLimiter.js` (login/register limiters)
-- `backend/src/utils/` — `pagination.js` (paginate + paginatedResponse), `sql.js` (tsFrag/monthTrunc for cross-db DateTime), `paymentCurrency.js` (VES↔USD via tasaCambioEfectiva)
+- `backend/src/utils/` — `pagination.js` (paginate + paginatedResponse), `sql.js` (tsFrag/monthTrunc for cross-db DateTime), `tasaAPI.js` (fachada única de tasa usada por todos los módulos), `paymentCurrency.js` (motor VES↔USD: `tasaCambioEfectiva`, `getTasaSistemaPorEmpresa`), `tasaEmpresaCache.js` (caché 60 s por empresa)
 - `frontend/src/pages/` — one file per route; router in `AppRoutes.jsx`
 - `frontend/src/components/ui/` — shared primitives (`FieldError`, `FormError`, `Button`, etc.) with CSS Modules
 - `frontend/src/context/` — `AuthContext`, `ThemeContext`, `ToastContext`
@@ -98,10 +98,13 @@ const facturaTenantFilter = (empresaId) => ({
 
 Uses `decimal.js` for all monetary math. Invoices support dual currency (`moneda` + `tasaCambio`). VES amounts are divided by `tasaCambio` to normalize to USD in dashboard aggregations. Never use native float arithmetic for money.
 
-**Never convert VES↔USD using `factura.tasaCambio` directly.** That field is only a real VES-per-USD rate when the invoice was issued in `VES`; for `USD` invoices it defaults to `1.0` and carries no rate, so a 1000 Bs payment would be read as 1000 USD and falsely trip over-payment errors. Always go through `backend/src/utils/paymentCurrency.js`:
+**Never convert VES↔USD using `factura.tasaCambio` directly.** That field is only a real VES-per-USD rate when the invoice was issued in `VES`; for `USD` invoices it defaults to `1.0` and carries no rate, so a 1000 Bs payment would be read as 1000 USD and falsely trip over-payment errors. Always resolve the rate through the single facade `backend/src/utils/tasaAPI.js` (which delegates to `paymentCurrency.js`):
 
-- `tasaCambioEfectiva(factura)` — resolves the correct rate (invoice rate for VES invoices, `config.json → moneda.tasaDolar` for USD invoices).
-- `convertirAFactura(monto, monedaOrigen, factura)` / `normalizarPagoAFactura(pago, factura)` — convert into the invoice's currency.
+- `tasaParaEmpresa(empresaId)` — rate of record for a company (`Empresa.tasaDolar`; BCV in `AUTO`, saved value in `MANUAL`).
+- `tasaEfectivaFactura(factura, empresaId)` — invoice rate for VES invoices, company rate for USD invoices.
+- `convertirMontoMoneda` / `convertirAFactura` / `normalizarPagoAFactura` / `sumarPagosNormalizados` — the conversions.
+
+**Every module** (facturas, CxC, cotizaciones, caja, inventario, reportes, dashboard) must resolve the rate through `tasaAPI`. The rate is **per company** — never use the global `config.json` rate or a hardcoded value in a request path. Raw-SQL payment aggregations (dashboard in `app.js`, `getCajaReporte` in `reportesService.js`, `buildPagosTurnoSql` in `caja.js`) normalize Bs payments with the company rate: `WHEN p."monedaPago"='VES' THEN CASE WHEN f."moneda"='VES' AND f."tasaCambio">0 THEN p."monto"/f."tasaCambio" ELSE p."monto"/tasaSistema END ELSE p."monto"`.
 
 `CuentaPorCobrar` amounts (`montoOriginal` / `montoCobrado` / `montoPendiente`) are **always USD-normalized**, so `cxc.js` converts payments to USD via a local `pagoAUsd()` helper rather than to the invoice currency.
 
@@ -201,6 +204,24 @@ Cada `Empresa` tiene su propia configuración: `tasaDolar` (Float), `monedaSimbo
 - **Aviso al iniciar sesión:** `components/widgets/AlertaTasaDolar.jsx` (montado en `Layout.jsx`) muestra un modal una vez al día por dispositivo y empresa (bandera `tasaDolarAviso:<empresaId>` en localStorage). Si la tasa ya es la de hoy se muestra como confirmación; si no, ofrece actualizarla desde el BCV o a mano.
 - Rutas: `POST /api/config/tasa-dolar/actualizar` (aplica la tasa del BCV a la empresa sin importar su modo, `requireRole('EMPRESA')`). El `GET /api/config/tasa-bcv` sigue existiendo.
 - Migración: `backend/prisma/migrations/20261016180000_add_empresa_tasa_dolar_auto/` — **debe aplicarse antes de desplegar el backend**, porque el login ya selecciona las columnas nuevas.
+
+### API estructurada de tasa (`/api/tasa`)
+
+`backend/src/routes/tasa.js` expone la misma fuente que usan todos los módulos. Requiere JWT.
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/api/tasa` | Tasa vigente de la empresa: `{ tasa, modo, fuente, actualizadaEn, empresaId }` |
+| `GET` | `/api/tasa/bcv` | Tasa oficial del BCV del día (global) |
+| `GET` | `/api/tasa/historico?fecha=YYYY-MM-DD` | Tasa BCV de una fecha |
+| `POST` | `/api/tasa/actualizar` | Aplica la tasa del BCV a la empresa. **No cambia el modo**. `EMPRESA` |
+| `PUT` | `/api/tasa` | `{ tasaDolar }` guarda a mano (**no cambia el modo**, marca la fecha de hoy); `{ modo }` cambia `AUTO`/`MANUAL`. `EMPRESA` |
+
+`utils/tasaAPI.js` es la fachada única: `tasaParaEmpresa`, `tasaEfectivaFactura`, `estadoTasaEmpresa`, `actualizarTasaEmpresa`, `guardarTasaManual`, `setModoTasa` + las conversiones de `paymentCurrency`.
+
+**Sin default `36.5`:** `Empresa.tasaDolar` ya no tiene `@default(36.5)`. Antes, toda empresa sin tasa explícita quedaba en 36.5 y el sistema convertía VES→USD con esa tasa (bug "*CxC usa una tasa de 36 Bs*"). `getTasaSistemaPorEmpresa` resuelve en cascada **tasa de la empresa → tasa global (`config.json`) → tasa del BCV** y nunca devuelve un valor hardcodeado. Migración: `backend/prisma/migrations/20261017200000_empresa_tasa_dolar_sin_default/` (**aplicar antes de desplegar**; hace `DROP DEFAULT` y limpia los `36.5` heredados).
+
+**Módulos conectados a la tasa por empresa:** facturas (POST usa `tasaParaEmpresa` como fallback), CxC (`pagoAUsd`), cotizaciones, caja y reportes usan `tasaAPI`; el dashboard (`app.js`) y `getCajaReporte` (`reportesService.js`) normalizan los pagos en Bs sobre facturas USD con la tasa de la empresa; `productos.js` (`GET /api/productos/lookup/:codigo`) devuelve `precioUsd/precioVes/tasaBcv` con la tasa de la empresa.
 
 ## Env vars
 

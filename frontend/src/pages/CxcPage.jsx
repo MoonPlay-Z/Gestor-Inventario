@@ -42,6 +42,7 @@ export function CxcPage() {
   });
   const [filtrosAplicados, setFiltrosAplicados] = useState({});
   const [showFiltros, setShowFiltros] = useState(false);
+  const [orden, setOrden] = useState('vencimiento');
   const loadRequestId = useRef(0);
 
   const loadResumen = async () => {
@@ -57,7 +58,7 @@ export function CxcPage() {
     const requestId = ++loadRequestId.current;
     setLoading(true);
     try {
-      const params = { page, limit, ...filtrosAplicados };
+      const params = { page, limit, orden, ...filtrosAplicados };
       const data = await API.getCxc(params);
       if (requestId !== loadRequestId.current) return;
       setCuentas(data.data || []);
@@ -85,12 +86,12 @@ export function CxcPage() {
   useEffect(() => {
     loadResumen();
     loadData();
-  }, [page, filtrosAplicados]);
+  }, [page, filtrosAplicados, orden]);
 
   const exportarCSV = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/cxc/export?${new URLSearchParams(filtrosAplicados)}`, {
+      const response = await fetch(`/api/cxc/export?${new URLSearchParams({ ...filtrosAplicados, orden })}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (!response.ok) throw new Error('Error al exportar');
@@ -231,6 +232,19 @@ export function CxcPage() {
 
         {/* Tabla */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-end gap-2">
+            <label className="text-sm text-gray-600">Ordenar por</label>
+            <select
+              value={orden}
+              onChange={(e) => { setOrden(e.target.value); setPage(1); }}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="vencimiento">Vencimiento (más reciente)</option>
+              <option value="estado">Estado (por pagar primero)</option>
+              <option value="cliente">Cliente (A-Z)</option>
+              <option value="monto">Monto (mayor a menor)</option>
+            </select>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-100">

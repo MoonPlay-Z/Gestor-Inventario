@@ -29,7 +29,7 @@ model Empresa {
   email                  String?
   monedaSimbolo          String?
   monedaCodigo           String?
-  tasaDolar              Float     @default(36.5)
+  tasaDolar              Float?
   // "AUTO": la tasa se refresca a diario con la del BCV. "MANUAL": solo cambia
   // cuando el usuario la guarda. Se conserva la fecha del último cambio para
   // saber si la tasa almacenada ya es la de hoy.

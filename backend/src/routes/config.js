@@ -55,7 +55,10 @@ function getSystemConfig() {
     moneda: {
       simbolo: process.env.MONEDA_SIMBOLO || '$',
       codigo:  process.env.MONEDA_CODIGO  || 'USD',
-      tasaDolar: 36.5
+      // Sin tasa por defecto: si no hay config.json se resuelve la tasa por
+      // empresa (o el BCV). Un valor fijo aquí (antes 36.5) convertía VES→USD
+      // con una tasa inexistente.
+      tasaDolar: process.env.MONEDA_TASA_DOLAR ? parseFloat(process.env.MONEDA_TASA_DOLAR) : null
     },
     ivaDefault: parseFloat(process.env.IVA_DEFAULT || '16.00'),
     tipoDocumento: process.env.TIPO_DOCUMENTO || 'FACTURA'

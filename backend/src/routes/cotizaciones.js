@@ -6,7 +6,7 @@ const { requireRole } = require('../middleware/auth');
 const { paginate, paginatedResponse } = require('../utils/pagination');
 const { obtenerSiguienteNumeroFactura } = require('../utils/numeracionFacturas');
 const { obtenerSiguienteNumeroCotizacion } = require('../utils/numeracionCotizaciones');
-const { convertirMontoMoneda, getTasaSistemaPorEmpresa } = require('../utils/paymentCurrency');
+const { convertirMontoMoneda, tasaParaEmpresa } = require('../utils/tasaAPI');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 
@@ -351,7 +351,7 @@ router.post('/:id/convert', async (req, res, next) => {
     // sistema para que la factura quede autodescriptiva y `tasaCambioEfectiva`
     // no tenga que recurrir al fallback global al leerla.
     const tasaFacturacion = cotizacion.moneda === 'VES'
-      ? await getTasaSistemaPorEmpresa(empresaRefId)
+      ? await tasaParaEmpresa(empresaRefId)
       : new Decimal(1);
     const totalFacturaUSD = convertirMontoMoneda(
       totalFactura, cotizacion.moneda, 'USD', tasaFacturacion

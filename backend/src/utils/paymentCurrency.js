@@ -1,10 +1,10 @@
 const { Decimal } = require('decimal.js');
 const { getSystemConfig } = require('../routes/config');
 const { obtenerTasaEmpresa, guardarTasaEmpresa } = require('./tasaEmpresaCache');
+const { tasaBCVActual } = require('./bcvHistorico');
 const prisma = require('../db/prisma');
 
 const MONEDAS_PAGO = ['USD', 'VES'];
-const TASA_VES_FALLBACK = new Decimal('36.5');
 
 // Caché de la tasa del sistema con invalidación por mtime, para no leer
 // config.json del disco en cada pago de un listado.
@@ -46,12 +46,15 @@ function leerTasaSistema() {
     const config = getSystemConfig();
     const raw = config?.moneda?.tasaDolar;
     const tasa = raw != null && raw !== '' ? new Decimal(String(raw)) : null;
-    const valor = esTasaValida(tasa) ? tasa : TASA_VES_FALLBACK;
+    // Sin tasa global se devuelve null y el llamador decide el siguiente
+    // recurso. Antes se devolvía 36.5 hardcodeado, que provocaba conversiones
+    // silenciosamente erróneas (1000 Bs leídos como ~27 USD).
+    const valor = esTasaValida(tasa) ? tasa : null;
     _tasaCache.tasa = valor;
     _tasaCache.mtime = mtime;
     return valor;
   } catch (_) {
-    return TASA_VES_FALLBACK;
+    return null;
   }
 }
 
@@ -120,26 +123,44 @@ async function sumarPagosNormalizados(pagos, factura, empresaId = null) {
  * Fallback al config global si la empresa no tiene tasa definida.
  */
 async function getTasaSistemaPorEmpresa(empresaId) {
-  if (!empresaId) return leerTasaSistema();
+  // 1. Tasa propia de la empresa (AUTO: BCV del día; MANUAL: la guardada).
+  if (empresaId) {
+    const enCache = obtenerTasaEmpresa(empresaId);
+    if (enCache) return enCache;
 
-  const enCache = obtenerTasaEmpresa(empresaId);
-  if (enCache) return enCache;
-
-  try {
-    const empresa = await prisma.empresa.findUnique({
-      where: { id: empresaId },
-      select: { tasaDolar: true },
-    });
-    const raw = empresa?.tasaDolar;
-    const tasa = raw != null && Number.isFinite(Number(raw)) && Number(raw) > 0
-      ? new Decimal(String(raw))
-      : null;
-    const valor = (tasa && tasa.isFinite() && tasa.gt(0)) ? tasa : leerTasaSistema();
-    guardarTasaEmpresa(empresaId, valor);
-    return valor;
-  } catch (_) {
-    return leerTasaSistema();
+    try {
+      const empresa = await prisma.empresa.findUnique({
+        where: { id: empresaId },
+        select: { tasaDolar: true },
+      });
+      const raw = empresa?.tasaDolar;
+      const tasa = raw != null && Number.isFinite(Number(raw)) && Number(raw) > 0
+        ? new Decimal(String(raw))
+        : null;
+      if (esTasaValida(tasa)) {
+        guardarTasaEmpresa(empresaId, tasa);
+        return tasa;
+      }
+    } catch (_) {
+      // Sin acceso a la empresa se intenta la tasa global.
+    }
   }
+
+  // 2. Tasa global del sistema (config.json).
+  const global = leerTasaSistema();
+  if (esTasaValida(global)) {
+    if (empresaId) guardarTasaEmpresa(empresaId, global);
+    return global;
+  }
+
+  // 3. Último recurso: tasa oficial del BCV. Nunca un valor hardcodeado.
+  const bcv = await tasaBCVActual();
+  if (esTasaValida(bcv)) {
+    if (empresaId) guardarTasaEmpresa(empresaId, bcv);
+    return bcv;
+  }
+
+  throw new Error('No hay una tasa de cambio configurada');
 }
 
 module.exports = {

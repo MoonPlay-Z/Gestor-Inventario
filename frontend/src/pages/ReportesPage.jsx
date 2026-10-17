@@ -544,7 +544,7 @@ export function ReportesPage() {
       // ── Detalle por factura ───────────────────────────────────────────────
       const lineasFactura = detalle.detalle || [];
       if (lineasFactura.length > 0) {
-        constTitulo = (texto, subtitulo, color) => {
+        const titulo = (texto, subtitulo, color) => {
           const espacio = 22;
           if (y + espacio > pageHeight - 24) {
             doc.addPage();

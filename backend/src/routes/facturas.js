@@ -6,10 +6,10 @@ const { createValidationError, createBusinessError } = require('../middleware/er
 const { invalidarCacheVentas } = require('../services/reportesService');
 const { requireRole } = require('../middleware/auth');
 const { obtenerSiguienteNumeroFactura } = require('../utils/numeracionFacturas');
-const { MONEDAS_PAGO, convertirMontoMoneda, sumarPagosNormalizados, normalizarPagoAFactura } = require('../utils/paymentCurrency');
+const { MONEDAS_PAGO, convertirMontoMoneda, sumarPagosNormalizados, normalizarPagoAFactura } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
+const { tasaParaEmpresa } = require('../utils/tasaAPI');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
-const configRouter = require('./config');
 
 // SUPER_ADMIN no genera facturas
 router.use(requireRole('EMPRESA', 'CAJA'));
@@ -233,11 +233,12 @@ router.post('/', async (req, res, next) => {
     const empresaId = req.user?.empresaId || req.user?.id;
     const empresaRefId = await getEmpresaRefId(req);
 
-    // Usar tasa BCV de la configuración del sistema si no se proporciona explícitamente
-    const systemConfig = configRouter.getSystemConfig();
-    const tasaBCV = systemConfig.moneda?.tasaDolar || 36.5;
-    
-    const tasaFacturacion = new Decimal(tasaCambio ?? tasaBCV);
+    // Tasa de la empresa (AUTO: BCV del día; MANUAL: la guardada). Si el
+    // cliente no envía `tasaCambio` se usa la vigente: nunca un valor
+    // hardcodeado, que produciría facturas con una tasa inexistente.
+    const tasaFacturacion = tasaCambio != null
+      ? new Decimal(String(tasaCambio))
+      : await tasaParaEmpresa(empresaRefId);
     if (!tasaFacturacion.isFinite() || tasaFacturacion.lte(0)) {
       throw createValidationError('La tasa de cambio debe ser mayor a cero');
     }

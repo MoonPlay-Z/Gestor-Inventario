@@ -22,6 +22,8 @@ const {
   cantidadEnKg,
 } = require('./unidades');
 const { paginate, paginatedResponse } = require('../utils/pagination');
+const { tasaParaEmpresa } = require('../utils/tasaAPI');
+const { resolverEmpresaRefId } = require('../utils/empresaContext');
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CACHÉ EN MEMORIA
@@ -368,13 +370,20 @@ async function getVentasReporte(req) {
 async function getAgrupacionVentas(periodo, inicio, fin, tenantFilter) {
   let groupBy, selectExpr;
 
-  // Expresiones de agrupación por período (PostgreSQL vs SQLite)
+  // Expresiones de agrupación por período, ancladas a hora de Venezuela.
+  // Truncar el instante tal cual agrupa por día/hora UTC, lo que deja los
+  // labels del gráfico corridos. Se desplaza 4 h hacia la hora local VE antes
+  // de truncar y se devuelve el borde como instante real (PostgreSQL) o como
+  // ISO con offset -04:00 (SQLite); el navegador interpreta ambos igual.
   const trunc = (unit) => IS_SQLITE
-    ? (unit === 'hour' ? `strftime('%Y-%m-%dT%H:00:00', f."fechaEmision"/1000, 'unixepoch')`
-      : unit === 'day' ? `strftime('%Y-%m-%d', f."fechaEmision"/1000, 'unixepoch')`
-      : unit === 'week' ? `strftime('%Y-W%W', f."fechaEmision"/1000, 'unixepoch')`
-      : `strftime('%Y-%m', f."fechaEmision"/1000, 'unixepoch')`)
-    : `DATE_TRUNC('${unit}', f."fechaEmision")`;
+    ? (unit === 'hour'
+        ? `strftime('%Y-%m-%dT%H:00:00', f."fechaEmision"/1000 - 14400, 'unixepoch') || '-04:00'`
+        : unit === 'day'
+        ? `strftime('%Y-%m-%d', f."fechaEmision"/1000 - 14400, 'unixepoch') || 'T00:00:00-04:00'`
+        : unit === 'week'
+        ? `strftime('%Y-%m-%d', f."fechaEmision"/1000 - 14400 - ((CAST(strftime('%w', f."fechaEmision"/1000 - 14400, 'unixepoch') AS INTEGER) + 6) % 7) * 86400, 'unixepoch') || 'T00:00:00-04:00'`
+        : `strftime('%Y-%m-01T00:00:00-04:00', f."fechaEmision"/1000 - 14400, 'unixepoch')`)
+    : `DATE_TRUNC('${unit}', f."fechaEmision" - INTERVAL '4 hours') + INTERVAL '4 hours'`;
 
   switch (periodo) {
     case 'diario':
@@ -606,6 +615,44 @@ async function getDetalleVentasReporte(req) {
     ? await getProductosConPerdida(inicio, fin, tenantFilter)
     : [];
 
+  // Totales del PERÍODO completo, no de la página. El detalle se muestra
+  // paginado, pero el pie ("Total facturado" y la ganancia) debe coincidir con
+  // lo que reportan /reportes/ventas y /reportes/ganancias para el mismo
+  // período. Se usan las MISMAS fórmulas que esos reportes.
+  const [totalesPeriodo, gananciaPeriodo, conteosCosto] = await Promise.all([
+    prisma.$queryRaw`
+      SELECT ${normalizarUSD('f."total"', 'total_usd')}
+      FROM facturas f
+      WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+        AND f."fechaEmision" <= ${tsFrag(fin)}
+        AND f."estado" != 'VOIDED'
+        ${buildTenantSql(tenantFilter)}
+    `,
+    puedeVerGanancia ? getGananciaPorProducto(inicio, fin, tenantFilter) : Promise.resolve([]),
+    puedeVerGanancia
+      ? prisma.$queryRaw`
+          SELECT
+            COUNT(DISTINCT CASE WHEN item."productoId" IS NOT NULL THEN f.id END) AS con_costo,
+            COUNT(DISTINCT CASE WHEN item."productoId" IS NULL THEN f.id END) AS sin_costo
+          FROM facturas f
+          INNER JOIN items_factura item ON item."facturaId" = f.id
+          WHERE f."fechaEmision" >= ${tsFrag(inicio)}
+            AND f."fechaEmision" <= ${tsFrag(fin)}
+            AND f."estado" != 'VOIDED'
+            ${buildTenantSql(tenantFilter)}
+        `
+      : Promise.resolve([]),
+  ]);
+
+  const totalIngresosPeriodo = new Decimal(totalesPeriodo[0]?.total_usd || 0);
+  const gananciaPeriodoTotal = gananciaPeriodo.reduce(
+    (acc, p) => acc.plus(new Decimal(p.ganancia || 0)),
+    new Decimal(0)
+  );
+  const facturasConCosto = Number(conteosCosto[0]?.con_costo || 0);
+  const facturasSinCosto = Number(conteosCosto[0]?.sin_costo || 0);
+  const gananciaDisponible = facturasConCosto > 0 || facturasSinCosto === 0;
+
   // Paginación: limitar el número de facturas cargadas para evitar respuestas masivas
   const page = Math.max(1, parseInt(pageStr) || 1);
   const limit = Math.min(Math.max(1, parseInt(limitStr) || 50), 200);
@@ -662,16 +709,10 @@ async function getDetalleVentasReporte(req) {
     prisma.factura.count({ where }),
   ]);
 
-  let totalIngresos = new Decimal(0);
-  let gananciaTotal = new Decimal(0);
-  let facturasSinCosto = 0;
-  let facturasConCosto = 0;
-
   const detalle = [];
   for (const factura of facturas) {
     const tasaCambio = factura.tasaCambio;
     const totalFacturaUSD = normalizarAUSD(factura.total, factura.moneda, tasaCambio);
-    totalIngresos = totalIngresos.plus(totalFacturaUSD);
 
     let ganancia = new Decimal(0);
     let costoDesconocido = false;
@@ -698,12 +739,6 @@ async function getDetalleVentasReporte(req) {
         const cobradoUSD = normalizarAUSD(item.subtotalLinea, factura.moneda, tasaCambio);
         ganancia = ganancia.plus(cobradoUSD.minus(costo.times(cantidad)));
       }
-      if (costoDesconocido) {
-        facturasSinCosto += 1;
-      } else {
-        gananciaTotal = gananciaTotal.plus(ganancia);
-        facturasConCosto += 1;
-      }
     }
 
     const referencias = [...new Set(
@@ -729,10 +764,8 @@ async function getDetalleVentasReporte(req) {
     periodo,
     etiqueta,
     moneda: 'USD',
-    totalIngresos: totalIngresos.toFixed(2),
-    gananciaTotal: puedeVerGanancia
-      ? (facturasConCosto === 0 && facturasSinCosto > 0 ? null : gananciaTotal.toFixed(2))
-      : null,
+    totalIngresos: totalIngresosPeriodo.toFixed(2),
+    gananciaTotal: puedeVerGanancia && gananciaDisponible ? gananciaPeriodoTotal.toFixed(2) : null,
     facturasConCosto,
     facturasSinCosto,
     productosConPerdida,
@@ -864,7 +897,7 @@ async function getProductosTop(req) {
   `;
 
   const total = await prisma.$queryRaw`
-    SELECT COUNT(*)::int AS n
+    SELECT CAST(COUNT(*) AS INTEGER) AS n
     FROM (
       SELECT p.id
       FROM items_factura if
@@ -928,7 +961,7 @@ async function getClientesTop(req) {
   `;
 
   const total = await prisma.$queryRaw`
-    SELECT COUNT(*)::int AS n
+    SELECT CAST(COUNT(*) AS INTEGER) AS n
     FROM (
       SELECT c.id
       FROM facturas f
@@ -965,6 +998,11 @@ async function getCajaReporte(req) {
   const tenantFilter = getTenantFilter(req);
   const whereClause = buildTenantSql(tenantFilter);
 
+  // Tasa vigente de la empresa para normalizar a USD los pagos en Bs. En
+  // facturas USD (tasaCambio=1) la tasa de la factura no sirve: sin esto,
+  // 1000 Bs se contarían como 1000 USD. Mismo criterio que el dashboard.
+  const tasaSistema = await tasaParaEmpresa(await resolverEmpresaRefId(req));
+
   const pagos = await prisma.$queryRaw`
     SELECT
       p."metodoPago" AS metodo,
@@ -972,8 +1010,11 @@ async function getCajaReporte(req) {
       COALESCE(SUM(p."monto"), 0) AS total_recibido,
       COALESCE(SUM(
         CASE
-          WHEN p."monedaPago" = 'VES' AND f."tasaCambio" > 0
-          THEN p."monto" / f."tasaCambio"
+          WHEN p."monedaPago" = 'VES' THEN
+            CASE WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+              THEN p."monto" / f."tasaCambio"
+              ELSE p."monto" / ${tasaSistema}
+            END
           ELSE p."monto"
         END
       ), 0) AS total_usd,

@@ -8,63 +8,87 @@
  *   - calcularComparacion: Calcula variación vs período anterior
  */
 
+// Venezuela es UTC-4 todo el año (no aplica horario de verano). Todos los
+// límites de período se anclan a la hora de Venezuela: con la hora del servidor
+// (UTC en producción) el "día" del reporte empezaría a las 20:00 del día
+// anterior y las ventas de la tarde-noche caerían en el día equivocado.
+const OFFSET_VE_MS = 4 * 60 * 60 * 1000;
+
+const MESES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MESES_LARGO = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+/** Día actual en Venezuela como [año, mes, día]. */
+function hoyVE() {
+  const ve = new Date(Date.now() - OFFSET_VE_MS);
+  return [ve.getUTCFullYear(), ve.getUTCMonth() + 1, ve.getUTCDate()];
+}
+
+/** Instante UTC de las 00:00 hora de Venezuela de un día (año, mes, día). */
+function inicioDiaVE(y, m, d) {
+  return new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0) + OFFSET_VE_MS);
+}
+
+/** Instante UTC de las 23:59:59.999 hora de Venezuela de un día. */
+function finDiaVE(y, m, d) {
+  return new Date(Date.UTC(y, m - 1, d, 23, 59, 59, 999) + OFFSET_VE_MS);
+}
+
+const partesUTC = (fecha) => [fecha.getUTCFullYear(), fecha.getUTCMonth() + 1, fecha.getUTCDate()];
+
 /**
- * Calcula las fechas de inicio y fin para un período dado.
+ * Calcula las fechas de inicio y fin para un período dado, en hora de Venezuela.
  * @param {string} periodo - 'diario' | 'semanal' | 'mensual' | 'anual'
  * @param {string} fecha - Fecha de referencia en formato 'YYYY-MM-DD' o 'YYYY-MM'
  * @returns {Object} { inicio, fin, inicioAnterior, finAnterior, etiqueta }
  */
 function getFechasPeriodo(periodo, fecha) {
-  const ahora = new Date();
   let inicio, fin, inicioAnterior, finAnterior, etiqueta;
 
   switch (periodo) {
     case 'diario': {
       // fecha = 'YYYY-MM-DD'
-      const [y, m, d] = fecha ? fecha.split('-').map(Number) : [ahora.getFullYear(), ahora.getMonth() + 1, ahora.getDate()];
-      inicio = new Date(y, m - 1, d, 0, 0, 0);
-      fin = new Date(y, m - 1, d, 23, 59, 59, 999);
-      inicioAnterior = new Date(y, m - 1, d - 1, 0, 0, 0);
-      finAnterior = new Date(y, m - 1, d - 1, 23, 59, 59, 999);
-      etiqueta = inicio.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+      const [y, m, d] = fecha ? fecha.split('-').map(Number) : hoyVE();
+      inicio = inicioDiaVE(y, m, d);
+      fin = finDiaVE(y, m, d);
+      const [ay, am, ad] = partesUTC(new Date(Date.UTC(y, m - 1, d - 1)));
+      inicioAnterior = inicioDiaVE(ay, am, ad);
+      finAnterior = finDiaVE(ay, am, ad);
+      etiqueta = `${d} ${MESES_CORTO[m - 1]} ${y}`;
       break;
     }
     case 'semanal': {
       // fecha = 'YYYY-MM-DD' (cualquier día de la semana deseada)
-      const [y, m, d] = fecha ? fecha.split('-').map(Number) : [ahora.getFullYear(), ahora.getMonth() + 1, ahora.getDate()];
-      const fechaRef = new Date(y, m - 1, d);
-      const diaSemana = fechaRef.getDay(); // 0=Domingo
-      const ajuste = diaSemana === 0 ? -6 : 1 - diaSemana; // Lunes como inicio
-      inicio = new Date(fechaRef);
-      inicio.setDate(fechaRef.getDate() + ajuste);
-      inicio.setHours(0, 0, 0, 0);
-      fin = new Date(inicio);
-      fin.setDate(inicio.getDate() + 6);
-      fin.setHours(23, 59, 59, 999);
-      inicioAnterior = new Date(inicio);
-      inicioAnterior.setDate(inicio.getDate() - 7);
-      finAnterior = new Date(fin);
-      finAnterior.setDate(fin.getDate() - 7);
-      etiqueta = `Semana del ${inicio.toLocaleDateString('es-VE', { day: '2-digit', month: 'short' })}`;
+      const [y, m, d] = fecha ? fecha.split('-').map(Number) : hoyVE();
+      // Lunes como inicio. El día de la semana es invariante al desplazamiento
+      // (son días completos), así que basta con la parte UTC.
+      const ref = new Date(Date.UTC(y, m - 1, d));
+      const dow = ref.getUTCDay(); // 0 = Domingo
+      ref.setUTCDate(ref.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
+      const [ly, lm, ld] = partesUTC(ref);
+      inicio = inicioDiaVE(ly, lm, ld);
+      fin = finDiaVE(...partesUTC(new Date(Date.UTC(ly, lm - 1, ld + 6))));
+      inicioAnterior = inicioDiaVE(...partesUTC(new Date(Date.UTC(ly, lm - 1, ld - 7))));
+      finAnterior = finDiaVE(...partesUTC(new Date(Date.UTC(ly, lm - 1, ld - 1))));
+      etiqueta = `Semana del ${ld} ${MESES_CORTO[lm - 1]}`;
       break;
     }
     case 'mensual': {
       // fecha = 'YYYY-MM'
-      const [y, m] = fecha ? fecha.split('-').map(Number) : [ahora.getFullYear(), ahora.getMonth() + 1];
-      inicio = new Date(y, m - 1, 1, 0, 0, 0);
-      fin = new Date(y, m, 0, 23, 59, 59, 999); // Último día del mes
-      inicioAnterior = new Date(y, m - 2, 1, 0, 0, 0);
-      finAnterior = new Date(y, m - 1, 0, 23, 59, 59, 999);
-      etiqueta = inicio.toLocaleDateString('es-VE', { month: 'long', year: 'numeric' });
+      const [y, m] = fecha ? fecha.split('-').map(Number) : hoyVE().slice(0, 2);
+      inicio = inicioDiaVE(y, m, 1);
+      fin = finDiaVE(y, m, new Date(Date.UTC(y, m, 0)).getUTCDate()); // Último día del mes
+      inicioAnterior = inicioDiaVE(y, m - 1, 1);
+      finAnterior = finDiaVE(y, m - 1, new Date(Date.UTC(y, m - 1, 0)).getUTCDate());
+      etiqueta = `${MESES_LARGO[m - 1]} ${y}`;
       break;
     }
     case 'anual': {
       // fecha = 'YYYY'
-      const y = fecha ? Number(fecha) : ahora.getFullYear();
-      inicio = new Date(y, 0, 1, 0, 0, 0);
-      fin = new Date(y, 11, 31, 23, 59, 59, 999);
-      inicioAnterior = new Date(y - 1, 0, 1, 0, 0, 0);
-      finAnterior = new Date(y - 1, 11, 31, 23, 59, 59, 999);
+      const y = fecha ? Number(fecha) : hoyVE()[0];
+      inicio = inicioDiaVE(y, 1, 1);
+      fin = finDiaVE(y, 12, 31);
+      inicioAnterior = inicioDiaVE(y - 1, 1, 1);
+      finAnterior = finDiaVE(y - 1, 12, 31);
       etiqueta = `Año ${y}`;
       break;
     }

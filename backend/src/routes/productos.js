@@ -4,8 +4,9 @@ const prisma = require('../db/prisma');
 const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
-const { getSystemConfig } = require('./config');
 const { aUnidadBase } = require('../utils/unidades');
+const { resolverEmpresaRefId } = require('../utils/empresaContext');
+const { tasaParaEmpresa } = require('../utils/tasaAPI');
 
 const UNIDADES_VALIDAS = [
   'UNIDAD', 'KILOGRAMO', 'GRAMO', 'LITRO', 'MILILITRO',
@@ -249,13 +250,9 @@ router.get('/lookup/:codigo', async (req, res, next) => {
       return res.status(404).json({ error: 'Producto no encontrado' });
     }
 
-    let tasaBcv;
-    try {
-      tasaBcv = getSystemConfig().moneda?.tasaDolar;
-    } catch (_) {}
-    if (!tasaBcv || !isFinite(Number(tasaBcv)) || Number(tasaBcv) <= 0) {
-      tasaBcv = 36.5; // fallback to hardcoded default
-    }
+    // Tasa vigente de la empresa (AUTO: BCV del día; MANUAL: la guardada).
+    // Se resuelve por empresa: usar la tasa global servía la de otro tenant.
+    const tasaBcv = await tasaParaEmpresa(await resolverEmpresaRefId(req));
 
     const precioUsd = new Decimal(producto.precioVenta.toString());
     const precioVes = precioUsd.mul(tasaBcv);
@@ -264,7 +261,7 @@ router.get('/lookup/:codigo', async (req, res, next) => {
       ...producto,
       precioUsd,
       precioVes,
-      tasaBcv,
+      tasaBcv: Number(tasaBcv.toString()),
       stockBajoMinimo: Number(producto.stockActual) <= Number(producto.stockMinimo)
     });
   } catch (err) { next(err); }

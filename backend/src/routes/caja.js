@@ -1,12 +1,12 @@
 const express = require('express');
 const prisma = require('../db/prisma');
-const { Prisma } = require('../db/prisma');
+const { Prisma, IS_SQLITE } = require('../db/prisma');
 const { tsFrag } = require('../utils/sql');
 const Decimal = require('decimal.js').Decimal;
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
 const { paginate, paginatedResponse } = require('../utils/pagination');
-const { getTasaSistemaPorEmpresa } = require('../utils/paymentCurrency');
+const { tasaParaEmpresa } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 
 const router = express.Router();
@@ -136,6 +136,13 @@ router.post('/open', async (req, res, next) => {
     const empresaId = await resolverEmpresaRefId(req);
 
     const nuevaCaja = await prisma.$transaction(async (tx) => {
+      // Bloquea la fila del usuario para serializar aperturas concurrentes del
+      // mismo cajero y evitar dos cajas OPEN por condición de carrera. SQLite no
+      // soporta FOR UPDATE: allí las escrituras ya se serializan.
+      if (!IS_SQLITE) {
+        await tx.$queryRaw`SELECT id FROM usuarios WHERE id = ${userId} FOR UPDATE`;
+      }
+
       const cajaAbierta = await tx.cierreCaja.findFirst({
         where: {
           usuarioId: userId,
@@ -219,7 +226,7 @@ router.get('/preview', async (req, res, next) => {
     const fechaApertura = new Date(cajaAbierta.fechaApertura).toISOString();
     const usuarioId = cajaAbierta.usuarioId;
 
-    const tasaSistema = await getTasaSistemaPorEmpresa(await resolverEmpresaRefId(req));
+    const tasaSistema = await tasaParaEmpresa(await resolverEmpresaRefId(req));
     const pagosAgregados = await prisma.$queryRaw(buildPagosTurnoSql({
       fechaApertura,
       usuarioId,
@@ -333,7 +340,10 @@ router.post('/close', async (req, res, next) => {
         where.usuarioId = userId;
       } else {
         Object.assign(where, getEmpresaFilter(req));
-        if (usuarioId) where.usuarioId = usuarioId;
+        // Sin `usuarioId` explícito, la EMPRESA cierra SU propia caja, igual que
+        // /status y /preview. Antes tomaba la más reciente de toda la empresa y
+        // podía cerrar por error el turno de un cajero (y escribirle el montoFinal).
+        where.usuarioId = usuarioId || req.user.id;
       }
 
       const cajaAbierta = await tx.cierreCaja.findFirst({
@@ -348,7 +358,7 @@ router.post('/close', async (req, res, next) => {
       const fechaApertura = new Date(cajaAbierta.fechaApertura).toISOString();
       const cajaUsuarioId = cajaAbierta.usuarioId;
 
-      const tasaSistema = await getTasaSistemaPorEmpresa(await resolverEmpresaRefId(req));
+      const tasaSistema = await tasaParaEmpresa(await resolverEmpresaRefId(req));
       const pagosAgregados = await tx.$queryRaw(buildPagosTurnoSql({
         fechaApertura,
         usuarioId: cajaUsuarioId,

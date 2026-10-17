@@ -67,7 +67,7 @@ async function main() {
   check('Stock arroz −2', Math.abs(Number(a2.stockActual) - (Number(arroz.stockActual) - 2)) < 1e-6, `${a2.stockActual}`);
 
   // ── Anulación restaura stock ──
-  const anular = await api(`/facturas/${v1.body.id}/anular`, { method: 'PATCH', body: JSON.stringify({ motivo: 'test' }) });
+  const anular = await api(`/facturas/${v1.body.id}/anular`, { method: 'PATCH', body: JSON.stringify({ confirmacion: 'anular', motivo: 'test' }) });
   check('Anular factura', anular.status === 200, `estado ${anular.body.estado}`);
   prods2 = (await api('/productos?limit=100')).body.data;
   check('Stock tomate restaurado', Math.abs(Number(prods2.find(p => p.sku === 'TOMATE').stockActual) - stockAntesTomate) < 1e-6);

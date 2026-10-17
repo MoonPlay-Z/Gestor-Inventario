@@ -6,7 +6,7 @@ const { Decimal } = require('decimal.js');
 const { requireRole } = require('../middleware/auth');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { paginate, paginatedResponse } = require('../utils/pagination');
-const { convertirMontoMoneda, tasaCambioEfectiva } = require('../utils/paymentCurrency');
+const { convertirMontoMoneda, tasaCambioEfectiva } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
 
@@ -145,10 +145,35 @@ router.get('/resumen', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+// Orden configurable del listado de CxC.
+//   vencimiento (default) → fecha de vencimiento más reciente primero
+//   cliente               → orden alfabético por razón social
+//   monto                 → monto pendiente de mayor a menor
+const ORDENES_CXC = {
+  vencimiento: { fechaVencimiento: 'desc' },
+  cliente: { cliente: { razonSocial: 'asc' } },
+  monto: { montoPendiente: 'desc' },
+};
+const ordenCxc = (orden) => ORDENES_CXC[orden] || ORDENES_CXC.vencimiento;
+
+// Orden por estado: el orderBy de Prisma no admite un orden personalizado, así
+// que se resuelve con un rango explícito — por pagar primero, abonadas segundo
+// y pagadas de último.
+const RANGO_ESTADO = { PENDING: 0, PARTIALLY_PAID: 1, PAID: 2 };
+const rangoEstado = (estado) => RANGO_ESTADO[estado] ?? 99;
+const esOrdenEstado = (orden) => orden === 'estado';
+
+const INCLUDE_CXC_LISTA = {
+  cliente: { select: { id: true, razonSocial: true, rifCedula: true, telefono: true, correo: true } },
+  factura: { select: { id: true, numeroFactura: true, fechaEmision: true, moneda: true, tasaCambio: true } },
+  usuario: { select: { id: true, username: true, nombre: true } },
+  _count: { select: { gestions: true } }
+};
+
 // ─── GET /api/cxc ──────────────────────────────────────────────────────────────
 router.get('/', async (req, res, next) => {
   try {
-    const { q, estado, vencidas, clienteId, page = 1, limit = 25 } = req.query;
+    const { q, estado, vencidas, clienteId, orden, page = 1, limit = 25 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const tenantFilter = cxcTenantFilter(req);
     const hoy = new Date();
@@ -172,21 +197,37 @@ router.get('/', async (req, res, next) => {
       }));
     }
 
-    const [cuentas, total] = await Promise.all([
-      prisma.cuentaPorCobrar.findMany({
+    const take = parseInt(limit);
+    const total = await prisma.cuentaPorCobrar.count({ where });
+
+    let cuentas;
+    if (esOrdenEstado(orden)) {
+      // Prisma no ordena por un rango personalizado: se traen los ids con su
+      // estado y se ordena en memoria antes de paginar.
+      const filas = await prisma.cuentaPorCobrar.findMany({
+        where,
+        select: { id: true, estado: true, fechaVencimiento: true },
+      });
+      filas.sort((a, b) => {
+        const d = rangoEstado(a.estado) - rangoEstado(b.estado);
+        return d !== 0 ? d : new Date(b.fechaVencimiento) - new Date(a.fechaVencimiento);
+      });
+      const idsPagina = filas.slice(skip, skip + take).map((f) => f.id);
+      const encontradas = await prisma.cuentaPorCobrar.findMany({
+        where: { id: { in: idsPagina } },
+        include: INCLUDE_CXC_LISTA,
+      });
+      const porId = new Map(encontradas.map((c) => [c.id, c]));
+      cuentas = idsPagina.map((id) => porId.get(id)).filter(Boolean);
+    } else {
+      cuentas = await prisma.cuentaPorCobrar.findMany({
         where,
         skip,
-        take: parseInt(limit),
-        orderBy: { fechaVencimiento: 'asc' },
-        include: {
-          cliente: { select: { id: true, razonSocial: true, rifCedula: true, telefono: true, correo: true } },
-          factura: { select: { id: true, numeroFactura: true, fechaEmision: true, moneda: true, tasaCambio: true } },
-          usuario: { select: { id: true, username: true, nombre: true } },
-          _count: { select: { gestions: true } }
-        }
-      }),
-      prisma.cuentaPorCobrar.count({ where })
-    ]);
+        take,
+        orderBy: ordenCxc(orden),
+        include: INCLUDE_CXC_LISTA,
+      });
+    }
 
     // Calcular días vencidos en cada cuenta
     const cuentasConDias = cuentas.map(c => {
@@ -544,7 +585,7 @@ router.post('/:id/gestion', async (req, res, next) => {
 router.get('/export', async (req, res, next) => {
   try {
     const tenantFilter = cxcTenantFilter(req);
-    const { estado, vencidas, clienteId } = req.query;
+    const { estado, vencidas, clienteId, orden } = req.query;
     const hoy = new Date();
 
     let where = { ...tenantFilter };
@@ -557,13 +598,20 @@ router.get('/export', async (req, res, next) => {
 
     const cuentas = await prisma.cuentaPorCobrar.findMany({
       where,
-      orderBy: { fechaVencimiento: 'asc' },
+      orderBy: esOrdenEstado(orden) ? undefined : ordenCxc(orden),
       include: {
         cliente: { select: { razonSocial: true, rifCedula: true, telefono: true, correo: true } },
         factura: { select: { numeroFactura: true, fechaEmision: true, moneda: true } },
         usuario: { select: { username: true, nombre: true } }
       }
     });
+
+    if (esOrdenEstado(orden)) {
+      cuentas.sort((a, b) => {
+        const d = rangoEstado(a.estado) - rangoEstado(b.estado);
+        return d !== 0 ? d : new Date(b.fechaVencimiento) - new Date(a.fechaVencimiento);
+      });
+    }
 
     // Build CSV
     const headers = ['Factura', 'Cliente', 'RIF/Cedula', 'Contacto', 'Emision', 'Vencimiento', 'Dias Vencido', 'Monto Original', 'Monto Cobrado', 'Monto Pendiente', 'Estado', 'Cajero', 'Ultima Gestion'];

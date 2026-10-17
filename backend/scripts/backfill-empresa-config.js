@@ -16,7 +16,7 @@ const APPLY = process.argv.includes('--apply');
 async function main() {
   // Leer config global actual
   const configPath = path.join(__dirname, '..', 'data', 'config.json');
-  let global = { moneda: { tasaDolar: 36.5, simbolo: '$', codigo: 'USD' } };
+  let global = { moneda: { simbolo: '$', codigo: 'USD' } };
   try {
     if (fs.existsSync(configPath)) {
       global = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -25,11 +25,14 @@ async function main() {
     console.warn('No se pudo leer config.json, usando defaults:', e.message);
   }
 
-  const tasaDolar = Number(global.moneda?.tasaDolar) || 36.5;
+  // Sin tasa global no se inventa un valor (antes 36.5): si no hay tasa se omite
+  // y cada empresa conserva/resuelve la suya (empresa → global → BCV).
+  const tasaGlobal = Number(global.moneda?.tasaDolar);
+  const tasaDolar = Number.isFinite(tasaGlobal) && tasaGlobal > 0 ? tasaGlobal : null;
   const monedaSimbolo = global.moneda?.simbolo || '$';
   const monedaCodigo = global.moneda?.codigo || 'USD';
 
-  console.log(`Valores globales: tasaDolar=${tasaDolar}, simbolo=${monedaSimbolo}, codigo=${monedaCodigo}`);
+  console.log(`Valores globales: tasaDolar=${tasaDolar ?? '(sin tasa: se omite)'}, simbolo=${monedaSimbolo}, codigo=${monedaCodigo}`);
   console.log(APPLY ? '=== APLICANDO ===' : '=== DRY-RUN (sin cambios) ===');
 
   const empresas = await prisma.empresa.findMany({
@@ -40,13 +43,13 @@ async function main() {
 
   for (const emp of empresas) {
     if (!APPLY) {
-      console.log(`  [dry-run] ${emp.nombre} (${emp.rif}) — tasa actual: ${emp.tasaDolar} → ${tasaDolar}`);
+      console.log(`  [dry-run] ${emp.nombre} (${emp.rif}) — tasa actual: ${emp.tasaDolar} → ${tasaDolar ?? '(sin cambio)'}`);
       continue;
     }
     await prisma.empresa.update({
       where: { id: emp.id },
       data: {
-        tasaDolar,
+        ...(tasaDolar != null ? { tasaDolar } : {}),
         monedaSimbolo,
         monedaCodigo,
         direccion: emp.direccion || undefined,

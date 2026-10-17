@@ -4,6 +4,8 @@ const cors    = require('cors');
 const path    = require('path');
 const prisma  = require('./db/prisma');
 const { tsFrag, monthTrunc } = require('./utils/sql');
+const { resolverEmpresaRefId } = require('./utils/empresaContext');
+const { tasaParaEmpresa } = require('./utils/tasaAPI');
 
 const clientesRouter   = require('./routes/clientes');
 const productosRouter  = require('./routes/productos');
@@ -21,6 +23,7 @@ const b2bRouter        = require('./routes/b2b');
 const fiscalRouter     = require('./routes/fiscal');
 const reportesRouter   = require('./routes/reportes');
 const cxcRouter        = require('./routes/cxc');
+const tasaRouter        = require('./routes/tasa');
 const { authMiddleware, requireRole } = require('./middleware/auth');
 const { subscriptionGuard } = require('./middleware/subscriptionGuard');
 const { errorHandler } = require('./middleware/errorHandler');
@@ -185,6 +188,7 @@ app.use('/api/facturas',     facturasRouter);
 app.use('/api/facturas-pruebas', facturasPruebasRouter);
 app.use('/api/pagos',        pagosRouter);
 app.use('/api/config',       configRouter);
+app.use('/api/tasa',         tasaRouter);
 app.use('/api/backup',       backupRouter);
 app.use('/api/caja',         cajaRouter);
 app.use('/api/cotizaciones', cotizacionesRouter);
@@ -208,6 +212,11 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
       ]
     };
 
+    // Tasa vigente de la empresa: se usa para normalizar a USD los pagos hechos
+    // en Bs cuando la factura fue emitida en USD (tasaCambio=1, no es una tasa
+    // real). Sin esto, 1000 Bs se contarían como 1000 USD.
+    const tasaSistema = await tasaParaEmpresa(await resolverEmpresaRefId(req));
+
     // Ejecutar todas las consultas independientes en paralelo
     const [
       pagosDelMes,
@@ -221,8 +230,11 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
       prisma.$queryRaw`
         SELECT
           SUM(CASE
-            WHEN p."monedaPago" = 'VES' AND f."tasaCambio" > 0
-            THEN p."monto" / f."tasaCambio"
+            WHEN p."monedaPago" = 'VES' THEN
+              CASE WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+                THEN p."monto" / f."tasaCambio"
+                ELSE p."monto" / ${tasaSistema}
+              END
             ELSE p."monto"
           END) AS total_usd
         FROM pagos p
@@ -281,8 +293,11 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
         SELECT
           ${monthTrunc('p."fechaPago"')} AS mes,
           SUM(CASE
-            WHEN p."monedaPago" = 'VES' AND f."tasaCambio" > 0
-            THEN p."monto" / f."tasaCambio"
+            WHEN p."monedaPago" = 'VES' THEN
+              CASE WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+                THEN p."monto" / f."tasaCambio"
+                ELSE p."monto" / ${tasaSistema}
+              END
             ELSE p."monto"
           END) AS total_usd
         FROM pagos p

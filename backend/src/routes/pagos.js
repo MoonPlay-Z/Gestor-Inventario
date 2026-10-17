@@ -5,7 +5,7 @@ const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
 const { paginate, paginatedResponse } = require('../utils/pagination');
-const { MONEDAS_PAGO, convertirAFactura, sumarPagosNormalizados } = require('../utils/paymentCurrency');
+const { MONEDAS_PAGO, convertirAFactura, sumarPagosNormalizados } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
 

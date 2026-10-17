@@ -61,7 +61,10 @@ model Empresa {
   email                  String?
   monedaSimbolo          String?
   monedaCodigo           String?
-  tasaDolar              Float?    @default(36.5)
+  // Sin default: una empresa sin tasa configurada queda en NULL y el sistema
+  // resuelve la tasa vigente (BCV en modo AUTO). El default histórico 36.5
+  // provocaba conversiones VES→USD erróneas (~25x de desviación).
+  tasaDolar              Float?
   // "AUTO": la tasa se refresca a diario con la del BCV. "MANUAL": solo cambia
   // cuando el usuario la guarda. Se conserva la fecha del último cambio para
   // saber si la tasa almacenada ya es la de hoy.
