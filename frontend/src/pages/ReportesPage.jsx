@@ -447,7 +447,7 @@ export function ReportesPage() {
       // ── Encabezado ────────────────────────────────────────────────────────
       doc.setFontSize(18);
       doc.text(
-        verGanancias ? 'Reporte de Ganancias por Producto' : 'Reporte de Ventas por Producto',
+        verGanancias ? 'Reporte de Ganancias por Producto' : 'Reporte de Ventas',
         pageWidth / 2, 15, { align: 'center' }
       );
       doc.setFontSize(10);
@@ -720,7 +720,7 @@ export function ReportesPage() {
         lista.reduce((a, p) => a + (parseFloat(p[campo]) || 0), 0);
 
       // ── Encabezado ────────────────────────────────────────────────────────
-      rows.push([verGanancias ? 'Reporte de Ganancias por Producto' : 'Reporte de Ventas por Producto']);
+      rows.push([verGanancias ? 'Reporte de Ganancias por Producto' : 'Reporte de Ventas']);
       rows.push(['Período', ventas?.etiqueta || 'N/A']);
       rows.push(['Fecha de generación', new Date().toLocaleString('es-VE')]);
       rows.push(['Moneda', 'USD']);
@@ -749,39 +749,42 @@ export function ReportesPage() {
 
       // ── Ganancia por producto ─────────────────────────────────────────────
       const porProducto = reporte?.gananciaPorProducto || [];
-      rows.push([
-        verGanancias
-          ? `GANANCIA POR PRODUCTO (${porProducto.length})`
-          : `INGRESOS POR PRODUCTO (${porProducto.length})`,
-      ]);
-      rows.push(verGanancias
-        ? ['Producto', 'SKU', 'Unidad', 'Cantidad vendida', 'Ingresos sin impuestos', 'Costo histórico', 'Ganancia']
-        : ['Producto', 'SKU', 'Unidad', 'Cantidad vendida', 'Ingresos sin impuestos']);
-      for (const p of porProducto) {
-        rows.push([
-          p.nombre,
-          p.sku || '',
-          p.unidad || '',
-          p.cantidadVendida,
-          p.ingresos,
-          ...(verGanancias ? [p.costo, p.ganancia] : []),
-        ]);
-      }
       if (porProducto.length > 0) {
-        rows.push([
-          'TOTAL',
-          '',
-          // No se pueden sumar cantidades de unidades distintas: se listan aparte.
-          desgloseUnidadesPorProducto(porProducto),
-          suma(porProducto, 'ingresos').toFixed(2),
-          ...(verGanancias ? [
-            suma(porProducto, 'costo').toFixed(2),
-            suma(porProducto, 'ganancia').toFixed(2),
-          ] : []),
+  rows.push([
+          verGanancias
+            ? `GANANCIA POR PRODUCTO (${porProducto.length})`
+            : `INGRESOS POR PRODUCTO (${porProducto.length})`,
         ]);
-      }
-      rows.push([]);
+        rows.push(verGanancias
+          ? ['Producto', 'SKU', 'Unidad', 'Cantidad vendida', 'Ingresos sin impuestos', 'Costo histórico', 'Ganancia']
+          : ['Producto', 'SKU', 'Unidad', 'Cantidad vendida', 'Ingresos sin impuestos']);
+        for (const p of porProducto) {
+          rows.push([
+            p.nombre,
+            p.sku || '',
+            p.unidad || '',
+            p.cantidadVendida,
+            p.ingresos,
+            ...(verGanancias ? [p.costo, p.ganancia] : []),
+          ]);
+        }
+        if (porProducto.length > 0) {
+          rows.push([
+            'TOTAL',
+            '',
+            // No se pueden sumar cantidades de unidades distintas: se listan aparte.
+            desgloseUnidadesPorProducto(porProducto),
+            suma(porProducto, 'ingresos').toFixed(2),
+            ...(verGanancias ? [
+              suma(porProducto, 'costo').toFixed(2),
+              suma(porProducto, 'ganancia').toFixed(2),
+            ] : []),
+          ]);
+        }
+        rows.push([]);
 
+
+}
       // ── Detalle por factura ───────────────────────────────────────────────
       const lineasFactura = detalle.detalle || [];
       if (lineasFactura.length > 0) {
