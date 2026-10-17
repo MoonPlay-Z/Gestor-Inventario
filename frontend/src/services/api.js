@@ -115,7 +115,12 @@ export const API = {
   getConfig: () => request('/config'),
   saveConfig: (data) => request('/config', { method: 'POST', body: data }),
   getTasaBCV: () => request('/config/tasa-bcv'),
+  getEmpresaConfig: (empresaId) => request(`/config/empresas/${empresaId}/config`),
   updateEmpresaConfig: (empresaId, data) => request(`/config/empresas/${empresaId}/config`, { method: 'PUT', body: data }),
+  // Aplica la tasa oficial del BCV a la empresa, sin importar su modo (acción
+  // explícita del usuario). La actualización diaria automática la hace el
+  // backend por su cuenta; esto es el botón "Actualizar desde BCV".
+  actualizarTasaDolar: () => request('/config/tasa-dolar/actualizar', { method: 'POST' }),
 
   // Dashboard
   getDashboardStats: (periodo = 'mes') => request(`/dashboard?periodo=${periodo}`),

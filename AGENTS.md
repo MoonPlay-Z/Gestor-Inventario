@@ -180,14 +180,28 @@ There is no test suite, linter, formatter, or CI configuration. Do not look for 
 
 ## Configuración independiente por empresa
 
-Cada `Empresa` tiene su propia configuración: `tasaDolar` (Float, manual), `monedaSimbolo`, `monedaCodigo`, `direccion`, `telefono`, `email`. La tasa se resuelve con `getTasaSistemaPorEmpresa(empresaId)` en `backend/src/utils/paymentCurrency.js` (caché en memoria de 60s, fallback a `leerTasaSistema()`).
+Cada `Empresa` tiene su propia configuración: `tasaDolar` (Float), `monedaSimbolo`, `monedaCodigo`, `direccion`, `telefono`, `email`. La tasa se resuelve con `getTasaSistemaPorEmpresa(empresaId)` en `backend/src/utils/paymentCurrency.js` (caché en memoria de 60s, fallback a `leerTasaSistema()`).
 
-- Al login, `auth.js` incluye `empresa: { id, nombre, rif, tasaDolar, monedaSimbolo, ... }` en la respuesta.
+- Al login, `auth.js` incluye `empresa: { id, nombre, rif, tasaDolar, tasaDolarModo, tasaDolarActualizadaEn, monedaSimbolo, ... }` en la respuesta.
 - El frontend guarda `empresa` en `AuthContext` (`context/AuthContext.jsx`) y los componentes la usan para conversiones.
-- El `DolarWidget` cambió de auto-fetch (`ve.dolarapi.com`) a **input manual** que guarda vía `PUT /api/config/empresas/:id/config`.
+- El `DolarWidget` (`components/widgets/DolarWidget.jsx`) permite actualizar desde el BCV, editar a mano y activar/desactivar la actualización automática. Solo es editable para `EMPRESA`; el resto de roles lo ven en modo lectura.
 - La tasa de una empresa no afecta a otras — cada una trabaja con su propia diferencia.
 - **Backfill:** `backend/scripts/backfill-empresa-config.js` (copia valores globales a empresas existentes; dry-run por defecto, `--apply` para persistir).
 
+### Actualización diaria de la tasa
+
+`Empresa.tasaDolarModo` (`"AUTO"` por defecto, o `"MANUAL"`) y `Empresa.tasaDolarActualizadaEn` gobiernan el refresco. Lógica central en `backend/src/services/tasaDolar.js`:
+
+- **`AUTO`** — la tasa se refresca con la oficial del BCV. **`MANUAL`** — solo cambia al guardarla.
+- Se dispara de dos formas complementarias, porque el backend puede estar dormido (Render free) o el equipo apagado a la hora programada: un **job diario** a las 08:00 de Venezuela (12:00 UTC, `setTimeout` que se reprograma solo, sin cron externo) y un **refresco perezoso** al primer uso del día (`GET /api/config` y `GET /api/config/empresas/:id/config`). Ambos son idempotentes.
+- Guardar la tasa a mano (`PUT`) marca `tasaDolarActualizadaEn = now`: la actualización automática **no la pisa hasta mañana**, aunque el modo siga en `AUTO`.
+- Si el BCV no responde se conserva la última tasa conocida (nunca se inventa un valor). `bcvHistorico.js` corta el `fetch` a los 8 s y aplica un backoff de 10 min tras un fallo, para que el refresco perezoso no cueste 8 s en cada carga.
+- Al guardar una tasa se invalida su caché de 60 s (`utils/tasaEmpresaCache.js`) para que el POS no siga cobrando con la anterior.
+- La fecha se calcula siempre en hora de Venezuela (UTC-4), en backend (`fechaEnVenezuela`) y frontend (`utils/fechaVenezuela.js`).
+- **Aviso al iniciar sesión:** `components/widgets/AlertaTasaDolar.jsx` (montado en `Layout.jsx`) muestra un modal una vez al día por dispositivo y empresa (bandera `tasaDolarAviso:<empresaId>` en localStorage). Si la tasa ya es la de hoy se muestra como confirmación; si no, ofrece actualizarla desde el BCV o a mano.
+- Rutas: `POST /api/config/tasa-dolar/actualizar` (aplica la tasa del BCV a la empresa sin importar su modo, `requireRole('EMPRESA')`). El `GET /api/config/tasa-bcv` sigue existiendo.
+- Migración: `backend/prisma/migrations/20261016180000_add_empresa_tasa_dolar_auto/` — **debe aplicarse antes de desplegar el backend**, porque el login ya selecciona las columnas nuevas.
+
 ## Env vars
 
-Required: `DATABASE_URL`, `JWT_SECRET` (app exits if missing). Optional: `PORT` (default 3001), `EMPRESA_NOMBRE`, `EMPRESA_RIF`, `EMPRESA_DIRECCION`, `EMPRESA_TELEFONO`, `EMPRESA_EMAIL`, `MONEDA_SIMBOLO`, `MONEDA_CODIGO`, `B2B_API_KEY`, `ALLOWED_ORIGINS`, `DB_PROVIDER`, `NODE_ENV`, `ELECTRON_ENV`.
+Required: `DATABASE_URL`, `JWT_SECRET` (app exits if missing). Optional: `PORT` (default 3001), `EMPRESA_NOMBRE`, `EMPRESA_RIF`, `EMPRESA_DIRECCION`, `EMPRESA_TELEFONO`, `EMPRESA_EMAIL`, `MONEDA_SIMBOLO`, `MONEDA_CODIGO`, `B2B_API_KEY`, `ALLOWED_ORIGINS`, `DB_PROVIDER`, `NODE_ENV`, `ELECTRON_ENV`, `TASA_DOLAR_AUTO_UPDATE` (poner `false` para desactivar el job diario de la tasa).

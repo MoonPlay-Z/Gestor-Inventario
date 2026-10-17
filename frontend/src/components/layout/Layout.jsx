@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { BottomNav } from './BottomNav';
+import { AlertaTasaDolar } from '../widgets/AlertaTasaDolar';
 import { API } from '../../services/api';
 
 const MOBILE_BREAKPOINT = 767;
@@ -76,6 +77,9 @@ export default function Layout() {
 
       {/* Bottom Navigation Dock (Visible on Mobile Screens) */}
       <BottomNav setIsMobileOpen={setIsMobileOpen} />
+
+      {/* Recordatorio de la tasa: una vez al día, al iniciar sesión. */}
+      <AlertaTasaDolar />
     </div>
   );
 }

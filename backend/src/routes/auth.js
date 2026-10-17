@@ -153,7 +153,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         select: {
           id: true, nombre: true, rif: true, direccion: true,
           telefono: true, email: true, tasaDolar: true,
-          monedaSimbolo: true, monedaCodigo: true
+          monedaSimbolo: true, monedaCodigo: true,
+          tasaDolarModo: true, tasaDolarActualizadaEn: true
         }
       });
     }

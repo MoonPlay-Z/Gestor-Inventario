@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.setTimeout(120000);
 
+import type { Page } from '@playwright/test';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CajaPage } from './pages/CajaPage';
@@ -12,10 +13,29 @@ const CLAVE = 'admin123';
 
 test.describe.configure({ retries: 0 });
 
+/**
+ * El aviso de la tasa aparece una vez al día, en el primer inicio de sesión, y
+ * es un modal: hay que cerrarlo para poder pulsar el resto de la interfaz.
+ * Playwright usa un contexto nuevo por prueba (localStorage vacío), así que
+ * aparece en todas y hay que descartarlo siempre.
+ */
+async function cerrarAvisoTasa(page: Page) {
+  const aviso = page.getByRole('dialog', { name: 'Tasa del día' });
+  try {
+    await aviso.waitFor({ state: 'visible', timeout: 8000 });
+  } catch {
+    return; // No apareció (rol sin permiso sobre la tasa, o ya se descartó hoy).
+  }
+  const descartar = aviso.getByRole('button', { name: /Entendido|Después/ }).first();
+  if (await descartar.count()) await descartar.click();
+  await expect(aviso).toHaveCount(0, { timeout: 5000 });
+}
+
 async function loginAndGo(lp: LoginPage, dp: DashboardPage) {
   await lp.goto();
   await lp.login(USUARIO, CLAVE);
   await dp.expectLoaded();
+  await cerrarAvisoTasa(lp.page);
 }
 
 test.describe('Flujos Críticos - @smoke', () => {
@@ -161,13 +181,13 @@ test.describe('Tasa BCV - @regression @config', () => {
     await expect(page.locator('text=/Tasa.*BCV|Tasa.*Actual/i')).toBeVisible({ timeout: 10000 });
 
     // Click en actualizar desde BCV
-    await page.locator('button:has-text("Actualizar desde BCV"), button:has-text("BCV")').first().click();
+    await page.locator('button:has-text("Actualizar desde BCV")').first().click();
 
-    // Esperar loading
-    await expect(page.getByText('Actualizando', { exact: false })).toBeVisible({ timeout: 5000 });
-
-    // Esperar resultado
-    await expect(page.getByText(/Tasa.*BCV.*actualizada|Tasa.*\d+/)).toBeVisible({ timeout: 15000 });
+    // Se verifica el resultado, no el estado "Actualizando...": con la tasa
+    // cacheada en el servidor la petición puede resolverse demasiado rápido
+    // como para que Playwright alcance a ver ese texto.
+    await expect(page.getByText(/Tasa BCV actualizada: [\d.,]+ Bs\.\/\$/)).toBeVisible({ timeout: 20000 });
+    await expect(page.locator('text=/Al día/')).toBeVisible({ timeout: 10000 });
   });
 });
 

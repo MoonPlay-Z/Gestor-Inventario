@@ -1,5 +1,6 @@
 const { Decimal } = require('decimal.js');
 const { getSystemConfig } = require('../routes/config');
+const { obtenerTasaEmpresa, guardarTasaEmpresa } = require('./tasaEmpresaCache');
 const prisma = require('../db/prisma');
 
 const MONEDAS_PAGO = ['USD', 'VES'];
@@ -8,9 +9,6 @@ const TASA_VES_FALLBACK = new Decimal('36.5');
 // Caché de la tasa del sistema con invalidación por mtime, para no leer
 // config.json del disco en cada pago de un listado.
 const _tasaCache = { tasa: null, mtime: 0 };
-
-// Caché de tasas por empresa (vigilia hasta 60 segundos)
-const _tasaEmpresaCache = new Map(); // empresaId -> { tasa, timestamp }
 
 function convertirMontoMoneda(monto, monedaOrigen, monedaDestino, tasaCambio) {
   if (!MONEDAS_PAGO.includes(monedaOrigen) || !MONEDAS_PAGO.includes(monedaDestino)) {
@@ -124,11 +122,8 @@ async function sumarPagosNormalizados(pagos, factura, empresaId = null) {
 async function getTasaSistemaPorEmpresa(empresaId) {
   if (!empresaId) return leerTasaSistema();
 
-  const cached = _tasaEmpresaCache.get(empresaId);
-  const now = Date.now();
-  if (cached && (now - cached.timestamp) < 60000) {
-    return cached.tasa;
-  }
+  const enCache = obtenerTasaEmpresa(empresaId);
+  if (enCache) return enCache;
 
   try {
     const empresa = await prisma.empresa.findUnique({
@@ -140,7 +135,7 @@ async function getTasaSistemaPorEmpresa(empresaId) {
       ? new Decimal(String(raw))
       : null;
     const valor = (tasa && tasa.isFinite() && tasa.gt(0)) ? tasa : leerTasaSistema();
-    _tasaEmpresaCache.set(empresaId, { tasa: valor, timestamp: now });
+    guardarTasaEmpresa(empresaId, valor);
     return valor;
   } catch (_) {
     return leerTasaSistema();

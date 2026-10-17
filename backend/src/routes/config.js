@@ -6,6 +6,36 @@ const { requireRole } = require('../middleware/auth');
 const prisma = require('../db/prisma');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaBCVActual } = require('../utils/bcvHistorico');
+const { invalidarTasaEmpresa } = require('../utils/tasaEmpresaCache');
+const {
+  MODOS,
+  actualizarTasaEmpresa,
+  actualizarTasas,
+  asegurarTasaDelDia,
+} = require('../services/tasaDolar');
+
+// Campos de empresa que devuelve la API (incluye el modo de tasa y su fecha).
+const SELECT_EMPRESA_CONFIG = {
+  id: true, nombre: true, rif: true, direccion: true,
+  telefono: true, email: true, tasaDolar: true,
+  monedaSimbolo: true, monedaCodigo: true,
+  tasaDolarModo: true, tasaDolarActualizadaEn: true,
+};
+
+/**
+ * Refresco perezoso de la tasa: si la empresa está en modo automático y su tasa
+ * no es la de hoy, se actualiza con la del BCV. Nunca hace fallar la petición:
+ * si el BCV está caído se responde con la última tasa conocida.
+ */
+async function refrescarTasaSiHaceFalta(empresa, contexto) {
+  try {
+    const refrescada = await asegurarTasaDelDia(empresa);
+    return refrescada ? { ...empresa, ...refrescada } : empresa;
+  } catch (err) {
+    console.error(`[config] Refresco de tasa (${contexto}):`, err.message);
+    return empresa;
+  }
+}
 
 console.log('[CONFIG ROUTES] Router loaded, routes registered');
 
@@ -64,14 +94,23 @@ router.get('/', async (req, res, next) => {
     const empresaRefId = await resolverEmpresaRefId(req);
 
     if (empresaRefId) {
-      const empresa = await prisma.empresa.findUnique({
+      let empresa = await prisma.empresa.findUnique({
         where: { id: empresaRefId },
-        select: { tasaDolar: true, monedaSimbolo: true, monedaCodigo: true },
+        select: {
+          tasaDolar: true, monedaSimbolo: true, monedaCodigo: true,
+          tasaDolarModo: true, tasaDolarActualizadaEn: true,
+        },
       });
+      // Primer uso del día: refresca la tasa automática antes de responder, para
+      // que el POS no cobre con la tasa de ayer.
+      empresa = await refrescarTasaSiHaceFalta(empresa, 'GET /config');
+
       if (empresa?.tasaDolar != null && Number(empresa.tasaDolar) > 0) {
         config.moneda.tasaDolar = Number(empresa.tasaDolar);
         config.moneda.simbolo = empresa.monedaSimbolo || config.moneda.simbolo;
         config.moneda.codigo = empresa.monedaCodigo || config.moneda.codigo;
+        config.moneda.tasaDolarModo = empresa.tasaDolarModo || 'AUTO';
+        config.moneda.tasaDolarActualizadaEn = empresa.tasaDolarActualizadaEn || null;
         config.tasaFuente = 'EMPRESA';
       } else {
         config.tasaFuente = 'GLOBAL';
@@ -100,6 +139,36 @@ router.get('/tasa-bcv', async (_req, res) => {
   } catch (err) {
     res.status(503).json({ error: 'No se pudo consultar la tasa oficial del BCV', details: err.message });
   }
+});
+
+// POST /api/config/tasa-dolar/actualizar — Aplica la tasa oficial del BCV a la
+// empresa autenticada, aunque ya se haya actualizado hoy y aunque esté en modo
+// MANUAL (es una acción explícita del usuario). No cambia el modo.
+router.post('/tasa-dolar/actualizar', requireRole('EMPRESA'), async (req, res, next) => {
+  try {
+    const empresaRefId = await resolverEmpresaRefId(req);
+    if (!empresaRefId) {
+      return res.status(400).json({ error: 'No hay una empresa asociada a la sesión' });
+    }
+
+    const resultado = await actualizarTasaEmpresa(empresaRefId);
+    if (resultado.motivo !== 'actualizada') {
+      const mensajes = {
+        sin_tasa: 'El BCV no tiene una tasa oficial disponible en este momento',
+        error: 'No se pudo consultar la tasa oficial del BCV',
+      };
+      return res.status(503).json({
+        error: resultado.error || mensajes[resultado.motivo] || 'No se pudo actualizar la tasa',
+        motivo: resultado.motivo,
+      });
+    }
+
+    const empresa = await prisma.empresa.findUnique({
+      where: { id: empresaRefId },
+      select: SELECT_EMPRESA_CONFIG,
+    });
+    res.json(empresa);
+  } catch (err) { next(err); }
 });
 
 // POST /api/config — Guarda configuración de la empresa
@@ -188,14 +257,10 @@ router.get('/empresas/:id/config', async (req, res, next) => {
     }
     const empresa = await require('../db/prisma').empresa.findUnique({
       where: { id },
-      select: {
-        id: true, nombre: true, rif: true, direccion: true,
-        telefono: true, email: true, tasaDolar: true,
-        monedaSimbolo: true, monedaCodigo: true
-      }
+      select: SELECT_EMPRESA_CONFIG,
     });
     if (!empresa) return res.status(404).json({ error: 'Empresa no encontrada' });
-    res.json(empresa);
+    res.json(await refrescarTasaSiHaceFalta(empresa, 'GET /empresas/:id/config'));
   } catch (err) { next(err); }
 });
 
@@ -210,7 +275,7 @@ router.put('/empresas/:id/config', requireRole('EMPRESA'), async (req, res, next
       return res.status(403).json({ error: 'No tienes permiso para modificar esta empresa' });
     }
 
-    const { tasaDolar, monedaSimbolo, monedaCodigo, nombre, rif, direccion, telefono, email } = req.body;
+    const { tasaDolar, tasaDolarModo, monedaSimbolo, monedaCodigo, nombre, rif, direccion, telefono, email } = req.body;
 
     // Validar tasaDolar si se proporciona
     if (tasaDolar !== undefined && tasaDolar !== null) {
@@ -220,9 +285,20 @@ router.put('/empresas/:id/config', requireRole('EMPRESA'), async (req, res, next
       }
     }
 
+    // Validar el modo de tasa: decide si la actualización diaria puede pisarla.
+    if (tasaDolarModo !== undefined && tasaDolarModo !== null && !MODOS.includes(tasaDolarModo)) {
+      return res.status(400).json({ error: `El modo de tasa debe ser ${MODOS.join(' o ')}` });
+    }
+
     // Construir objeto de actualización solo con campos proporcionados
     const data = {};
-    if (tasaDolar !== undefined) data.tasaDolar = Number(tasaDolar);
+    if (tasaDolar !== undefined) {
+      data.tasaDolar = Number(tasaDolar);
+      // Guardar la fecha permite distinguir "tasa de hoy" de "tasa de ayer"
+      // sin volver a consultar el BCV.
+      data.tasaDolarActualizadaEn = new Date();
+    }
+    if (tasaDolarModo !== undefined && tasaDolarModo !== null) data.tasaDolarModo = tasaDolarModo;
     if (monedaSimbolo !== undefined) data.monedaSimbolo = monedaSimbolo?.trim() || null;
     if (monedaCodigo !== undefined) data.monedaCodigo = monedaCodigo?.trim()?.toUpperCase() || null;
     if (nombre !== undefined) data.nombre = nombre?.trim();
@@ -234,12 +310,12 @@ router.put('/empresas/:id/config', requireRole('EMPRESA'), async (req, res, next
     const actualizada = await prisma.empresa.update({
       where: { id },
       data,
-      select: {
-        id: true, nombre: true, rif: true, direccion: true,
-        telefono: true, email: true, tasaDolar: true,
-        monedaSimbolo: true, monedaCodigo: true
-      }
+      select: SELECT_EMPRESA_CONFIG
     });
+
+    // El POS tiene la tasa cacheada 60 s: sin invalidar seguiría cobrando con la
+    // tasa anterior aunque el usuario acabe de cambiarla.
+    invalidarTasaEmpresa(id);
 
     res.json(actualizada);
   } catch (err) { next(err); }

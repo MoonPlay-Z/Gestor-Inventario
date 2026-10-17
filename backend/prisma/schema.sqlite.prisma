@@ -21,23 +21,28 @@ datasource db {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Empresa {
-  id                 String    @id @default(uuid())
-  nombre             String
-  rif                String    @unique
-  direccion          String?
-  telefono           String?
-  email              String?
-  monedaSimbolo      String?
-  monedaCodigo       String?
-  tasaDolar          Float     @default(36.5)
-  activo             Boolean   @default(true)
-  subscriptionStatus String    @default("trialing")
-  planType           String?
-  trialStartsAt      DateTime?
-  trialEndsAt        DateTime?
-  currentPeriodEnd   DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                     String    @id @default(uuid())
+  nombre                 String
+  rif                    String    @unique
+  direccion              String?
+  telefono               String?
+  email                  String?
+  monedaSimbolo          String?
+  monedaCodigo           String?
+  tasaDolar              Float     @default(36.5)
+  // "AUTO": la tasa se refresca a diario con la del BCV. "MANUAL": solo cambia
+  // cuando el usuario la guarda. Se conserva la fecha del último cambio para
+  // saber si la tasa almacenada ya es la de hoy.
+  tasaDolarModo          String    @default("AUTO")
+  tasaDolarActualizadaEn DateTime?
+  activo                 Boolean   @default(true)
+  subscriptionStatus     String    @default("trialing")
+  planType               String?
+  trialStartsAt          DateTime?
+  trialEndsAt            DateTime?
+  currentPeriodEnd       DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   usuarios     Usuario[]    @relation("EmpresaUsuarios")
   roles        Rol[]
@@ -156,8 +161,8 @@ model Producto {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  empresa      Usuario       @relation("EmpresaProductos", fields: [empresaId], references: [id])
-  itemsFactura ItemFactura[]
+  empresa         Usuario          @relation("EmpresaProductos", fields: [empresaId], references: [id])
+  itemsFactura    ItemFactura[]
   itemsCotizacion ItemCotizacion[]
 
   @@unique([empresaId, sku])
@@ -192,8 +197,8 @@ model Factura {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  items ItemFactura[]
-  pagos Pago[]
+  items            ItemFactura[]
+  pagos            Pago[]
   cotizacionOrigen Cotizacion?
 
   @@index([fechaEmision])
@@ -205,22 +210,22 @@ model Factura {
 }
 
 model ItemFactura {
-  id                      String    @id @default(uuid())
-  facturaId               String
-  factura                 Factura   @relation(fields: [facturaId], references: [id], onDelete: Cascade)
-  productoId              String?
-  producto                Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
-  descripcionHistorica    String
-  cantidad                Float
-  unidadMedida            String    @default("UNIDAD")
-  pesoReal                Float?
-  precioUnitarioHistorico Float
+  id                        String    @id @default(uuid())
+  facturaId                 String
+  factura                   Factura   @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  productoId                String?
+  producto                  Producto? @relation(fields: [productoId], references: [id], onDelete: SetNull)
+  descripcionHistorica      String
+  cantidad                  Float
+  unidadMedida              String    @default("UNIDAD")
+  pesoReal                  Float?
+  precioUnitarioHistorico   Float
   costoUnitarioHistoricoUSD Float?
-  tasaImpuestoAplicada    Float
-  subtotalLinea           Float
-  impuestoLinea           Float
-  totalLinea              Float
-  createdAt               DateTime  @default(now())
+  tasaImpuestoAplicada      Float
+  subtotalLinea             Float
+  impuestoLinea             Float
+  totalLinea                Float
+  createdAt                 DateTime  @default(now())
 
   @@index([facturaId])
   @@map("items_factura")
@@ -252,24 +257,24 @@ model Correlativo {
 }
 
 model CierreCaja {
-  id               String    @id @default(uuid())
-  usuarioId        String?
-  usuario          Usuario?  @relation(fields: [usuarioId], references: [id])
-  empresaId        String?
-  empresa          Empresa?  @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  fechaApertura    DateTime  @default(now())
-  fechaCierre      DateTime?
-  montoInicial     Float
-  montoFinal       Float?
-  ingresosEfectivo Float     @default(0.00)
-  ingresosBanco    Float     @default(0.00)
+  id                  String    @id @default(uuid())
+  usuarioId           String?
+  usuario             Usuario?  @relation(fields: [usuarioId], references: [id])
+  empresaId           String?
+  empresa             Empresa?  @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  fechaApertura       DateTime  @default(now())
+  fechaCierre         DateTime?
+  montoInicial        Float
+  montoFinal          Float?
+  ingresosEfectivo    Float     @default(0.00)
+  ingresosBanco       Float     @default(0.00)
   ingresosEfectivoVES Float?
   ingresosBancoVES    Float?
-  estado           String    @default("OPEN")
-  observaciones    String?
-  arqueoDetalle    String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  estado              String    @default("OPEN")
+  observaciones       String?
+  arqueoDetalle       String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@index([usuarioId])
   @@index([empresaId])
@@ -311,7 +316,7 @@ model ItemCotizacion {
   cotizacionId   String
   cotizacion     Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
   productoId     String?
-  producto       Producto? @relation(fields: [productoId], references: [id])
+  producto       Producto?  @relation(fields: [productoId], references: [id])
   descripcion    String
   cantidad       Int
   precioUnitario Float
@@ -322,37 +327,37 @@ model ItemCotizacion {
 }
 
 model Usuario {
-  id                 String    @id @default(uuid())
-  username           String    @unique
-  passwordHash       String
-  nombre             String    @default("")
-  email              String?
-  rol                String    @default("CAJA")
-  rolId              String?
-  rolDinamico        Rol?      @relation(fields: [rolId], references: [id], onDelete: SetNull)
-  activo             Boolean   @default(true)
-  empresaId          String?
-  empresaRefId       String?
-  empresaRef         Empresa?  @relation("EmpresaUsuarios", fields: [empresaRefId], references: [id], onDelete: SetNull)
+  id                    String    @id @default(uuid())
+  username              String    @unique
+  passwordHash          String
+  nombre                String    @default("")
+  email                 String?
+  rol                   String    @default("CAJA")
+  rolId                 String?
+  rolDinamico           Rol?      @relation(fields: [rolId], references: [id], onDelete: SetNull)
+  activo                Boolean   @default(true)
+  empresaId             String?
+  empresaRefId          String?
+  empresaRef            Empresa?  @relation("EmpresaUsuarios", fields: [empresaRefId], references: [id], onDelete: SetNull)
   // ── Suscripción SaaS ──
-  subscriptionStatus String    @default("trialing")
-  planType           String?
-  trialStartsAt      DateTime?
-  trialEndsAt        DateTime?
-  currentPeriodEnd   DateTime?
+  subscriptionStatus    String    @default("trialing")
+  planType              String?
+  trialStartsAt         DateTime?
+  trialEndsAt           DateTime?
+  currentPeriodEnd      DateTime?
   // ── Seguridad Avanzada ──
-  mfaEnabled         Boolean   @default(false)
-  mfaSecret          String?
-  sessionVersion     Int       @default(1)
-  sudoModeExpiresAt  DateTime?
+  mfaEnabled            Boolean   @default(false)
+  mfaSecret             String?
+  sessionVersion        Int       @default(1)
+  sudoModeExpiresAt     DateTime?
   registrationIp        String?
-  registrationLatitude Float?
+  registrationLatitude  Float?
   registrationLongitude Float?
-  lastLoginIp        String?
-  lastLoginAt        DateTime?
-  deletedAt          DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  lastLoginIp           String?
+  lastLoginAt           DateTime?
+  deletedAt             DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   empresa               Usuario?              @relation("EmpresaSubusuarios", fields: [empresaId], references: [id])
   subUsuarios           Usuario[]             @relation("EmpresaSubusuarios")

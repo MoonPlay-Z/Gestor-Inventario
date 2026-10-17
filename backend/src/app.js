@@ -24,6 +24,7 @@ const cxcRouter        = require('./routes/cxc');
 const { authMiddleware, requireRole } = require('./middleware/auth');
 const { subscriptionGuard } = require('./middleware/subscriptionGuard');
 const { errorHandler } = require('./middleware/errorHandler');
+const { iniciarActualizacionDiaria } = require('./services/tasaDolar');
 
 const app    = express();
 const PORT   = process.env.PORT || 3001;
@@ -343,6 +344,9 @@ if (require('fs').existsSync(frontendDist)) {
 app.listen(PORT, () => {
   console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
   console.log(`   API base: http://localhost:${PORT}/api\n`);
+  // Mantiene al día `Empresa.tasaDolar` (modo AUTOMATICO) sin depender de que
+  // alguien use la app. Ver services/tasaDolar.js.
+  iniciarActualizacionDiaria();
 });
 
 module.exports = { app, prisma };

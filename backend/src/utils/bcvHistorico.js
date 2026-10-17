@@ -11,6 +11,16 @@ const API_URL = 'https://ve.dolarapi.com/v1/historicos/dolares/oficial';
 let _cache = { tasas: null, timestamp: 0 };
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6 horas
 
+// Si dolarapi no responde hay que cortar la espera: el refresco diario de la
+// tasa se dispara desde `GET /api/config`, y sin timeout una consulta colgada
+// dejaría al POS esperando en cada carga.
+const TIMEOUT_MS = 8000;
+
+// Tras un fallo se espera antes de reintentar, para que un dolarapi caído no
+// cueste 8 s en cada petición (el refresco perezoso se consulta a diario).
+const BACKOFF_ERROR_MS = 10 * 60 * 1000;
+let _ultimoError = 0;
+
 function parsearRespuesta(data) {
   const tasas = new Map();
   if (!Array.isArray(data)) return tasas;
@@ -31,13 +41,34 @@ async function fetchTasasBCV() {
     return _cache.tasas;
   }
 
-  const res = await fetch(API_URL);
-  if (!res.ok) throw new Error(`BCV API HTTP ${res.status}`);
-  const data = await res.json();
-  const tasas = parsearRespuesta(data);
+  if (_ultimoError && (ahora - _ultimoError) < BACKOFF_ERROR_MS) {
+    if (_cache.tasas) return _cache.tasas;
+    throw new Error('La API del BCV no está disponible (reintento en espera)');
+  }
 
-  _cache = { tasas, timestamp: ahora };
-  return tasas;
+  const controller = new AbortController();
+  const temporizador = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(API_URL, { signal: controller.signal });
+    if (!res.ok) throw new Error(`BCV API HTTP ${res.status}`);
+    const data = await res.json();
+    const tasas = parsearRespuesta(data);
+
+    // Una respuesta vacía no se cachea: serviría una lista sin tasas durante
+    // 6 horas. Se trata como fallo para que el reintento siga disponible.
+    if (tasas.size === 0) throw new Error('La API del BCV no devolvió tasas');
+
+    _cache = { tasas, timestamp: ahora };
+    _ultimoError = 0;
+    return tasas;
+  } catch (err) {
+    _ultimoError = Date.now();
+    throw err.name === 'AbortError'
+      ? new Error(`La API del BCV no respondió en ${TIMEOUT_MS / 1000} s`)
+      : err;
+  } finally {
+    clearTimeout(temporizador);
+  }
 }
 
 /**
