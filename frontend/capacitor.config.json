@@ -1,0 +1,11 @@
+{
+  "appId": "com.gestorpos.app",
+  "appName": "GestorPOS",
+  "webDir": "dist",
+  "android": {
+    "allowNavigation": []
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}

@@ -22,3 +22,23 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Firma de la app (no versionar: respaldar aparte)
+android/keystore.properties
+android/app/*.keystore
+android/app/*.jks
+
+# Capacitor (apps nativas Android/iOS)
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/public/
+ios/App/App/build/
+ios/App/App/public/
+ios/App/Pods/
+ios/App/App.xcworkspace/
+ios/App/App.xcodeproj/project.xcworkspace/
+ios/App/App.xcodeproj/xcuserdata/
+ios/*.xcworkspace/
+ios/*.xcodeproj/

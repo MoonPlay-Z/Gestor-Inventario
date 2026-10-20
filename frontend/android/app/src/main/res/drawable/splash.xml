@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Splash de arranque (Android 8–11 y ventana inicial de la activity).
+  Fondo sólido de marca + logo con el nombre centrado, generado por
+  `scripts/generar-splash.py` en drawable-nodpi/splash_logo.png.
+  En Android 12+ manda el splash del sistema (ver styles.xml).
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splashBackground" />
+    <item>
+        <bitmap
+            android:gravity="center"
+            android:src="@drawable/splash_logo" />
+    </item>
+</layer-list>

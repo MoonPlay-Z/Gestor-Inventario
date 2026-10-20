@@ -1,0 +1,31 @@
+diff --git a/node_modules/@capacitor-mlkit/barcode-scanning/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/barcodescanning/BarcodeScanner.java b/node_modules/@capacitor-mlkit/barcode-scanning/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/barcodescanning/BarcodeScanner.java
+index d4d4d1d..8747942 100644
+--- a/node_modules/@capacitor-mlkit/barcode-scanning/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/barcodescanning/BarcodeScanner.java
++++ b/node_modules/@capacitor-mlkit/barcode-scanning/android/src/main/java/io/capawesome/capacitorjs/plugins/mlkit/barcodescanning/BarcodeScanner.java
+@@ -96,7 +96,13 @@ public class BarcodeScanner implements ImageAnalysis.Analyzer {
+         BarcodeScannerOptions options = buildBarcodeScannerOptions(scanSettings);
+         barcodeScannerInstance = BarcodeScanning.getClient(options);
+ 
+-        ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build();
++        // GESTORPOS: el analizador por defecto es 640x480 y los códigos pequeños
++        // (EAN-13 de 2 cm) no se resuelven. Se pide 1920x1080; CameraX elige la
++        // resolución soportada más cercana.
++        ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
++            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
++            .setTargetResolution(new android.util.Size(1920, 1080))
++            .build();
+         imageAnalysis.setAnalyzer(ContextCompat.getMainExecutor(plugin.getContext()), this);
+ 
+         ListenableFuture<ProcessCameraProvider> cameraProviderFuture = ProcessCameraProvider.getInstance(plugin.getContext());
+@@ -451,7 +457,10 @@ public class BarcodeScanner implements ImageAnalysis.Analyzer {
+         List<Barcode> barcodesWithEnoughVotes = new ArrayList<>();
+         for (Barcode barcode : barcodes) {
+             Integer votes = voteForBarcode(barcode);
+-            if (votes >= 10) {
++            // GESTORPOS: 10 lecturas idénticas tardaban segundos en pantallas con
++            // reflejos. Con 3 la lectura es inmediata y siguen descartándose los
++            // falsos positivos (el valor debe repetirse en fotogramas distintos).
++            if (votes >= 3) {
+                 barcodesWithEnoughVotes.add(barcode);
+             }
+         }

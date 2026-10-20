@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">GestorPOS</string>
+    <string name="title_activity_main">GestorPOS</string>
+    <string name="package_name">com.gestorpos.app</string>
+    <string name="custom_url_scheme">com.gestorpos.app</string>
+</resources>

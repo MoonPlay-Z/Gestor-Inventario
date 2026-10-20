@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 9+ bloquea HTTP en claro por defecto (ERR_CLEARTEXT_NOT_PERMITTED).
+  La app de producción usa HTTPS (Render), así que aquí solo se permite HTTP
+  para el backend local de desarrollo. En release no se usa.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Backend local con `adb reverse tcp:3001 tcp:3001` -->
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

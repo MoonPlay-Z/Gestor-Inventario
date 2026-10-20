@@ -83,3 +83,6 @@ storageState.json
 # Tooling de agentes (no forma parte de la app)
 .agents/
 skills-lock.json
+
+# Bloqueo del script de publicación de la APK
+.publicar-apk.lock

@@ -1,0 +1,13 @@
+{
+  "versionCode": 8,
+  "versionName": "1.7",
+  "url": "https://gestor-pos.netlify.app/descargas/gestorpos-android.apk",
+  "size": 9347095,
+  "sha256": "53c405cd71f05102bab3a4fdb2452b40097fa3ce1b22dce441128facf4ea409b",
+  "publishedAt": "2026-10-20",
+  "minVersionCode": 0,
+  "notes": [
+    "Actualización automática desde la app (descarga y verificación)",
+    "Dashboard con fichas compactas y tablas más legibles"
+  ]
+}
