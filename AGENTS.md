@@ -9,8 +9,9 @@ Sistema POS y Gestor de Inventario (Venezuela). Backend: Node.js + Express + Pri
 - `backend/src/utils/` — `pagination.js` (paginate + paginatedResponse), `sql.js` (tsFrag/monthTrunc for cross-db DateTime), `tasaAPI.js` (fachada única de tasa usada por todos los módulos), `paymentCurrency.js` (motor VES↔USD: `tasaCambioEfectiva`, `getTasaSistemaPorEmpresa`), `tasaEmpresaCache.js` (caché 60 s por empresa)
 - `frontend/src/pages/` — one file per route; router in `AppRoutes.jsx`
 - `frontend/src/components/ui/` — shared primitives (`FieldError`, `FormError`, `Button`, etc.) with CSS Modules
+- `frontend/src/components/auth/` — `AuthLayout.jsx` (marco visual de login/registro: cabecera con estado real del server vía `/api/health`, tarjeta de marca y tarjeta del formulario; 1 columna en móvil, 2 desde `lg`) y `ProtectedRoute.jsx`
 - `frontend/src/context/` — `AuthContext`, `ThemeContext`, `ToastContext`
-- `scripts/` — `validar-flujos.js` (API flow validation), `verify-prisma-engines.js`
+- `scripts/` — `validar-flujos.js` (API flow validation), `verify-prisma-engines.js`, `generar-iconos.py` (regenera favicon/PWA/iconos Android desde `frontend/public/favicon.html`)
 - `backend/scripts/` — `backfill-cierre-caja-monedas.js`, `backfill-empresa-config.js`, migration/verification scripts
 - `opencode.json` — OpenCode config with `opencode-omniroute-auth` plugin
 
@@ -134,9 +135,36 @@ Estilos globales (variables CSS, reset, Tailwind) en `frontend/src/css/main.css`
 
 CSS Modules: `localsConvention: 'camelCaseOnly'` and scoped names `[name]__[local]___[hash:base64:5]` — import styles as `styles` and use camelCase keys. Production build splits manual chunks `react` and `iconify`.
 
+## App móvil (Capacitor)
+
+- Proyecto nativo en `frontend/android/` (Capacitor 6). `frontend/capacitor.config.json` no define `server.androidScheme`, así que el WebView usa `https://localhost` (contexto seguro: cámara y PWA funcionan). Solo se necesita HTTP en claro para desarrollo (`res/xml/network_security_config.xml` → `localhost`/`127.0.0.1`).
+- `frontend/.env.capacitor` define `VITE_API_URL` para la app nativa (activo: backend de Render por HTTPS). Las variantes LAN/USB están comentadas.
+- **Release firmada:** `frontend/android/keystore.properties` + `android/app/gestorpos-release.keystore` (git-ignored, **respaldar**). `app/build.gradle` lo carga en `signingConfigs.release`.
+- Flujo: mover el APK fuera de `frontend/public/descargas/` → `npm run build:capacitor` → `npm run build:android:release` → copiar `android/app/build/outputs/apk/release/app-release.apk` a `frontend/public/descargas/gestorpos-android.apk` → `npm run build` (web relativa).
+- `AndroidManifest.xml` declara `CAMERA` + `uses-feature camera` (`required="false"`), `ACCESS_FINE_LOCATION`/`ACCESS_COARSE_LOCATION` (registro y alta de usuarios) y `WRITE_EXTERNAL_STORAGE` con `maxSdkVersion="28"`. **No** declara contactos (WhatsApp se abre por enlace) ni notificaciones. Los permisos se piden en contexto (primer escaneo / al registrarse).
+- **Descargas:** en el WebView un `blob:` no descarga. `MainActivity` expone `window.AndroidDownloads` y `src/utils/descargas.js` intercepta los clics Blob (CSV, PDF, respaldo JSON) para guardarlos en Descargas (MediaStore en Android 10+, permiso clásico en 9−).
+- **Horizontal (giroscopio):** «teléfono» se define una sola vez en `frontend/src/hooks/useMediaQuery.js` (`QUERY_TELEFONO`: `(max-width: 767px), (max-width: 1023px) and (max-height: 520px) and (orientation: landscape)`). Las media queries de `frontend/src/css/movil.css` repiten esa condición y `Layout`/`Sidebar`/`BottomNav` la usan vía `useMediaQuery` (dock + cajón en lugar de sidebar fijo). Sin ella, un teléfono girado (873 px de ancho) caía en el layout de escritorio y desbordaba. `/login` y `/registro` no deben hacer scroll en horizontal: 2 columnas, registro con rejilla 2×2 de campos y consentimientos en una fila (clases `reg-form`, `reg-field`, `reg-legal`, `reg-head`, `auth-cta`, `auth-nota`).
+- **Pantalla completa:** la app nativa va en modo inmersivo (`MainActivity.java`: `setDecorFitsSystemWindows(false)` + `WindowInsetsControllerCompat` con barras transitorias; `styles.xml` con `shortEdges` y barras transparentes). Los insets reales se publican al WebView como `--inset-top/right/bottom/left` en px CSS (divididos por `density`) y `movil.css` deriva `--safe-*`; **no** se usa `env(safe-area-inset-*)` (en Android llega 0). La zona de gestos inferior se reserva ignorando la visibilidad de la barra. `#main-content`, `.landing-root`, `Sidebar`, `BottomNav`, `.pos-mobile-bar` y `AuthLayout` consumen esos valores.
+- **Splash:** `scripts/generar-splash.py` genera `drawable-nodpi/splash_logo.png` (logo + nombre) y `splash_icon.png`; `drawable/splash.xml` + `styles.xml` (`Theme.SplashScreen`, `windowSplashScreen*`, `postSplashScreenTheme`) y `SplashScreen.installSplashScreen()` en `MainActivity`. La pantalla de carga HTML (`#boot-splash` en `index.html`, retirada por `QuitarSplash` en `main.jsx`) comparte el fondo `#0F172A`.
+
 ## Electron mode
 
 When `ELECTRON_ENV=true`, `backend/src/electron-start.js` loads `.env.electron` (git-ignored) and then starts `app.js`. Electron's `electron/main.js` spawns the backend as a child process and injects `DATABASE_URL`/`PORT` — `.env.electron` must NOT override those two.
+
+## Actualizaciones de la APK
+
+La app instalada detecta, descarga e instala sus propias actualizaciones (sin tienda). Piezas:
+
+- **Manifiesto** `frontend/public/descargas/version.json` — `{ versionCode, versionName, url, size, sha256, publishedAt, minVersionCode, notes }`. `url` es **absoluta** y https; `versionCode` es lo que se compara; `minVersionCode > 0` obliga a actualizar (sin «Más tarde»).
+- **Publicación**: `npm run apk:publicar -- --bump --notas "…" [--notas "…"] [--forzar <versionCode>] [--republicar]`.
+  Lee `versionCode`/`versionName` de `frontend/android/app/build.gradle`, aborta si falta la keystore o si el `versionCode` no es mayor que el publicado, saca la APK anterior de `public/descargas` (si no se embebería), compila `build:capacitor` + release, calcula tamaño y SHA-256 y escribe el manifiesto de forma atómica (`tmp` + `rename`). Bloqueo en `.publicar-apk.lock`.
+- **Consulta en la app**: `frontend/src/services/actualizaciones.js` es una **fachada** que compone `features/actualizaciones/`: `domain/` (manifiesto, política de throttle y máquina de estados, puro), `application/` (caso de uso), `adapters/` (HTTP, localStorage, puente nativo) y `ui/useActualizacion.js` (estado + ciclo de vida). `components/app/ActualizarApk.jsx` solo pinta. Usa `App.getInfo()` (`build` = versionCode), consulta el manifiesto **como máximo una vez al día** (si falla, reintenta al abrir la app con 30 min de separación), se salta `/pos` y `/caja` y no avisa con ventas pendientes en el outbox.
+- **Sin estados sin salida**: `domain/maquinaEstados.js` declara las transiciones y `puedeCerrar()`. Si el usuario cancela el instalador de Android, la app vuelve del fondo en `instalando` y el aviso regresa a `aviso` con «Reanudar»; durante la descarga hay «Cancelar descarga». `domain/maquinaEstados.test.js` verifica que todo estado ocupado se pueda abandonar.
+- **Instalación** (`ActualizadorApk` + `VerificadorApk`, expuestos como `window.AndroidUpdates` desde `MainActivity.ActualizacionesNativas`): `DownloadManager` a `getExternalFilesDir(DIRECTORY_DOWNLOADS)/actualizaciones/`; `VerificadorApk` comprueba SHA-256, `packageName`, `versionCode` y firma con `getPackageArchiveInfo`, y el actualizador abre el instalador vía `FileProvider` (`res/xml/file_paths.xml` → `<external-files-path path="Download/actualizaciones/">`). Requiere `REQUEST_INSTALL_PACKAGES`; si falta el permiso, abre `ACTION_MANAGE_UNKNOWN_APP_SOURCES`. `app/proguard-rules.pro` conserva los métodos `@JavascriptInterface` por si algún día se activa `minifyEnabled`.
+- **Integridad**: la actualización es *in-place* con la misma keystore (`frontend/android/app/gestorpos-release.keystore`), así que Android conserva sesión, caja y datos del WebView. Perder la keystore rompe las actualizaciones para siempre. `android:allowBackup="false"` evita que los datos del WebView (sesión, caja) acaben en la copia de seguridad de Google.
+- **Env**: `VITE_UPDATE_URL` (origen del sitio donde viven `/descargas/version.json` y el APK; por defecto vacío = mismo origen, y en `.env.capacitor` apunta a Netlify) y `VITE_UPDATE_MANIFEST_URL` (opcional, URL completa del manifiesto si se aloja en otro sitio). En la app nativa **no** sirve una ruta relativa: el WebView resolvería contra el dist empaquetado.
+- **Netlify**: `netlify.toml` envía `Access-Control-Allow-Origin: *` y `no-cache` para `version.json` (la app la consulta desde `https://localhost`).
+- La página `/descargar` (`DescargarPage.jsx`) lee versión y tamaño del manifiesto; ya no hay valores a mano.
 
 ## Deployment
 
@@ -144,9 +172,15 @@ When `ELECTRON_ENV=true`, `backend/src/electron-start.js` loads `.env.electron` 
 - **Backend**: Render/Railway/VPS. Production is on Render with Neon PostgreSQL.
 - In production, the backend serves `frontend/dist/` statically if it exists (SPA catch-all in `app.js`).
 
-## No tests, lint, or CI
+## Pruebas, lint y CI
 
-There is no test suite, linter, formatter, or CI configuration. Do not look for them. Verify changes manually against the running app.
+Solo hay pruebas unitarias del **dominio del actualizador** (funciones puras: validación del manifiesto, política de revisión y máquina de estados). Se ejecutan con el runner de Node, sin dependencias nuevas:
+
+```bash
+cd frontend && npm test   # node --test src/features/actualizaciones/domain
+```
+
+No hay linter, formateador ni CI. El resto se verifica manualmente contra la app en ejecución.
 
 ## Cuentas por Cobrar (CxC)
 
