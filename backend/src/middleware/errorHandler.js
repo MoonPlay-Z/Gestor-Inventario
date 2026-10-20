@@ -75,6 +75,19 @@ function errorHandler(err, req, res, next) {
     });
   }
 
+  // decimal.js lanza un Error cuyo mensaje empieza por `[DecimalError]` cuando
+  // recibe un valor no numérico (su `name` es "Error", no "DecimalError"). Antes
+  // caía en el 500 genérico; ahora se responde 422. Es una red de seguridad: las
+  // rutas deben validar con `utils/decimal.js`, pero así ningún módulo pendiente
+  // (p. ej. cotizaciones) filtra un 500 por un número malformado.
+  if (typeof err.message === 'string' && err.message.startsWith('[DecimalError]')) {
+    return res.status(422).json({
+      error: 'Error de validación',
+      code: 'INVALID_NUMBER',
+      message: 'Uno de los valores numéricos enviados no es válido',
+    });
+  }
+
   // Error genérico
   const status = err.status || err.statusCode || 500;
   res.status(status).json({

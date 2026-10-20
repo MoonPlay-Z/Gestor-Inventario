@@ -117,6 +117,33 @@ async function sumarPagosNormalizados(pagos, factura, empresaId = null) {
 }
 
 /**
+ * Normaliza un pago a USD para CuentaPorCobrar, que SIEMPRE almacena montos en
+ * USD. La tasa efectiva es la de la factura si se emitió en VES, o la vigente
+ * de la empresa si se emitió en USD (`tasaCambio = 1` no es una tasa real).
+ *
+ * Fuente única compartida por `pagos.js` y `cxc.js`: si divergen, el saldo que
+ * escribe una puerta no coincide con el que lee la otra (bug de CxC con
+ * facturas en Bs).
+ */
+async function pagoCxcAUsd(pago, factura, empresaId = null) {
+  return convertirMontoMoneda(
+    pago.monto,
+    pago.monedaPago || factura?.moneda || 'USD',
+    'USD',
+    await tasaCambioEfectiva(factura, empresaId)
+  );
+}
+
+/** Suma en USD una lista de pagos para el saldo de CuentaPorCobrar. */
+async function sumarPagosCxcUSD(pagos, factura, empresaId = null) {
+  let total = new Decimal(0);
+  for (const pago of pagos || []) {
+    total = total.add(await pagoCxcAUsd(pago, factura, empresaId));
+  }
+  return total;
+}
+
+/**
  * Resuelve la tasa VES→USD para una empresa específica.
  * Lee desde el registro Empresa.tasaDolar (configuración manual por empresa).
  * Caché en memoria de 60 segundos para no golpe la BD en cada pago.
@@ -170,6 +197,8 @@ module.exports = {
   tasaCambioEfectiva,
   normalizarPagoAFactura,
   sumarPagosNormalizados,
+  pagoCxcAUsd,
+  sumarPagosCxcUSD,
   getTasaSistema: leerTasaSistema,
   getTasaSistemaPorEmpresa
 };

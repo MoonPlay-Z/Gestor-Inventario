@@ -3,6 +3,7 @@ const router  = express.Router();
 const prisma = require('../db/prisma');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
+const { paginate } = require('../utils/pagination');
 
 // SUPER_ADMIN no gestiona clientes
 router.use(requireRole('EMPRESA', 'CAJA', 'INVENTARIO'));
@@ -12,8 +13,11 @@ const getEmpresaId = (req) => req.user?.empresaId || req.user?.id;
 // GET /api/clientes
 router.get('/', async (req, res, next) => {
   try {
-    const { q, page = 1, limit = 50 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const { q } = req.query;
+    // `paginate` normaliza page/limit: clamp de page>=1 y take entre 1 y 100.
+    // Antes `parseInt` sin validar permitía page/limit negativos o no numéricos
+    // y Prisma lanzaba un 500 (skip/take inválidos).
+    const { skip, take, page, limit } = paginate(req.query, { limit: 50 });
     const empresaId = getEmpresaId(req);
 
     let where = { empresaId };
@@ -32,7 +36,7 @@ router.get('/', async (req, res, next) => {
       prisma.cliente.findMany({
         where,
         skip,
-        take: parseInt(limit),
+        take,
         orderBy: { razonSocial: 'asc' },
       }),
       prisma.cliente.count({ where }),
@@ -61,7 +65,7 @@ router.get('/', async (req, res, next) => {
       _count: { facturas: facturasCountMap.get(c.id) || 0 },
     }));
 
-    res.json({ data: clientesConCount, total, page: parseInt(page), limit: parseInt(limit) });
+    res.json({ data: clientesConCount, total, page, limit });
   } catch (err) { next(err); }
 });
 

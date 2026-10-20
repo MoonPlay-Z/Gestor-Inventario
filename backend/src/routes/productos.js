@@ -4,9 +4,11 @@ const prisma = require('../db/prisma');
 const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
+const { toDecimalSeguro } = require('../utils/decimal');
 const { aUnidadBase } = require('../utils/unidades');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaParaEmpresa } = require('../utils/tasaAPI');
+const { paginate } = require('../utils/pagination');
 
 const UNIDADES_VALIDAS = [
   'UNIDAD', 'KILOGRAMO', 'GRAMO', 'LITRO', 'MILILITRO',
@@ -20,7 +22,10 @@ router.use(requireRole('EMPRESA', 'CAJA', 'INVENTARIO'));
 // GET /api/productos/metricas - Métricas agregadas del inventario
 router.get('/metricas', async (req, res, next) => {
   try {
-    const empresaId = req.user.id;
+    // El tenant es el usuario EMPRESA padre; las sub-cuentas (CAJA/INVENTARIO)
+    // tienen su propio `id` y `empresaId` apunta al padre. Usar `req.user.id`
+    // dejaba a las sub-cuentas con métricas en 0 pese a tener inventario.
+    const empresaId = req.user.empresaId || req.user.id;
 
     if (!empresaId) {
       return res.status(401).json({ error: 'Usuario no autenticado' });
@@ -106,10 +111,13 @@ router.get('/alertas', async (req, res, next) => {
 // GET /api/productos
 router.get('/', async (req, res, next) => {
   try {
-    const { q, soloActivos = 'true', stockBajo, categoria, alertaIva, alertaCostoVenta, page = 1, limit, limite } = req.query;
-    const pageNumber = parseInt(page) || 1;
-    const take = parseInt(limit ?? limite) || 25;
-    const skip = (pageNumber - 1) * take;
+    const { q, soloActivos = 'true', stockBajo, categoria, alertaIva, alertaCostoVenta, limite } = req.query;
+    // `paginate` normaliza page/limit (clamp page>=1, take 1..100). Se conserva
+    // el alias histórico `limite` (usado por el POS) mapeándolo a `limit`.
+    const { skip, take, page: pageNumber, limit } = paginate(
+      { ...req.query, limit: req.query.limit ?? limite },
+      { limit: 25 }
+    );
     const empresaId = req.user.empresaId || req.user.id;
 
     const where = { empresaId };
@@ -192,7 +200,7 @@ router.get('/', async (req, res, next) => {
       total = productos.length;
     }
 
-    res.json({ data: productos, total, page: parseInt(page), limit: take });
+    res.json({ data: productos, total, page: pageNumber, limit });
   } catch (err) { next(err); }
 });
 
@@ -322,17 +330,19 @@ router.post('/', async (req, res, next) => {
     // Validaciones
     if (!nombre?.trim())  throw createValidationError('El nombre es obligatorio', { nombre: 'Campo requerido' });
 
-    const precio = new Decimal(precioVenta ?? 0);
-    const costo  = new Decimal(costoCompra ?? 0);
-    const tasa   = new Decimal(tasaImpuesto ?? 16);
-    const stock  = new Decimal(stockActual ?? 0);
-    const smin   = new Decimal(stockMinimo ?? 5);
+    const precio = toDecimalSeguro(precioVenta, 0);
+    const costo  = toDecimalSeguro(costoCompra, 0);
+    const tasa   = toDecimalSeguro(tasaImpuesto, 16);
+    const stock  = toDecimalSeguro(stockActual, 0);
+    const smin   = toDecimalSeguro(stockMinimo, 5);
 
-    if (precio.lte(0))   throw createValidationError('El precio debe ser mayor a 0', { precioVenta: 'Debe ser positivo' });
-    if (costo.lt(0))     throw createValidationError('El costo no puede ser negativo', { costoCompra: 'Debe ser no negativo' });
-    if (tasa.lt(0) || tasa.gt(100)) throw createValidationError('La tasa de impuesto debe estar entre 0 y 100', { tasaImpuesto: 'Rango inválido' });
-    if (stock.lt(0))     throw createValidationError('El stock no puede ser negativo', { stockActual: 'No puede ser negativo' });
-    if (smin.lt(0))      throw createValidationError('El stock mínimo no puede ser negativo', { stockMinimo: 'No puede ser negativo' });
+    // `isFinite` cubre el caso no numérico: `toDecimalSeguro` devuelve NaN en
+    // vez de lanzar, y NaN no cumple las comparaciones (antes daba 500).
+    if (!precio.isFinite() || precio.lte(0))   throw createValidationError('El precio debe ser mayor a 0', { precioVenta: 'Debe ser positivo' });
+    if (!costo.isFinite() || costo.lt(0))     throw createValidationError('El costo no puede ser negativo', { costoCompra: 'Debe ser no negativo' });
+    if (!tasa.isFinite() || tasa.lt(0) || tasa.gt(100)) throw createValidationError('La tasa de impuesto debe estar entre 0 y 100', { tasaImpuesto: 'Rango inválido' });
+    if (!stock.isFinite() || stock.lt(0))     throw createValidationError('El stock no puede ser negativo', { stockActual: 'No puede ser negativo' });
+    if (!smin.isFinite() || smin.lt(0))      throw createValidationError('El stock mínimo no puede ser negativo', { stockMinimo: 'No puede ser negativo' });
 
     // ── VALIDACIONES DE UNIDAD DE MEDIDA ──
     if (!UNIDADES_VALIDAS.includes(unidadMedida)) {
@@ -350,8 +360,8 @@ router.post('/', async (req, res, next) => {
 
     // Validar precio por kilo si es venta por peso
     if (esVentaPorPeso) {
-      const precioKilo = new Decimal(precioPorKilo ?? 0);
-      if (precioKilo.lte(0)) {
+      const precioKilo = toDecimalSeguro(precioPorKilo, 0);
+      if (!precioKilo.isFinite() || precioKilo.lte(0)) {
         throw createValidationError('El precio por kilo debe ser mayor a 0 para venta por peso', {
           precioPorKilo: 'Debe ser positivo'
         });
@@ -360,8 +370,8 @@ router.post('/', async (req, res, next) => {
 
     // Validar tolerancia de peso (solo si se proporciona)
     if (toleranciaPeso !== undefined && toleranciaPeso !== null && toleranciaPeso !== '') {
-      const tolerancia = new Decimal(toleranciaPeso);
-      if (tolerancia.lt(0) || tolerancia.gt(100)) {
+      const tolerancia = toDecimalSeguro(toleranciaPeso, 0);
+      if (!tolerancia.isFinite() || tolerancia.lt(0) || tolerancia.gt(100)) {
         throw createValidationError('La tolerancia de peso debe estar entre 0 y 100', {
           toleranciaPeso: 'Rango inválido'
         });
@@ -389,9 +399,9 @@ router.post('/', async (req, res, next) => {
         // ── NUEVOS CAMPOS ──
         unidadMedida,
         esVentaPorPeso,
-        precioPorKilo: esVentaPorPeso ? new Decimal(precioPorKilo ?? 0).toFixed(2) : null,
-        toleranciaPeso: toleranciaPeso !== undefined && toleranciaPeso !== null 
-          ? new Decimal(toleranciaPeso).toFixed(2) 
+        precioPorKilo: esVentaPorPeso ? toDecimalSeguro(precioPorKilo, 0).toFixed(2) : null,
+        toleranciaPeso: toleranciaPeso !== undefined && toleranciaPeso !== null && toleranciaPeso !== ''
+          ? toDecimalSeguro(toleranciaPeso, 0).toFixed(2)
           : null,
         // ── CAMPOS EXISTENTES ──
         stockActual: stock.toFixed(4),
@@ -419,16 +429,16 @@ router.put('/:id', async (req, res, next) => {
     if (!sku?.trim())    throw createValidationError('El SKU es obligatorio');
     if (!nombre?.trim()) throw createValidationError('El nombre es obligatorio');
 
-    const precio = new Decimal(precioVenta ?? 0);
-    const costo  = new Decimal(costoCompra ?? 0);
-    const tasa   = new Decimal(tasaImpuesto ?? 16);
-    const stock  = new Decimal(stockActual ?? 0);
-    const smin   = new Decimal(stockMinimo ?? 5);
+    const precio = toDecimalSeguro(precioVenta, 0);
+    const costo  = toDecimalSeguro(costoCompra, 0);
+    const tasa   = toDecimalSeguro(tasaImpuesto, 16);
+    const stock  = toDecimalSeguro(stockActual, 0);
+    const smin   = toDecimalSeguro(stockMinimo, 5);
 
-    if (precio.lte(0))   throw createValidationError('El precio debe ser mayor a 0');
-    if (costo.lt(0))     throw createValidationError('El costo no puede ser negativo');
-    if (tasa.lt(0) || tasa.gt(100)) throw createValidationError('La tasa de impuesto debe estar entre 0 y 100');
-    if (stock.lt(0) || smin.lt(0))       throw createValidationError('El stock no puede ser negativo');
+    if (!precio.isFinite() || precio.lte(0))   throw createValidationError('El precio debe ser mayor a 0');
+    if (!costo.isFinite() || costo.lt(0))     throw createValidationError('El costo no puede ser negativo');
+    if (!tasa.isFinite() || tasa.lt(0) || tasa.gt(100)) throw createValidationError('La tasa de impuesto debe estar entre 0 y 100');
+    if (!stock.isFinite() || !smin.isFinite() || stock.lt(0) || smin.lt(0))       throw createValidationError('El stock no puede ser negativo');
 
     if (unidadMedida !== undefined && !UNIDADES_VALIDAS.includes(unidadMedida)) {
       throw createValidationError('Unidad de medida inválida', {
@@ -441,7 +451,7 @@ router.put('/:id', async (req, res, next) => {
       });
     }
     if (esVentaPorPeso) {
-      const precioKilo = new Decimal(precioPorKilo ?? 0);
+      const precioKilo = toDecimalSeguro(precioPorKilo, 0);
       if (!precioKilo.isFinite() || precioKilo.lte(0)) {
         throw createValidationError('El precio por kilo debe ser mayor a 0 para venta por peso', {
           precioPorKilo: 'Debe ser positivo',
@@ -449,7 +459,7 @@ router.put('/:id', async (req, res, next) => {
       }
     }
     if (toleranciaPeso !== undefined && toleranciaPeso !== null && toleranciaPeso !== '') {
-      const tolerancia = new Decimal(toleranciaPeso);
+      const tolerancia = toDecimalSeguro(toleranciaPeso, 0);
       if (!tolerancia.isFinite() || tolerancia.lt(0) || tolerancia.gt(100)) {
         throw createValidationError('La tolerancia de peso debe estar entre 0 y 100', {
           toleranciaPeso: 'Rango inválido',
@@ -476,12 +486,12 @@ router.put('/:id', async (req, res, next) => {
         esVentaPorPeso: esVentaPorPeso !== undefined ? Boolean(esVentaPorPeso) : undefined,
         precioPorKilo: esVentaPorPeso === undefined && precioPorKilo === undefined
           ? undefined
-          : esVentaPorPeso ? new Decimal(precioPorKilo).toFixed(2) : null,
+          : esVentaPorPeso ? toDecimalSeguro(precioPorKilo, 0).toFixed(2) : null,
         toleranciaPeso: esVentaPorPeso === undefined && toleranciaPeso === undefined
           ? undefined
           : toleranciaPeso === undefined || toleranciaPeso === null || toleranciaPeso === ''
             ? null
-            : new Decimal(toleranciaPeso).toFixed(2),
+            : toDecimalSeguro(toleranciaPeso, 0).toFixed(2),
       },
     });
     if (producto.count === 0) {
@@ -495,7 +505,9 @@ router.put('/:id', async (req, res, next) => {
 router.patch('/:id/stock', async (req, res, next) => {
   try {
     const { cantidad, operacion = 'set', unidadMedida } = req.body;
-    const qty = new Decimal(cantidad);
+    // NaN como default: omitir la cantidad es un error de validación, no un 0
+    // silencioso que podría dejar el stock en cero.
+    const qty = toDecimalSeguro(cantidad, NaN);
 
     if (!qty.isFinite() || qty.lt(0)) throw createValidationError('La cantidad debe ser un número válido no negativo');
 

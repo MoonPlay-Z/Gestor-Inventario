@@ -22,7 +22,13 @@ const authMiddleware = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    
+
+    // Un refresh token no puede usarse como access token (y viceversa). El
+    // claim `type` los separa: 'access' (12h) y 'refresh' (30d).
+    if (decoded.type === 'refresh') {
+      return res.status(401).json({ error: 'Token inválido o expirado.' });
+    }
+
     // Verificar que el usuario exista y siga activo en BD
     const usuario = await prisma.usuario.findUnique({
       where: { id: decoded.id },

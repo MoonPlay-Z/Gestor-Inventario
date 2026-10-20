@@ -8,24 +8,9 @@ const { requireRole } = require('../middleware/auth');
 const { paginate, paginatedResponse } = require('../utils/pagination');
 const { tasaParaEmpresa } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
+const { toDecimalSeguro } = require('../utils/decimal');
 
 const router = express.Router();
-
-/**
- * Convierte a Decimal sin lanzar. `new Decimal()` con texto no numérico o con
- * null/'' lanza DecimalError, que el errorHandler no conoce y terminaba en 500.
- * Devuelve un Decimal no finito para que la validación del llamador lo rechace
- * con un 422 legible.
- */
-const toDecimalSeguro = (valor, porDefecto) => {
-  if (valor === undefined || valor === null || valor === '') return new Decimal(porDefecto);
-  try {
-    const d = new Decimal(String(valor).trim());
-    return d.isFinite() ? d : new Decimal(NaN);
-  } catch {
-    return new Decimal(NaN);
-  }
-};
 
 // SUPER_ADMIN no abre ni cierra caja
 router.use(requireRole('EMPRESA', 'CAJA'));
@@ -400,8 +385,12 @@ router.post('/close', async (req, res, next) => {
         ? montoFinalDecimal
         : new Decimal(cajaAbierta.montoInicial.toString()).add(ingresosEfectivoUSD);
 
-      return await tx.cierreCaja.update({
-        where: { id: cajaAbierta.id },
+      // `updateMany` con `estado: 'OPEN'` como condición: si dos peticiones de
+      // cierre pasan a la vez, la segunda espera el lock de fila y, al reevaluar
+      // la condición tras el commit de la primera, afecta 0 filas. Así se evita
+      // el doble cierre (antes ambas devolvían 200 y reescribían el arqueo).
+      const cerrados = await tx.cierreCaja.updateMany({
+        where: { id: cajaAbierta.id, estado: 'OPEN' },
         data: {
           fechaCierre: new Date().toISOString(),
           montoFinal: finalMonto.toFixed(2),
@@ -415,6 +404,14 @@ router.post('/close', async (req, res, next) => {
             : (cajaAbierta.observaciones || advertenciaMonto ? `${cajaAbierta.observaciones ? cajaAbierta.observaciones + '\n' : ''}${advertenciaMonto || ''}`.trim() || null : null),
           ...(arqueoDetalleStr ? { arqueoDetalle: arqueoDetalleStr } : {}),
         },
+      });
+
+      if (cerrados.count === 0) {
+        throw createBusinessError('La caja ya fue cerrada por otra operación concurrente.');
+      }
+
+      return await tx.cierreCaja.findUnique({
+        where: { id: cajaAbierta.id },
         select: {
           id: true,
           usuarioId: true,

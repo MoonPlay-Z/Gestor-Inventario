@@ -394,6 +394,7 @@ model Usuario {
   mfaEnabled            Boolean   @default(false)
   mfaSecret             String?
   sessionVersion        Int       @default(1)
+  refreshTokenId        String?
   sudoModeExpiresAt     DateTime?
   registrationIp        String?
   registrationLatitude  Float?

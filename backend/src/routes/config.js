@@ -180,7 +180,11 @@ router.post('/tasa-dolar/actualizar', requireRole('EMPRESA'), async (req, res, n
 // `empresas.tasaDolar` y los símbolos de moneda de la empresa autenticada. Sin
 // esa sincronización el usuario veía el cambio en la pantalla de Configuración
 // pero el POS seguía cobrando con la tasa anterior.
-router.post('/', async (req, res, next) => {
+//
+// Solo EMPRESA y SUPER_ADMIN: cualquier sub-cuenta (CAJA/INVENTARIO/VISOR)
+// podía reescribir la tasa y los datos fiscales de la empresa. El frontend ya
+// restringe /config a ADMIN_ONLY; esto cierra el hueco en la API.
+router.post('/', requireRole('EMPRESA', 'SUPER_ADMIN'), async (req, res, next) => {
   try {
     const { empresa, moneda, ivaDefault, tipoDocumento } = req.body;
     

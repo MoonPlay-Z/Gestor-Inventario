@@ -23,6 +23,39 @@ function safeCompare(a, b) {
   return crypto.timingSafeEqual(bufA, bufB);
 }
 
+// ─── Emisión de tokens ───────────────────────────────────────────────────────
+// Access token (12h): identidad completa para el middleware. Refresh token
+// (30d): solo identidad mínima + `type`, para renovar el access token. El claim
+// `type` ('access' | 'refresh') evita que un refresh token se use como access
+// token (y viceversa). No requiere migración: son JWTs firmados con JWT_SECRET.
+const ACCESS_TOKEN_TTL = '12h';
+const REFRESH_TOKEN_TTL = '7d'; // deslizante: cada renovación emite uno nuevo
+
+function signAccessToken(usuario, empresaId, subscriptionStatus) {
+  return jwt.sign(
+    {
+      id: usuario.id,
+      username: usuario.username,
+      nombre: usuario.nombre,
+      rol: usuario.rol,
+      empresaId,
+      subscriptionStatus,
+      sessionVersion: usuario.sessionVersion,
+      type: 'access'
+    },
+    JWT_SECRET,
+    { expiresIn: ACCESS_TOKEN_TTL }
+  );
+}
+
+function signRefreshToken(usuario, jti) {
+  return jwt.sign(
+    { id: usuario.id, username: usuario.username, type: 'refresh', jti, sessionVersion: usuario.sessionVersion },
+    JWT_SECRET,
+    { expiresIn: REFRESH_TOKEN_TTL }
+  );
+}
+
 // ─── 1. Iniciar sesión ───────────────────────────────────────────────────────
 router.post('/login', loginLimiter, async (req, res, next) => {
   try {
@@ -121,27 +154,19 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       }
     }
 
-    // Token incluye: id, username, nombre del operador, rol, subscriptionStatus
-    const token = jwt.sign(
-      {
-        id: usuario.id,
-        username: usuario.username,
-        nombre: usuario.nombre,
-        rol: usuario.rol,
-        empresaId: resolvedEmpresaId,
-        subscriptionStatus: effectiveSubscription.status,
-        sessionVersion: usuario.sessionVersion
-      },
-      JWT_SECRET,
-      { expiresIn: '12h' }
-    );
+    // Access token (12h) + refresh token (7d deslizantes, rota en cada renovación).
+    const token = signAccessToken(usuario, resolvedEmpresaId, effectiveSubscription.status);
+    const refreshTokenId = crypto.randomUUID();
+    const refreshToken = signRefreshToken(usuario, refreshTokenId);
 
-    // Actualizar metadatos de último login
+    // Actualizar metadatos de último login + guardar el refresh token vigente
+    // (su jti permite rotar y detectar reuso en /auth/refresh).
     await prisma.usuario.update({
       where: { id: usuario.id },
       data: {
         lastLoginAt: new Date().toISOString(),
-        lastLoginIp: req.ip || null
+        lastLoginIp: req.ip || null,
+        refreshTokenId
       }
     });
 
@@ -161,6 +186,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
 
     res.json({
       token,
+      refreshToken,
       usuario: {
         id: usuario.id,
         username: usuario.username,
@@ -176,6 +202,57 @@ router.post('/login', loginLimiter, async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// ─── 1b. Refrescar sesión (refresh token) ─────────────────────────────────────
+// Renueva el access token (12h) y rota el refresh token (30d). Requiere un
+// refresh token válido; NO es una superficie de fuerza bruta (es un secreto
+// firmado de 30d). Invalida si el sessionVersion cambió (revocación).
+router.post('/refresh', async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) throw createValidationError('refreshToken es requerido');
+
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, JWT_SECRET);
+    } catch (e) {
+      return res.status(401).json({ error: 'Token de refresco inválido o expirado.' });
+    }
+
+    // Solo un refresh token (type:'refresh') puede renovar; un access token
+    // (o un token sin type) no sirve aquí.
+    if (decoded.type !== 'refresh') {
+      return res.status(401).json({ error: 'Token inválido.' });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: decoded.id },
+      select: { id: true, username: true, nombre: true, rol: true, empresaId: true, subscriptionStatus: true, activo: true, deletedAt: true, sessionVersion: true, refreshTokenId: true }
+    });
+
+    if (!usuario || !usuario.activo || usuario.deletedAt) {
+      return res.status(401).json({ error: 'Sesión revocada o usuario inactivo.' });
+    }
+    if (decoded.sessionVersion !== undefined && decoded.sessionVersion !== usuario.sessionVersion) {
+      return res.status(401).json({ error: 'Sesión invalidada. Por favor, inicia sesión nuevamente.' });
+    }
+
+    // Rotación con detección de reuso: el jti presentado debe ser el vigente.
+    // Si no coincide, el token fue reutilizado (posible robo) → revocar todo.
+    if (decoded.jti !== usuario.refreshTokenId) {
+      await prisma.usuario.update({ where: { id: usuario.id }, data: { sessionVersion: { increment: 1 } } }).catch(() => null);
+      return res.status(401).json({ error: 'Sesión invalidada por reuso de token. Por favor, inicia sesión nuevamente.' });
+    }
+
+    // Rotar: nuevo jti, el anterior queda inservible aunque fuera filtrado.
+    const nuevoJti = crypto.randomUUID();
+    const token = signAccessToken(usuario, usuario.empresaId, usuario.subscriptionStatus);
+    const nuevoRefreshToken = signRefreshToken(usuario, nuevoJti);
+    await prisma.usuario.update({ where: { id: usuario.id }, data: { refreshTokenId: nuevoJti } });
+
+    res.json({ token, refreshToken: nuevoRefreshToken });
+  } catch (err) { next(err); }
 });
 
 // ─── 2. Registro Remoto (Solo Desarrollador) ─────────────────────────────────
@@ -322,7 +399,10 @@ router.post('/register-client', registerLimiter, async (req, res, next) => {
 });
 
 // ─── 3. Info del usuario autenticado ─────────────────────────────────────────
-router.get('/me', loginLimiter, authMiddleware, async (req, res, next) => {
+// NO usa loginLimiter: compartir el presupuesto de intentos de login hacía que
+// tras agotarlo (429) la app no pudiera resolver la sesión con `/me` y expulsara
+// al usuario. Requiere token válido, así que no es una superficie de fuerza bruta.
+router.get('/me', authMiddleware, async (req, res, next) => {
   try {
     if (!req.user || !req.user.id) {
       return res.status(401).json({ error: 'No autorizado' });

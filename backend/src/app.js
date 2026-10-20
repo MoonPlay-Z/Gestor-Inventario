@@ -66,6 +66,9 @@ const allowedOrigins = new Set([
   'http://127.0.0.1:5173',
   `http://localhost:${PORT}`,
   `http://127.0.0.1:${PORT}`,
+  // Orígenes de apps nativas Capacitor (Android/iOS)
+  'https://localhost',
+  'capacitor://localhost',
   ...configuredOrigins,
 ]);
 

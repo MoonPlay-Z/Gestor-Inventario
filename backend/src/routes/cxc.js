@@ -6,9 +6,11 @@ const { Decimal } = require('decimal.js');
 const { requireRole } = require('../middleware/auth');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { paginate, paginatedResponse } = require('../utils/pagination');
-const { convertirMontoMoneda, tasaCambioEfectiva } = require('../utils/tasaAPI');
+const { tasaCambioEfectiva, pagoCxcAUsd } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
+const { toDecimalSeguro } = require('../utils/decimal');
+const { lockFactura, lockCuenta } = require('../utils/locks');
 
 // Roles: EMPRESA ve todo, CAJA ve solo lo suyo
 router.use(requireRole('EMPRESA', 'CAJA'));
@@ -34,15 +36,11 @@ const cxcTenantFilter = (req) => {
 };
 
 // CuentaPorCobrar SIEMPRE almacena montos en USD (ver POST /api/facturas).
-// Normaliza cualquier pago (USD o VES) a USD. Para facturas USD la tasa se
-// resuelve por EMPRESA (Empresa.tasaDolar), no la global: en multi-tenant
-// mezclar una tasa de otra empresa desvirtúa el saldo y el monto cobrado.
-const pagoAUsd = async (pago, factura, empresaId) => convertirMontoMoneda(
-  pago.monto,
-  pago.monedaPago || factura?.moneda || 'USD',
-  'USD',
-  await tasaCambioEfectiva(factura, empresaId)
-);
+// Normaliza cualquier pago (USD o VES) a USD. La implementación vive en la
+// fachada única (`paymentCurrency.pagoCxcAUsd`) que también usa /api/pagos: si
+// cada módulo tuviera su copia, el saldo escrito por una puerta no coincidiría
+// con el leído por la otra.
+const pagoAUsd = pagoCxcAUsd;
 
 // Traduce `cxcTenantFilter` a SQL para las consultas crudas del resumen.
 // Debe mantenerse en espejo con esa función: si divergen, los totales y el
@@ -173,8 +171,10 @@ const INCLUDE_CXC_LISTA = {
 // ─── GET /api/cxc ──────────────────────────────────────────────────────────────
 router.get('/', async (req, res, next) => {
   try {
-    const { q, estado, vencidas, clienteId, orden, page = 1, limit = 25 } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const { q, estado, vencidas, clienteId, orden } = req.query;
+    // `paginate` normaliza page/limit (clamp) en vez de `parseInt` sin validar,
+    // que permitía negativos y terminaba en 500 al consultar.
+    const { skip, take, page, limit } = paginate(req.query, { limit: 25 });
     const tenantFilter = cxcTenantFilter(req);
     const hoy = new Date();
 
@@ -197,7 +197,6 @@ router.get('/', async (req, res, next) => {
       }));
     }
 
-    const take = parseInt(limit);
     const total = await prisma.cuentaPorCobrar.count({ where });
 
     let cuentas;
@@ -242,7 +241,7 @@ router.get('/', async (req, res, next) => {
       };
     });
 
-    res.json(paginatedResponse(cuentasConDias, total, parseInt(page), parseInt(limit)));
+    res.json(paginatedResponse(cuentasConDias, total, page, limit));
   } catch (err) { next(err); }
 });
 
@@ -278,6 +277,71 @@ router.get('/cliente/:clienteId', async (req, res, next) => {
       .reduce((acc, c) => acc.add(new Decimal(c.montoPendiente)), new Decimal(0));
 
     res.json({ data: cuentasConDias, totalPendiente: totalPendiente.toFixed(2) });
+  } catch (err) { next(err); }
+});
+
+// ─── GET /api/cxc/export — Exportar reporte de CxC (CSV) ────────────────────────
+// Debe declararse ANTES de `GET /:id`: Express casa en orden de registro y, si
+// `/:id` va primero, "export" se interpreta como un id y la exportación muere
+// con 404.
+router.get('/export', async (req, res, next) => {
+  try {
+    const tenantFilter = cxcTenantFilter(req);
+    const { estado, vencidas, clienteId, orden } = req.query;
+    const hoy = new Date();
+
+    let where = { ...tenantFilter };
+    if (estado) where.estado = estado;
+    if (clienteId) where.clienteId = clienteId;
+    if (vencidas === 'true') {
+      where.estado = { in: ['PENDING', 'PARTIALLY_PAID'] };
+      where.fechaVencimiento = { lt: hoy.toISOString() };
+    }
+
+    const cuentas = await prisma.cuentaPorCobrar.findMany({
+      where,
+      orderBy: esOrdenEstado(orden) ? undefined : ordenCxc(orden),
+      include: {
+        cliente: { select: { razonSocial: true, rifCedula: true, telefono: true, correo: true } },
+        factura: { select: { numeroFactura: true, fechaEmision: true, moneda: true } },
+        usuario: { select: { username: true, nombre: true } }
+      }
+    });
+
+    if (esOrdenEstado(orden)) {
+      cuentas.sort((a, b) => {
+        const d = rangoEstado(a.estado) - rangoEstado(b.estado);
+        return d !== 0 ? d : new Date(b.fechaVencimiento) - new Date(a.fechaVencimiento);
+      });
+    }
+
+    // Build CSV
+    const headers = ['Factura', 'Cliente', 'RIF/Cedula', 'Contacto', 'Emision', 'Vencimiento', 'Dias Vencido', 'Monto Original', 'Monto Cobrado', 'Monto Pendiente', 'Estado', 'Cajero', 'Ultima Gestion'];
+    const rows = cuentas.map(c => {
+      const venc = new Date(c.fechaVencimiento);
+      const dias = Math.ceil((hoy - venc) / (1000 * 60 * 60 * 24));
+      const fechaLim = c.ultimaGestion ? new Date(c.ultimaGestion).toISOString().split('T')[0] : '';
+      return [
+        c.factura?.numeroFactura || '',
+        c.cliente?.razonSocial || '',
+        c.cliente?.rifCedula || '',
+        c.cliente?.telefono || c.cliente?.correo || '',
+        new Date(c.fechaEmision).toISOString().split('T')[0],
+        new Date(c.fechaVencimiento).toISOString().split('T')[0],
+        dias > 0 ? dias : 0,
+        new Decimal(c.montoOriginal.toString()).toFixed(2),
+        new Decimal(c.montoCobrado.toString()).toFixed(2),
+        new Decimal(c.montoPendiente.toString()).toFixed(2),
+        c.estado,
+        c.usuario?.nombre || c.usuario?.username || '',
+        fechaLim
+      ].join(',');
+    });
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=cxc_report_${new Date().toISOString().slice(0, 10)}.csv`);
+    res.send(csv);
   } catch (err) { next(err); }
 });
 
@@ -389,7 +453,7 @@ router.get('/:id/conversion', async (req, res, next) => {
 
     // El monto es opcional: sin él solo devuelve tasa y máximo para la moneda.
     if (monto !== undefined && monto !== null && monto !== '') {
-      const montoRaw = new Decimal(monto);
+      const montoRaw = toDecimalSeguro(monto, NaN);
       if (!montoRaw.isFinite() || montoRaw.lte(0)) {
         return res.status(400).json({ error: 'El monto debe ser mayor a 0' });
       }
@@ -412,7 +476,8 @@ router.post('/:id/pago', async (req, res, next) => {
 
     // Validaciones básicas
     if (!monto) throw createValidationError('El monto es obligatorio');
-    const montoPagoRaw = new Decimal(monto);
+    // NaN como default: un valor no numérico ("abc") es un 422, no un 500.
+    const montoPagoRaw = toDecimalSeguro(monto, NaN);
     if (!montoPagoRaw.isFinite() || montoPagoRaw.lte(0)) throw createValidationError('El monto debe ser mayor a 0');
 
     if (!metodoPago || !['CASH', 'BANK_TRANSFER', 'CREDIT_CARD', 'MOBILE_PAYMENT', 'PAGO_MOVIL'].includes(metodoPago)) {
@@ -422,45 +487,7 @@ router.post('/:id/pago', async (req, res, next) => {
       throw createValidationError('La referencia es obligatoria para pagos electrónicos');
     }
 
-    const cuenta = await prisma.cuentaPorCobrar.findFirst({
-      where: { id: req.params.id, ...tenantFilter },
-      include: { factura: true }
-    });
-
-    if (!cuenta) throw createValidationError('Cuenta por cobrar no encontrada');
-    if (cuenta.estado === 'PAID') throw createBusinessError('Esta cuenta ya está completamente pagada');
-
-    const factura = cuenta.factura;
-    const monedaFactura = factura.moneda || 'USD';
-
-    // Normalizar monto del pago a USD para validación y almacenamiento.
-    // CuentaPorCobrar siempre guarda montos en USD, así que la tasa debe ser la
-    // efectiva VES→USD: la de la factura si fue emitida en VES, o la tasa
-    // vigente del sistema si fue emitida en USD (tasaCambio=1 no sirve).
-    const monedaDelPago = monedaPago || monedaFactura;
-    if (!['USD', 'VES'].includes(monedaDelPago)) {
-      throw createValidationError('Moneda de pago inválida. Valores permitidos: USD, VES');
-    }
     const empresaRefIdPago = await getEmpresaRefId(req);
-    const tasaUsada = await tasaCambioEfectiva(factura, empresaRefIdPago);
-    const montoPagoUSD = await pagoAUsd({ monto: montoPagoRaw, monedaPago: monedaDelPago }, factura, empresaRefIdPago);
-    const pendienteUSD = new Decimal(cuenta.montoPendiente.toString());
-
-    // Convertir un abono en Bs a USD puede dejar un excedente de redondeo mínimo
-    // (p. ej. 10 Bs = 0.0116 USD contra 0.01 USD de pendiente). Si el pago no
-    // supera el pendiente por más de medio centavo, se acepta y se aplica solo lo
-    // necesario para saldar la cuenta.
-    const TOLERANCIA_REDONDEO = new Decimal('0.005');
-    if (montoPagoUSD.gt(pendienteUSD.plus(TOLERANCIA_REDONDEO))) {
-      // Se informa en ambas monedas para que el usuario vea la conversión que
-      // el servidor aplicó, no la que él calculó.
-      throw createBusinessError(
-        `El monto (${montoPagoRaw.toFixed(2)} ${monedaDelPago}` +
-        (monedaDelPago === 'VES' ? ` = ${montoPagoUSD.toFixed(4)} USD` : '') +
-        `) excede el pendiente (${pendienteUSD.toFixed(2)} USD)`
-      );
-    }
-    const montoAplicarUSD = montoPagoUSD.gt(pendienteUSD) ? pendienteUSD : montoPagoUSD;
 
     // Tasa BCV del día del abono, resuelta fuera de la transacción para no
     // bloquear filas mientras se espera la API externa.
@@ -474,9 +501,59 @@ router.post('/:id/pago', async (req, res, next) => {
       console.warn('[cxc] No se pudo obtener la tasa BCV:', err.message);
     }
 
-    const { pago, cuentaActualizada } = await prisma.$transaction(async (tx) => {
+    const { pago, cuentaActualizada, conversion } = await prisma.$transaction(async (tx) => {
+      // Bloqueo en el mismo orden que /api/pagos (factura → cuenta) para que dos
+      // abonos concurrentes sobre la misma cuenta no lean el mismo pendiente.
+      const cuentaRef = await tx.cuentaPorCobrar.findFirst({
+        where: { id: req.params.id, ...tenantFilter },
+        select: { id: true, facturaId: true },
+      });
+      if (!cuentaRef) throw createValidationError('Cuenta por cobrar no encontrada');
+
+      await lockFactura(tx, cuentaRef.facturaId);
+      await lockCuenta(tx, cuentaRef.id);
+
+      // Relectura dentro de la transacción: los montos deben ser los frescos.
+      const cuenta = await tx.cuentaPorCobrar.findUniqueOrThrow({
+        where: { id: cuentaRef.id },
+        include: { factura: true },
+      });
+
+      if (cuenta.estado === 'PAID') throw createBusinessError('Esta cuenta ya está completamente pagada');
+
+      const factura = cuenta.factura;
+      const monedaFactura = factura.moneda || 'USD';
+
+      // Normalizar monto del pago a USD para validación y almacenamiento.
+      // CuentaPorCobrar siempre guarda montos en USD, así que la tasa debe ser la
+      // efectiva VES→USD: la de la factura si fue emitida en VES, o la tasa
+      // vigente del sistema si fue emitida en USD (tasaCambio=1 no sirve).
+      const monedaDelPago = monedaPago || monedaFactura;
+      if (!['USD', 'VES'].includes(monedaDelPago)) {
+        throw createValidationError('Moneda de pago inválida. Valores permitidos: USD, VES');
+      }
+      const tasaUsada = await tasaCambioEfectiva(factura, empresaRefIdPago);
+      const montoPagoUSD = await pagoAUsd({ monto: montoPagoRaw, monedaPago: monedaDelPago }, factura, empresaRefIdPago);
+      const pendienteUSD = new Decimal(cuenta.montoPendiente.toString());
+
+      // Convertir un abono en Bs a USD puede dejar un excedente de redondeo mínimo
+      // (p. ej. 10 Bs = 0.0116 USD contra 0.01 USD de pendiente). Si el pago no
+      // supera el pendiente por más de medio centavo, se acepta y se aplica solo lo
+      // necesario para saldar la cuenta.
+      const TOLERANCIA_REDONDEO = new Decimal('0.005');
+      if (montoPagoUSD.gt(pendienteUSD.plus(TOLERANCIA_REDONDEO))) {
+        // Se informa en ambas monedas para que el usuario vea la conversión que
+        // el servidor aplicó, no la que él calculó.
+        throw createBusinessError(
+          `El monto (${montoPagoRaw.toFixed(2)} ${monedaDelPago}` +
+          (monedaDelPago === 'VES' ? ` = ${montoPagoUSD.toFixed(4)} USD` : '') +
+          `) excede el pendiente (${pendienteUSD.toFixed(2)} USD)`
+        );
+      }
+      const montoAplicarUSD = montoPagoUSD.gt(pendienteUSD) ? pendienteUSD : montoPagoUSD;
+
       // Crear pago (guarda monto original en su moneda)
-    const nuevoPago = await tx.pago.create({
+      const nuevoPago = await tx.pago.create({
         data: {
           facturaId: factura.id,
           monto: montoPagoRaw.toFixed(2),
@@ -514,7 +591,18 @@ router.post('/:id/pago', async (req, res, next) => {
         data: { estado: nuevoEstado }
       });
 
-      return { pago: nuevoPago, cuentaActualizada: cxcUpd };
+      return {
+        pago: nuevoPago,
+        cuentaActualizada: cxcUpd,
+        conversion: {
+          monedaDelPago,
+          montoPagoUSD,
+          montoAplicarUSD,
+          tasaUsada,
+          monedaFactura: factura.moneda,
+          tasaDeFactura: factura.tasaCambio,
+        },
+      };
     });
 
     res.status(201).json({
@@ -523,11 +611,11 @@ router.post('/:id/pago', async (req, res, next) => {
       // equivalente sin recalcularlo (y por tanto sin divergir del backend).
       conversion: {
         montoIngresado: montoPagoRaw.toFixed(2),
-        monedaIngresada: monedaDelPago,
-        montoUsd: montoPagoUSD.toFixed(4),
-        montoUsdAplicado: montoAplicarUSD.toFixed(2),
-        tasaUsada: tasaUsada.toNumber(),
-        tasaDeFactura: factura.moneda === 'VES' ? Number(factura.tasaCambio) : null,
+        monedaIngresada: conversion.monedaDelPago,
+        montoUsd: conversion.montoPagoUSD.toFixed(4),
+        montoUsdAplicado: conversion.montoAplicarUSD.toFixed(2),
+        tasaUsada: conversion.tasaUsada.toNumber(),
+        tasaDeFactura: conversion.monedaFactura === 'VES' ? Number(conversion.tasaDeFactura) : null,
       },
       cuenta: {
         ...cuentaActualizada,
@@ -578,68 +666,6 @@ router.post('/:id/gestion', async (req, res, next) => {
     });
 
     res.status(201).json(gestion);
-  } catch (err) { next(err); }
-});
-
-// ─── GET /api/cxc/export — Exportar reporte de CxC (CSV) ────────────────────────
-router.get('/export', async (req, res, next) => {
-  try {
-    const tenantFilter = cxcTenantFilter(req);
-    const { estado, vencidas, clienteId, orden } = req.query;
-    const hoy = new Date();
-
-    let where = { ...tenantFilter };
-    if (estado) where.estado = estado;
-    if (clienteId) where.clienteId = clienteId;
-    if (vencidas === 'true') {
-      where.estado = { in: ['PENDING', 'PARTIALLY_PAID'] };
-      where.fechaVencimiento = { lt: hoy.toISOString() };
-    }
-
-    const cuentas = await prisma.cuentaPorCobrar.findMany({
-      where,
-      orderBy: esOrdenEstado(orden) ? undefined : ordenCxc(orden),
-      include: {
-        cliente: { select: { razonSocial: true, rifCedula: true, telefono: true, correo: true } },
-        factura: { select: { numeroFactura: true, fechaEmision: true, moneda: true } },
-        usuario: { select: { username: true, nombre: true } }
-      }
-    });
-
-    if (esOrdenEstado(orden)) {
-      cuentas.sort((a, b) => {
-        const d = rangoEstado(a.estado) - rangoEstado(b.estado);
-        return d !== 0 ? d : new Date(b.fechaVencimiento) - new Date(a.fechaVencimiento);
-      });
-    }
-
-    // Build CSV
-    const headers = ['Factura', 'Cliente', 'RIF/Cedula', 'Contacto', 'Emision', 'Vencimiento', 'Dias Vencido', 'Monto Original', 'Monto Cobrado', 'Monto Pendiente', 'Estado', 'Cajero', 'Ultima Gestion'];
-    const rows = cuentas.map(c => {
-      const venc = new Date(c.fechaVencimiento);
-      const dias = Math.ceil((hoy - venc) / (1000 * 60 * 60 * 24));
-      const fechaLim = c.ultimaGestion ? new Date(c.ultimaGestion).toISOString().split('T')[0] : '';
-      return [
-        c.factura?.numeroFactura || '',
-        c.cliente?.razonSocial || '',
-        c.cliente?.rifCedula || '',
-        c.cliente?.telefono || c.cliente?.correo || '',
-        new Date(c.fechaEmision).toISOString().split('T')[0],
-        new Date(c.fechaVencimiento).toISOString().split('T')[0],
-        dias > 0 ? dias : 0,
-        new Decimal(c.montoOriginal.toString()).toFixed(2),
-        new Decimal(c.montoCobrado.toString()).toFixed(2),
-        new Decimal(c.montoPendiente.toString()).toFixed(2),
-        c.estado,
-        c.usuario?.nombre || c.usuario?.username || '',
-        fechaLim
-      ].join(',');
-    });
-
-    const csv = [headers.join(','), ...rows].join('\n');
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename=cxc_report_${new Date().toISOString().slice(0, 10)}.csv`);
-    res.send(csv);
   } catch (err) { next(err); }
 });
 

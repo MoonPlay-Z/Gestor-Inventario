@@ -6,6 +6,7 @@ const { createValidationError, createBusinessError } = require('../middleware/er
 const { invalidarCacheVentas } = require('../services/reportesService');
 const { requireRole } = require('../middleware/auth');
 const { obtenerSiguienteNumeroFactura } = require('../utils/numeracionFacturas');
+const { paginate } = require('../utils/pagination');
 const { MONEDAS_PAGO, convertirMontoMoneda, sumarPagosNormalizados, normalizarPagoAFactura } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaParaEmpresa } = require('../utils/tasaAPI');
@@ -28,8 +29,10 @@ const facturaTenantFilter = (empresaId) => ({
 // GET /api/facturas
 router.get('/', async (req, res, next) => {
   try {
-    const { estado, estados, clienteId, usuarioId, q, page = 1, limit = 25, vencidas, desde, hasta } = req.query;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const { estado, estados, clienteId, usuarioId, q, vencidas, desde, hasta } = req.query;
+    // `paginate` normaliza page/limit (clamp page>=1, take 1..100) y evita el
+    // 500 que producían page/limit negativos o no numéricos.
+    const { skip, take, page, limit } = paginate(req.query, { limit: 25 });
     const hoy  = new Date();
 
     const empresaId = getEmpresaId(req);
@@ -97,7 +100,7 @@ router.get('/', async (req, res, next) => {
       prisma.factura.findMany({
         where,
         skip,
-        take: parseInt(limit),
+        take,
         orderBy: { fechaEmision: 'desc' },
         include: {
           cliente: true,
@@ -141,7 +144,7 @@ router.get('/', async (req, res, next) => {
       };
     });
 
-    res.json({ data: facturasConEstado, total, page: parseInt(page), limit: parseInt(limit) });
+    res.json({ data: facturasConEstado, total, page, limit });
   } catch (err) { next(err); }
 });
 
@@ -260,8 +263,11 @@ router.post('/', async (req, res, next) => {
       if (requestIdLimpio.length > 120) {
         throw createValidationError('El requestId es demasiado largo');
       }
-      const existente = await prisma.factura.findUnique({
-        where: { requestId: requestIdLimpio },
+      // `findFirst` con filtro de tenant, no `findUnique` por requestId: el
+      // índice único es GLOBAL, así que sin el filtro otra empresa recibía la
+      // factura ajena al reutilizar la misma clave (fuga entre inquilinos).
+      const existente = await prisma.factura.findFirst({
+        where: { requestId: requestIdLimpio, ...facturaTenantFilter(empresaId) },
         include: {
           cliente: { select: { razonSocial: true } },
           pagos: { select: { metodoPago: true, monedaPago: true, monto: true, referenciaTransaccion: true, fechaPago: true } },
@@ -569,8 +575,11 @@ router.post('/', async (req, res, next) => {
       // hace que una sola gane; la perdedora recupera la factura ganadora en
       // lugar de reportar un error al cajero.
       if (requestIdLimpio && txErr?.code === 'P2002') {
-        const yaEmitida = await prisma.factura.findUnique({
-          where: { requestId: requestIdLimpio },
+        // Solo se recupera la factura si pertenece a la MISMA empresa. Si la
+        // clave la usó otro inquilino, se propaga el P2002 (409) y nunca se
+        // devuelve su factura.
+        const yaEmitida = await prisma.factura.findFirst({
+          where: { requestId: requestIdLimpio, ...facturaTenantFilter(empresaId) },
           include: {
             cliente: { select: { razonSocial: true } },
             pagos: { select: { metodoPago: true, monedaPago: true, monto: true, referenciaTransaccion: true, fechaPago: true } },

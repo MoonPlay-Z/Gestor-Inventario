@@ -19,6 +19,8 @@ const {
   convertirAFactura,
   normalizarPagoAFactura,
   sumarPagosNormalizados,
+  pagoCxcAUsd,
+  sumarPagosCxcUSD,
   tasaCambioEfectiva,
   getTasaSistemaPorEmpresa,
 } = require('./paymentCurrency');
@@ -139,6 +141,8 @@ module.exports = {
   convertirAFactura,
   normalizarPagoAFactura,
   sumarPagosNormalizados,
+  pagoCxcAUsd,
+  sumarPagosCxcUSD,
   getTasaSistemaPorEmpresa,
   tasaCambioEfectiva,
   tasaParaEmpresa,

@@ -5,9 +5,18 @@ const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
 const { paginate, paginatedResponse } = require('../utils/pagination');
-const { MONEDAS_PAGO, convertirAFactura, sumarPagosNormalizados } = require('../utils/tasaAPI');
+const {
+  MONEDAS_PAGO,
+  convertirAFactura,
+  convertirMontoMoneda,
+  sumarPagosNormalizados,
+  sumarPagosCxcUSD,
+  tasaCambioEfectiva,
+} = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
+const { toDecimalSeguro } = require('../utils/decimal');
+const { lockFactura, lockCuenta } = require('../utils/locks');
 
 // Medio centavo de tolerancia: absorber el excedente de redondeo que aparece al
 // convertir un abono en Bs a USD (p. ej. 10 Bs = 0.0116 USD contra 0.01 USD).
@@ -46,19 +55,9 @@ router.get('/', async (req, res, next) => {
         skip,
         take,
         orderBy: { fechaPago: 'desc' },
-        include: {
-          factura: {
-            select: {
-              id: true,
-              numeroFactura: true,
-              estado: true,
-              total: true,
-              moneda: true,
-              tasaCambio: true,
-              cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
-            },
-          },
-        },
+        // Un solo bloque `select` de nivel superior: Prisma no admite `include`
+        // y `select` juntos (devolvía 500 en todos los listados de pagos). Los
+        // campos de `factura` van anidados dentro del `select`.
         select: {
           id: true,
           facturaId: true,
@@ -70,6 +69,17 @@ router.get('/', async (req, res, next) => {
           notas: true,
           tasaBCV: true,
           createdAt: true,
+          factura: {
+            select: {
+              id: true,
+              numeroFactura: true,
+              estado: true,
+              total: true,
+              moneda: true,
+              tasaCambio: true,
+              cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
+            },
+          },
         },
       }),
       prisma.pago.count({ where }),
@@ -90,7 +100,7 @@ router.post('/', async (req, res, next) => {
       throw createValidationError(`Método de pago inválido. Valores permitidos: ${METODOS_VALIDOS.join(', ')}`);
     }
 
-    const montoPago = new Decimal(monto ?? 0);
+    const montoPago = toDecimalSeguro(monto, 0);
     if (!montoPago.isFinite() || montoPago.lte(0)) throw createValidationError('El monto del pago debe ser mayor a 0', { monto: 'Debe ser positivo' });
     if (monedaPago !== undefined && !MONEDAS_PAGO.includes(monedaPago)) {
       throw createValidationError('La moneda del pago debe ser USD o VES', { monedaPago: 'Moneda inválida' });
@@ -103,52 +113,9 @@ router.post('/', async (req, res, next) => {
       });
     }
 
-    // ── Obtener factura y calcular balance ────────────────────────────────────
-    const empresaId = getEmpresaId(req);
-    const factura = await prisma.factura.findFirstOrThrow({
-      where: {
-        id: facturaId,
-        ...facturaTenantFilter(empresaId),
-      },
-      include: { pagos: true },
-    });
-
-    if (factura.estado === 'VOIDED') {
-      throw createBusinessError('No se puede registrar un pago en una factura anulada');
-    }
-    if (factura.estado === 'PAID') {
-      throw createBusinessError('La factura ya está completamente pagada');
-    }
-
-    const empresaRefId = await getEmpresaRefId(req);
-    const monedaDelPago = monedaPago || factura.moneda || 'USD';
-    const totalPagado = await sumarPagosNormalizados(factura.pagos, factura, empresaRefId);
-    const totalFactura     = new Decimal(factura.total.toString());
-    const balancePendiente = totalFactura.sub(totalPagado);
-    const montoEnMonedaFactura = await convertirAFactura(
-      montoPago,
-      monedaDelPago,
-      factura,
-      empresaRefId
-    );
-
-    if (montoEnMonedaFactura.gt(balancePendiente.plus(TOLERANCIA_REDONDEO))) {
-      throw createBusinessError(
-        `El monto (${montoPago.toFixed(2)} ${monedaDelPago}) excede el balance pendiente (${balancePendiente.toFixed(2)} ${factura.moneda || 'USD'})`
-      );
-    }
-    const montoAplicar = montoEnMonedaFactura.gt(balancePendiente) ? balancePendiente : montoEnMonedaFactura;
-
-    // ── Determinar nuevo estado de factura ────────────────────────────────────
-    const nuevoTotalPagado = totalPagado.add(montoAplicar);
-    let nuevoEstado;
-    if (nuevoTotalPagado.gte(totalFactura)) {
-      nuevoEstado = 'PAID';
-    } else {
-      nuevoEstado = 'PARTIALLY_PAID';
-    }
-
-    // ── Obtener tasa BCV histórica para la fecha del pago ────────────────────
+    // ── Tasa BCV histórica para la fecha del pago ─────────────────────────────
+    // Se resuelve fuera de la transacción: es I/O externo y no debe bloquear la
+    // fila de la factura mientras se espera la API del BCV.
     const fechaPagoFinal = fechaPago && !isNaN(new Date(fechaPago).getTime())
       ? new Date(fechaPago)
       : new Date();
@@ -159,13 +126,60 @@ router.post('/', async (req, res, next) => {
       console.warn('No se pudo obtener tasa BCV:', err.message);
     }
 
+    const empresaId = getEmpresaId(req);
+    const empresaRefId = await getEmpresaRefId(req);
+
     // ── Transacción atómica ───────────────────────────────────────────────────
-    const { pago, facturaActualizada } = await prisma.$transaction(async (tx) => {
+    // La factura se relee DENTRO de la transacción y con bloqueo de fila: si se
+    // validara el saldo antes, dos abonos concurrentes leían el mismo pendiente
+    // y ambos pasaban (sobrepago por carrera). Con el lock, el segundo espera y
+    // ve el saldo ya actualizado.
+    const { pago, facturaActualizada, totalPagadoFinal } = await prisma.$transaction(async (tx) => {
+      // Orden de bloqueo: factura primero, luego CxC (evita deadlocks con
+      // POST /cxc/:id/pago, que sigue el mismo orden).
+      await lockFactura(tx, facturaId);
+
+      const factura = await tx.factura.findFirstOrThrow({
+        where: {
+          id: facturaId,
+          ...facturaTenantFilter(empresaId),
+        },
+        include: { pagos: true },
+      });
+
+      if (factura.estado === 'VOIDED') {
+        throw createBusinessError('No se puede registrar un pago en una factura anulada');
+      }
+      if (factura.estado === 'PAID') {
+        throw createBusinessError('La factura ya está completamente pagada');
+      }
+
+      const monedaDelPagoTx = monedaPago || factura.moneda || 'USD';
+      const totalPagado = await sumarPagosNormalizados(factura.pagos, factura, empresaRefId);
+      const totalFactura = new Decimal(factura.total.toString());
+      const balancePendiente = totalFactura.sub(totalPagado);
+      const montoEnMonedaFactura = await convertirAFactura(
+        montoPago,
+        monedaDelPagoTx,
+        factura,
+        empresaRefId
+      );
+
+      if (montoEnMonedaFactura.gt(balancePendiente.plus(TOLERANCIA_REDONDEO))) {
+        throw createBusinessError(
+          `El monto (${montoPago.toFixed(2)} ${monedaDelPagoTx}) excede el balance pendiente (${balancePendiente.toFixed(2)} ${factura.moneda || 'USD'})`
+        );
+      }
+      const montoAplicar = montoEnMonedaFactura.gt(balancePendiente) ? balancePendiente : montoEnMonedaFactura;
+
+      const nuevoTotalPagado = totalPagado.add(montoAplicar);
+      const nuevoEstado = nuevoTotalPagado.gte(totalFactura) ? 'PAID' : 'PARTIALLY_PAID';
+
       const nuevoPago = await tx.pago.create({
         data: {
           facturaId,
           monto:                 montoPago.toFixed(2),
-          monedaPago:            monedaDelPago,
+          monedaPago:            monedaDelPagoTx,
           metodoPago,
           referenciaTransaccion: referenciaTransaccion?.trim() || null,
           fechaPago:             fechaPagoFinal.toISOString(),
@@ -210,27 +224,46 @@ router.post('/', async (req, res, next) => {
         },
       });
 
-      // Actualizar CuentaPorCobrar
-      await tx.cuentaPorCobrar.update({
-        where: { facturaId },
-        data: {
-          montoCobrado: nuevoTotalPagado.toFixed(2),
-          montoPendiente: totalFactura.sub(nuevoTotalPagado).gt(0)
-            ? totalFactura.sub(nuevoTotalPagado).toFixed(2)
-            : '0.00',
-          estado: nuevoEstado,
-          ultimaGestion: new Date().toISOString()
-        }
-      }).catch(() => {
-        // Si no existe CxC, no es error crítico
-      });
+      // Actualizar CuentaPorCobrar. SIEMPRE en USD: se normaliza con la misma
+      // función que usa cxc.js (`sumarPagosCxcUSD`). Antes escribía el total en
+      // la moneda de la factura, así que un abono de 1000 Bs sobre una factura
+      // VES de 10 USD dejaba montoCobrado=1000 sobre montoOriginal=10.
+      const cxc = await tx.cuentaPorCobrar.findUnique({ where: { facturaId } });
+      if (cxc) {
+        await lockCuenta(tx, cxc.id);
 
-      return { pago: nuevoPago, facturaActualizada: facturaUpd };
+        const cobradoPrevioUSD = await sumarPagosCxcUSD(factura.pagos, factura, empresaRefId);
+        const montoAplicarUSD = await convertirMontoMoneda(
+          montoAplicar,
+          factura.moneda || 'USD',
+          'USD',
+          await tasaCambioEfectiva(factura, empresaRefId)
+        );
+        const nuevoCobradoUSD = cobradoPrevioUSD.add(montoAplicarUSD);
+        const nuevoPendienteUSD = new Decimal(cxc.montoOriginal.toString()).sub(nuevoCobradoUSD);
+
+        let estadoCxc;
+        if (nuevoPendienteUSD.lte(0)) estadoCxc = 'PAID';
+        else if (nuevoCobradoUSD.gt(0)) estadoCxc = 'PARTIALLY_PAID';
+        else estadoCxc = 'PENDING';
+
+        await tx.cuentaPorCobrar.update({
+          where: { id: cxc.id },
+          data: {
+            montoCobrado: nuevoCobradoUSD.toFixed(2),
+            montoPendiente: nuevoPendienteUSD.gt(0) ? nuevoPendienteUSD.toFixed(2) : '0.00',
+            estado: estadoCxc,
+            ultimaGestion: new Date().toISOString(),
+          },
+        });
+      }
+
+      const totalPagadoFinal = await sumarPagosNormalizados(facturaUpd.pagos, facturaUpd, empresaRefId);
+      return { pago: nuevoPago, facturaActualizada: facturaUpd, totalPagadoFinal };
     });
 
     // Calcular totales para la respuesta
-    const totalPagadoFinal = await sumarPagosNormalizados(facturaActualizada.pagos, facturaActualizada, empresaRefId);
-    const balanceFinal = totalFactura.sub(totalPagadoFinal);
+    const balanceFinal = new Decimal(facturaActualizada.total.toString()).sub(totalPagadoFinal);
 
     res.status(201).json({
       pago,
@@ -247,56 +280,34 @@ router.post('/', async (req, res, next) => {
 router.delete('/:id', async (req, res, next) => {
   try {
     const empresaId = getEmpresaId(req);
-    const pago = await prisma.pago.findFirstOrThrow({
-      where: {
-        id: req.params.id,
-        factura: facturaTenantFilter(empresaId),
-      },
-      select: {
-        id: true,
-        facturaId: true,
-        monto: true,
-        monedaPago: true,
-        metodoPago: true,
-        referenciaTransaccion: true,
-        fechaPago: true,
-        notas: true,
-        createdAt: true,
-        factura: {
-          select: {
-            id: true,
-            numeroFactura: true,
-            estado: true,
-            total: true,
-            moneda: true,
-            tasaCambio: true,
-            pagos: {
-              select: {
-                id: true,
-                monto: true,
-                monedaPago: true,
-                metodoPago: true,
-                fechaPago: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const factura = pago.factura;
-    if (factura.estado === 'VOIDED') {
-      throw createBusinessError('No se puede eliminar un pago de una factura anulada');
-    }
+    const empresaRefId = await getEmpresaRefId(req);
 
     await prisma.$transaction(async (tx) => {
+      const pago = await tx.pago.findFirstOrThrow({
+        where: {
+          id: req.params.id,
+          factura: facturaTenantFilter(empresaId),
+        },
+        select: { id: true, facturaId: true },
+      });
+
+      await lockFactura(tx, pago.facturaId);
+
+      // Relectura dentro de la transacción: el listado pudo cambiar entre la
+      // lectura previa y el borrado (p. ej. otro pago simultáneo).
+      const factura = await tx.factura.findUniqueOrThrow({
+        where: { id: pago.facturaId },
+        include: { pagos: true },
+      });
+
+      if (factura.estado === 'VOIDED') {
+        throw createBusinessError('No se puede eliminar un pago de una factura anulada');
+      }
+
       await tx.pago.delete({ where: { id: req.params.id } });
 
-      // Recalcular estado
       const otrosPagos = factura.pagos.filter(p => p.id !== req.params.id);
-      // Se calcula fuera de la transacción: la conversión puede requerir I/O
-      // (tasa por empresa) y no debe bloquear filas mientras tanto.
-      const totalOtros = await sumarPagosNormalizados(otrosPagos, factura, await getEmpresaRefId(req));
+      const totalOtros = await sumarPagosNormalizados(otrosPagos, factura, empresaRefId);
       const totalFactura = new Decimal(factura.total.toString());
 
       let nuevoEstado;
@@ -306,18 +317,27 @@ router.delete('/:id', async (req, res, next) => {
 
       await tx.factura.update({ where: { id: factura.id }, data: { estado: nuevoEstado } });
 
-      // Actualizar CuentaPorCobrar
-      await tx.cuentaPorCobrar.update({
-        where: { facturaId: factura.id },
-        data: {
-          montoCobrado: totalOtros.toFixed(2),
-          montoPendiente: totalFactura.sub(totalOtros).gt(0)
-            ? totalFactura.sub(totalOtros).toFixed(2)
-            : '0.00',
-          estado: nuevoEstado,
-          ultimaGestion: new Date().toISOString()
-        }
-      }).catch(() => {});
+      // CxC en USD, igual que al registrar el pago (misma normalización).
+      const cxc = await tx.cuentaPorCobrar.findUnique({ where: { facturaId: factura.id } });
+      if (cxc) {
+        const totalOtrosUSD = await sumarPagosCxcUSD(otrosPagos, factura, empresaRefId);
+        const pendienteUSD = new Decimal(cxc.montoOriginal.toString()).sub(totalOtrosUSD);
+
+        let estadoCxc;
+        if (pendienteUSD.lte(0)) estadoCxc = 'PAID';
+        else if (totalOtrosUSD.gt(0)) estadoCxc = 'PARTIALLY_PAID';
+        else estadoCxc = 'PENDING';
+
+        await tx.cuentaPorCobrar.update({
+          where: { id: cxc.id },
+          data: {
+            montoCobrado: totalOtrosUSD.toFixed(2),
+            montoPendiente: pendienteUSD.gt(0) ? pendienteUSD.toFixed(2) : '0.00',
+            estado: estadoCxc,
+            ultimaGestion: new Date().toISOString()
+          }
+        });
+      }
     });
 
     res.status(204).send();
