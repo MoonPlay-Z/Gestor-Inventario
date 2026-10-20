@@ -946,7 +946,7 @@ export function ReportesPage() {
               <label className="form-label">Fecha</label>
               <input
                 type={periodo === 'anual' ? 'number' : periodo === 'mensual' ? 'month' : 'date'}
-                className="form-input"
+                className="form-control"
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
               />
@@ -982,7 +982,7 @@ export function ReportesPage() {
               ))}
             </div>
             {/* Skeleton de gráficos */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: '24px' }}>
               {[1, 2].map(i => (
                 <div key={i} className="card">
                   <div style={{ height: '20px', width: '150px', background: 'var(--bg-secondary)', borderRadius: '4px', marginBottom: '16px' }} />
@@ -1254,7 +1254,7 @@ export function ReportesPage() {
             )}
 
             {/* Gráficos principales */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: '24px', marginBottom: '24px' }}>
               {/* Gráfico de Ventas */}
               <div className="card">
                 <div className="card-header">
@@ -1316,7 +1316,7 @@ export function ReportesPage() {
             </div>
 
             {/* Inversión y Caja */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: '24px', marginBottom: '24px' }}>
               {/* Inversión por categoría */}
               {puedeVerInversion && (
                 <div className="card">
@@ -1406,7 +1406,7 @@ export function ReportesPage() {
             </div>
 
             {/* Tablas de Top Productos y Clientes */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: '24px' }}>
               {/* Productos Top */}
               <div className="card">
                 <div className="card-header">

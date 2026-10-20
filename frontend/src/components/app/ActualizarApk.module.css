@@ -1,0 +1,255 @@
+/* Aviso de actualización de la APK. Azul royal, legible en teléfono. */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding:
+    calc(var(--safe-top, 0px) + 16px)
+    16px
+    calc(var(--safe-bottom, 0px) + 16px);
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+.card {
+  position: relative;
+  width: min(430px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  background: var(--bg-card, #fff);
+  color: var(--text-primary);
+  border-radius: 18px;
+  box-shadow: 0 26px 70px rgba(2, 6, 23, 0.5);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 18px 16px;
+  color: #fff;
+  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #3b82f6 100%);
+}
+
+.icono {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.titulo {
+  margin: 0;
+  font-size: 1.06rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.version {
+  margin: 3px 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.82);
+  font-variant-numeric: tabular-nums;
+}
+
+.cuerpo {
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.texto {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.texto strong {
+  color: var(--text-primary);
+}
+
+.notas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 7px;
+}
+
+.notas li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 0.87rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+.notas li::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 0.5em;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--accent, #2563eb);
+}
+
+.avisoForzado {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.83rem;
+  line-height: 1.45;
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.avisoForzado svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.seguridad {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 0.77rem;
+  color: var(--text-secondary);
+}
+
+.seguridad svg {
+  flex: 0 0 auto;
+  color: #16a34a;
+}
+
+.progreso {
+  display: grid;
+  gap: 8px;
+}
+
+.barra {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+
+.barraRelleno {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1d4ed8, #3b82f6);
+  transition: width 0.25s ease;
+}
+
+.porcentaje {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent, #2563eb);
+  font-variant-numeric: tabular-nums;
+}
+
+.error {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.pie {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 18px 18px;
+}
+
+.pista {
+  margin-right: auto;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.primario,
+.secundario {
+  min-height: 44px;
+  padding: 0 18px;
+  border-radius: 11px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+
+.primario {
+  color: #fff;
+  border: none;
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.32);
+}
+
+.primario:active {
+  transform: translateY(1px);
+}
+
+.secundario {
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border, #e2e8f0);
+}
+
+.secundario:active {
+  background: var(--bg-hover, #f1f5f9);
+}
+
+.cerrar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 999px;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+}
+
+.cerrar:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+@media (max-width: 380px) {
+  .pie {
+    flex-wrap: wrap;
+  }
+
+  .primario,
+  .secundario {
+    flex: 1 1 auto;
+  }
+}

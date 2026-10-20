@@ -1,0 +1,556 @@
+/* =========================================================================
+   MOVIL.CSS — Adaptación a teléfonos
+   -------------------------------------------------------------------------
+   Se importa DESPUÉS de main.css. No reemplaza el diseño de escritorio:
+   sólo endurece el comportamiento en móvil/táctil (adaptación, no escalado).
+
+   Ejecuta `frontend/src/components/layout/ResponsiveTables.jsx`, que copia la
+   cabecera de cada tabla a `data-label`; aquí se apilan como tarjetas.
+   ========================================================================= */
+
+:root {
+  /* Áreas seguras (notch / lente / gesto inferior).
+     En la app Android (pantalla completa) MainActivity sobrescribe --inset-*
+     con las medidas reales en píxeles CSS; en navegador se usan las de env(). */
+  --inset-top: env(safe-area-inset-top, 0px);
+  --inset-right: env(safe-area-inset-right, 0px);
+  --inset-bottom: env(safe-area-inset-bottom, 0px);
+  --inset-left: env(safe-area-inset-left, 0px);
+  --safe-top: var(--inset-top);
+  --safe-right: var(--inset-right);
+  --safe-bottom: var(--inset-bottom);
+  --safe-left: var(--inset-left);
+  --dock-h: 56px;   /* alto de la barra inferior (BottomNav) */
+  --touch: 44px;    /* objetivo táctil mínimo recomendado */
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* =========================================================================
+   FORMULARIOS — 16px evita el auto-zoom de iOS al enfocar un campo
+   ========================================================================= */
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 520px) and (orientation: landscape) {
+  /* `!important` vence a los `fontSize` en línea (Login, Admin, etc.) */
+  input:not([type='checkbox']):not([type='radio']):not([type='submit']):not([type='button']):not([type='reset']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+  /* La barra de búsqueda fija de 280px desbordaba la toolbar */
+  .search-box { width: 100%; }
+  .search-box input { width: 100%; }
+}
+
+/* =========================================================================
+   TÁCTIL — objetivos ≥44px y sin estados hover "pegajosos"
+   ========================================================================= */
+@media (pointer: coarse), (max-width: 767px), (max-width: 1023px) and (max-height: 520px) and (orientation: landscape) {
+  /* `.btn*` son las clases globales; el componente <Button> usa CSS Modules
+     con nombre con hash (`Button-module__btn___xxx`), por eso el selector de
+     atributo: son dos sistemas de botones distintos conviviendo. */
+  .btn,
+  [class*='Button-module__btn'] { min-height: var(--touch); }
+  .btn-sm { min-height: var(--touch); }
+  .btn-icon,
+  [class*='Button-module__btnIcon'] { width: var(--touch); height: var(--touch); }
+  .pagination button { width: var(--touch); height: var(--touch); }
+}
+
+@media (hover: none) {
+  .btn-primary:hover,
+  .btn-secondary:hover,
+  .btn-success:hover,
+  .btn-danger:hover,
+  .metric-card:hover,
+  .card:hover {
+    transform: none;
+  }
+}
+
+/* =========================================================================
+   MODALES — que el pie envuelva y el modal use el alto disponible
+   ========================================================================= */
+.modal-footer { flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .modal { padding: 20px 16px; max-height: 88vh; }
+  .modal-header { margin-bottom: 16px; }
+  .modal-footer { justify-content: stretch; }
+  .modal-footer > * { flex: 1 1 auto; }
+}
+
+/* =========================================================================
+   TABLAS → TARJETAS (móvil)
+   ========================================================================= */
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 520px) and (orientation: landscape) {
+  /* `#main-content` es un ítem flex (`flex-1`) con `min-width: auto` por defecto:
+     cualquier contenido ancho (una tabla con `min-width`, una barra, un gráfico)
+     lo estira más allá del viewport y ENSANCHA TODO EL DOCUMENTO. Eso rompe las
+     media queries: el layout se va a escritorio (reaparece el sidebar) y la
+     página queda recortada. `min-width: 0` lo deja encogerse al viewport; el
+     desborde interno se contiene con `clip`. */
+  #main-content { min-width: 0; overflow-x: clip; }
+  .page-body { overflow-x: clip; }
+
+  .table-wrapper:has(table.rt-cards) {
+    overflow: visible;
+    border: none;
+    background: transparent;
+  }
+  table.rt-cards { display: block; width: 100%; max-width: 100%; min-width: 0; border: none; }
+  table.rt-cards > thead { display: none; }
+  table.rt-cards > tbody { display: block; width: 100%; }
+
+  table.rt-cards > tbody > tr {
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 10px;
+    padding: 4px 14px;
+  }
+  table.rt-cards > tbody > tr:hover { background: var(--surface); }
+
+  table.rt-cards > tbody > tr > td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    min-width: 0;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    white-space: normal;
+    word-break: break-word;
+  }
+  table.rt-cards > tbody > tr > td:last-child { border-bottom: none; }
+  table.rt-cards > tbody > tr > td > * { min-width: 0; max-width: 100%; }
+
+  table.rt-cards > tbody > tr > td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    margin-right: auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-secondary);
+    text-align: left;
+  }
+
+  /* Filas de estado vacío (colspan) */
+  table.rt-cards > tbody > tr > td[colspan] {
+    display: block;
+    text-align: center;
+    border-bottom: none;
+    padding: 18px 0;
+  }
+  table.rt-cards > tbody > tr > td[colspan]::before { display: none; }
+  table.rt-cards > tbody > tr:has(> td[colspan]) {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    padding: 0;
+  }
+
+  /* Pie de tabla (`tfoot`): la fila de totales, p. ej. «Total General» en
+     Reportes. Sin esto queda como fila de tabla dentro de una tabla `block` y
+     desborda el viewport. */
+  table.rt-cards > tfoot { display: block; width: 100%; }
+  table.rt-cards > tfoot > tr {
+    display: block;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    margin-top: 10px;
+    padding: 4px 14px;
+  }
+  table.rt-cards > tfoot > tr > td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    min-width: 0;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    white-space: normal;
+    word-break: break-word;
+  }
+  table.rt-cards > tfoot > tr > td:last-child { border-bottom: none; }
+  table.rt-cards > tfoot > tr > td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    margin-right: auto;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-secondary);
+    text-align: left;
+  }
+  table.rt-cards > tfoot > tr > td[colspan] { display: block; text-align: left; }
+  table.rt-cards > tfoot > tr > td[colspan]::before { display: none; }
+}
+
+/* =========================================================================
+   LOGIN / REGISTRO / PAGO SAAS — split que colapsa a una columna
+   ========================================================================= */
+.auth-split {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) 1fr;
+}
+@media (max-width: 860px) {
+  .auth-split { grid-template-columns: 1fr; }
+  .auth-split .auth-brand { padding: 26px 22px !important; gap: 16px !important; }
+  .auth-split .auth-features,
+  .auth-split .auth-brand > div:first-child > div:last-child { display: none !important; }
+}
+
+/* -------------------------------------------------------------------------
+   PAGO SAAS en teléfono: cabecera de marca compacta y formulario legible.
+   Los tamaños van con !important porque la página usa estilos en línea.
+   (Login y registro ya no usan estas clases: tienen su propio diseño Tailwind.)
+   ------------------------------------------------------------------------- */
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 520px) and (orientation: landscape) {
+  .auth-split {
+    border-radius: 14px !important;
+    box-shadow: 0 10px 24px -14px rgba(15, 23, 42, 0.28) !important;
+  }
+
+  .auth-split .auth-brand {
+    padding: 15px 18px !important;
+    gap: 0 !important;
+  }
+  .auth-split .auth-brand > div:first-child > div:first-child { margin-bottom: 9px !important; }
+  .auth-split .auth-brand > div:first-child > div:first-child img {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 8px !important;
+  }
+  .auth-split .auth-brand > div:first-child > div:first-child span { font-size: 1rem !important; }
+  .auth-split .auth-brand h2 {
+    font-size: clamp(1rem, 4.6vw, 1.18rem) !important;
+    margin-bottom: 3px !important;
+  }
+  .auth-split .auth-brand p {
+    font-size: 0.73rem !important;
+    line-height: 1.45 !important;
+    margin-bottom: 0 !important;
+  }
+  .auth-split .auth-brand > div:last-child { display: none !important; }
+}
+
+/* =========================================================================
+   TELÉFONO EN HORIZONTAL — el alto útil baja a ~390 px: se recorta el aire
+   vertical (sobre todo en login/registro) para que la acción principal quepa
+   sin tener que desplazarse.
+   ========================================================================= */
+@media (max-width: 1023px) and (max-height: 520px) and (orientation: landscape) {
+  /* Las dos columnas (marca + formulario) se fuerzan también en teléfonos
+     pequeños en horizontal, donde el punto de corte md (768 px) no llega. */
+  .auth-main {
+    max-width: none !important;
+    padding-top: 4px !important;
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+  .auth-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: stretch;
+  }
+  .auth-grid > section:first-child {
+    margin-bottom: 0 !important;
+    padding: 14px !important;
+  }
+  .auth-main .auth-card { padding: 10px 14px !important; }
+  .auth-main .auth-card > div:first-child { margin-bottom: 8px !important; }
+  .auth-main .auth-card h2 { font-size: 18px !important; line-height: 1.2 !important; }
+  /* Campos de 44 px (objetivo táctil) en vez de 52: el botón de ingreso cabe
+     completo aun con la barra de estado y la de navegación descontadas. */
+  .auth-main .auth-card input[type='text'],
+  .auth-main .auth-card input[type='email'],
+  .auth-main .auth-card input[type='password'] {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+  .auth-subtitulo,
+  .auth-hero-sub { display: none !important; }
+
+  /* Login y registro sin scroll: se retiran adornos y se comprime el pie. */
+  .auth-nota { display: none !important; }
+  .auth-main footer { display: none !important; }
+  .auth-header > div { padding-top: 4px !important; padding-bottom: 4px !important; }
+  /* En registro el título ya lo da la tarjeta de marca ("¡Prueba gratis 7 días!"). */
+  .reg-head { display: none !important; }
+  /* Errores de campo compactos: con dos avisos el botón sigue a la vista. */
+  .auth-main .field-error { margin-top: 3px !important; padding: 4px 8px !important; }
+  .auth-main .field-error span { font-size: 11px !important; line-height: 1.25 !important; }
+  .auth-cta {
+    margin-top: 4px !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+  }
+
+  /* Registro en horizontal: campos en 2 columnas y legales en una fila. */
+  .reg-form {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px 14px !important;
+    align-items: start;
+  }
+  .reg-form > * { grid-column: 1 / -1; }
+  .reg-form > .reg-field { grid-column: auto; }
+  .reg-form .reg-field > label,
+  .reg-form .reg-field > div > label { margin-bottom: 3px !important; }
+  .reg-form .reg-legal {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2px 12px;
+    padding: 6px 9px !important;
+  }
+  .reg-aviso { display: none !important; }
+  .reg-form .reg-legal label {
+    font-size: 10.5px !important;
+    line-height: 1.3 !important;
+    gap: 5px !important;
+  }
+  /* Sin iconos decorativos el texto de los campos respira (el ojo de la
+     contraseña es un botón y se mantiene). */
+  .reg-form .reg-field span.pointer-events-none { display: none !important; }
+  .reg-form .reg-field input { padding-right: 12px !important; }
+  /* El ojo de la contraseña sigue ocupando su espacio. */
+  .reg-form .reg-field input#password { padding-right: 46px !important; }
+  .reg-form .reg-field label { font-size: 10px !important; }
+  .reg-form .reg-legal input[type='checkbox'] { margin-top: 1px; }
+  .reg-form .reg-submit { padding-top: 0 !important; }
+  .reg-submit button {
+    min-height: 44px !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+  .solo-vertical { display: none !important; }
+
+  /* Cabecera de página compacta: el subtítulo y el atajo a POS (que ya vive
+     en el dock) no caben sin robar alto útil al contenido. */
+  .page-header { padding-top: 8px !important; padding-bottom: 8px !important; }
+  .page-header p { display: none !important; }
+  .page-header a[href='/pos'] { display: none !important; }
+
+  /* Menú de la landing: en 390 px de alto la lista vertical empuja los botones
+     de acceso fuera de pantalla; en horizontal se muestra como fichas. */
+  .landing-nav[data-open='true'] {
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    gap: 8px !important;
+    margin-top: 4px;
+  }
+  .landing-nav[data-open='true'] > a {
+    flex: 0 0 auto;
+    padding: 8px 14px;
+    font-size: 0.85rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 10px;
+    text-align: center;
+  }
+  .landing-header-actions[data-open='true'] { width: 100%; justify-content: center; }
+}
+
+/* =========================================================================
+   COTIZACIONES — panel lateral de 360px que colapsa
+   ========================================================================= */
+.split-360 {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 1023px) {
+  .split-360 { grid-template-columns: 1fr; }
+}
+
+/* =========================================================================
+   POS MÓVIL — barra de cobro fija sobre el dock inferior
+   ========================================================================= */
+.pos-mobile-bar {
+  position: fixed;
+  left: var(--safe-left, 0px);
+  right: var(--safe-right, 0px);
+  bottom: calc(var(--dock-h) + var(--safe-bottom, 0px));
+  z-index: 35;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+}
+.pos-mobile-bar-total { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.pos-mobile-bar-total strong { font-size: 1.15rem; font-weight: 800; color: var(--accent); }
+.pos-mobile-bar-total span { font-size: 0.72rem; color: var(--text-secondary); }
+
+@media (min-width: 1024px) {
+  .pos-mobile-bar { display: none; }
+  .pos-cobro-grip,
+  .pos-cobro-close,
+  .pos-cobro-backdrop { display: none !important; }
+}
+
+/* Panel de cobro: columna lateral (escritorio) → hoja inferior (móvil) */
+.pos-cobro-panel { position: sticky; top: 20px; }
+.pos-cobro-grip { display: none; }
+.pos-cobro-close { display: none; }
+
+@media (max-width: 1023px) {
+  .pos-body {
+    overflow-x: visible;
+    padding-bottom: calc(var(--dock-h) + 84px + var(--safe-bottom)) !important;
+  }
+  .pos-cobro-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    z-index: 210;
+    max-height: 88vh;
+    overflow-y: auto;
+    border-radius: 20px 20px 0 0;
+    padding: 16px 18px calc(18px + var(--safe-bottom));
+    box-shadow: 0 -10px 40px rgba(15, 23, 42, 0.25);
+    transform: translateY(105%);
+    visibility: hidden;
+    transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), visibility 0.22s;
+  }
+  .pos-cobro-panel.open {
+    transform: translateY(0);
+    visibility: visible;
+  }
+  .pos-cobro-grip {
+    display: block;
+    width: 42px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--border);
+    margin: 0 auto 12px;
+  }
+  .pos-cobro-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: var(--touch);
+    height: var(--touch);
+    border-radius: var(--radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+  /* Deja libre la esquina del botón cerrar para el selector de moneda */
+  .pos-cobro-panel > div:first-of-type { padding-right: 44px; }
+  .pos-cobro-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 205;
+    background: rgba(15, 23, 42, 0.55);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pos-cobro-panel { transition: none; }
+}
+
+/* =========================================================================
+   LANDING PÚBLICA EN MÓVIL
+   -------------------------------------------------------------------------
+   `LandingPage.jsx` define TODO su estilo inline, así que aquí se sobrescribe
+   con `!important`. Dos objetivos:
+   1. Que el documento no se ensanche. El header no envolvía (logo + nav +
+      CTA ≈ 807 px de min-content) y el grid de `#beneficios` era
+      `1fr minmax(320px, 400px)` (≈ 787 px). Al expandirse el layout, la media
+      query dejaba de aplicar y la página se veía recortada (y con scroll
+      horizontal).
+   2. Proporciones de móvil: menos padding, tipografía menor y CTA a ancho
+      completo. Arriba de 767px NO aplica nada de esto (el botón de menú
+      simplemente no se muestra).
+   ========================================================================= */
+.landing-menu-btn { display: none; }
+
+/* Pantalla completa (app Android): ni el encabezado ni el contenido de la
+   landing se meten bajo el lente. En navegador las insets valen 0. */
+.landing-root {
+  padding-top: var(--safe-top, 0px);
+  padding-left: var(--safe-left, 0px);
+  padding-right: var(--safe-right, 0px);
+}
+
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 520px) and (orientation: landscape) {
+  .landing-root { overflow-x: clip; }
+
+  /* --- Header: logo + hamburguesa; nav y CTA se pliegan --- */
+  .landing-header { padding: 12px 16px !important; flex-wrap: wrap; row-gap: 10px; }
+  .landing-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--touch, 44px);
+    height: var(--touch, 44px);
+    border-radius: var(--radius-sm, 8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    cursor: pointer;
+  }
+  .landing-nav,
+  .landing-header-actions { display: none !important; flex-basis: 100%; min-width: 0; }
+  .landing-nav[data-open='true'],
+  .landing-header-actions[data-open='true'] { display: flex !important; }
+  .landing-nav[data-open='true'] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0 !important;
+    margin-top: 6px;
+  }
+  .landing-nav[data-open='true'] > a {
+    padding: 13px 2px;
+    font-size: 1rem !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .landing-header-actions[data-open='true'] { gap: 10px !important; margin-top: 6px; }
+  .landing-header-actions[data-open='true'] > a { flex: 1 1 0; text-align: center; }
+
+  /* --- Hero --- */
+  .landing-hero { padding: 40px 16px 52px !important; }
+  .landing-hero-title { font-size: 1.95rem !important; }
+  .landing-hero-sub { font-size: 1.1rem !important; }
+  .landing-glass { padding: 18px !important; border-radius: 14px !important; }
+  .landing-social { flex-wrap: wrap; row-gap: 10px; }
+  .landing-hero .landing-cta-row { gap: 12px !important; }
+  .landing-hero .landing-cta-row > a { width: 100%; justify-content: center; }
+
+  /* --- Secciones --- */
+  .landing-section { padding: 44px 16px !important; }
+  .landing-section h2 { font-size: 1.55rem !important; }
+  .landing-head { margin-bottom: 26px !important; }
+
+  /* --- Rejillas a una columna --- */
+  .landing-split { grid-template-columns: 1fr !important; gap: 26px !important; }
+  .landing-split > div:last-child { padding: 20px !important; }
+  .landing-grid { grid-template-columns: 1fr !important; gap: 18px !important; }
+  .landing-grid-3 > div { padding: 18px !important; }
+  .landing-card-actions { flex-direction: column !important; }
+
+  /* --- Footer --- */
+  .landing-footer { padding: 40px 16px 24px !important; }
+}

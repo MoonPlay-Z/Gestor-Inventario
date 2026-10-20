@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+export const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Tiempo máximo de espera para una petición antes de abortarla (ms).
 const REQUEST_TIMEOUT_MS = 20000;
@@ -13,30 +13,56 @@ export class ApiError extends Error {
   }
 }
 
-export async function request(endpoint, options = {}) {
-  const url = `${API_URL}${endpoint}`;
-  const token = localStorage.getItem('token');
+const REFRESH_TOKEN_KEY = 'refreshToken';
 
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-  };
+/** Guarda (o elimina con null) el refresh token. */
+export function setRefreshToken(token) {
+  if (token) localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  else localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
 
-  const mergedHeaders = { ...headers, ...(options.headers || {}) };
+// Dedup: si varias peticiones reciben 401 a la vez, comparten un solo refresh.
+let refreshPromise = null;
 
-  const body = (options.body && typeof options.body === 'object')
-    ? JSON.stringify(options.body)
-    : options.body;
+/**
+ * Renueva el access token con el refresh token. El backend rota el refresh
+ * token (devuelve uno nuevo). Las llamadas concurrentes comparten la misma
+ * promesa para no disparar varios refreshes a la vez.
+ */
+export function refreshAccessToken() {
+  const current = localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (!current) return Promise.reject(new ApiError('Sin refresh token', 401));
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: current }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new ApiError(data.message || data.error || 'No se pudo renovar la sesión', res.status);
+      }
+      if (data.token) localStorage.setItem('token', data.token);
+      if (data.refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
+      return data.token;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+}
 
+async function doFetch(url, mergedHeaders, options, body) {
   // Controlador para poder abortar la petición si tarda demasiado
   // (evita que el usuario quede esperando indefinidamente si el
   // backend no responde).
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-  let response;
   try {
-    response = await fetch(url, {
+    return await fetch(url, {
       ...options,
       headers: mergedHeaders,
       body,
@@ -64,15 +90,44 @@ export async function request(endpoint, options = {}) {
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+export async function request(endpoint, options = {}) {
+  const url = `${API_URL}${endpoint}`;
+  const token = localStorage.getItem('token');
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+
+  const mergedHeaders = { ...headers, ...(options.headers || {}) };
+
+  const body = (options.body && typeof options.body === 'object')
+    ? JSON.stringify(options.body)
+    : options.body;
+
+  let response = await doFetch(url, mergedHeaders, options, body);
+
+  // 401: el access token (12h) expiró. Intentar renovarlo UNA vez y reintentar
+  // la petición original. No aplica a /auth/login ni /auth/refresh (evita
+  // bucles). Si el refresh falla (refresh token expirado/revocado), se cierra
+  // la sesión. En móvil esto evita el relogin diario: el refresh token dura 30d.
+  if (response.status === 401 && endpoint !== '/auth/login' && endpoint !== '/auth/refresh') {
+    try {
+      const newToken = await refreshAccessToken();
+      const retryHeaders = { ...mergedHeaders, Authorization: `Bearer ${newToken}` };
+      response = await doFetch(url, retryHeaders, options, body);
+    } catch (refreshErr) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      window.dispatchEvent(new Event('auth:unauthorized'));
+      throw new ApiError('Sesión expirada', 401);
+    }
+  }
 
   if (response.status === 204) return null;
-
-  if (response.status === 401 && endpoint !== '/auth/login') {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    window.dispatchEvent(new Event('auth:unauthorized'));
-    throw new ApiError('Sesión expirada', 401);
-  }
 
   // El backend puede responder con contenido no-JSON en ciertos fallos
   // (por ejemplo una página de error HTML de un proxy). Si eso pasa,
@@ -84,7 +139,8 @@ export async function request(endpoint, options = {}) {
   // para indicar que la mensualidad venció. Antes esta comparación nunca
   // coincidía y el evento 'subscription:expired' nunca se disparaba.
   if (response.status === 403 && safeData.code === 'PAYMENT_REQUIRED') {
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    let user = {};
+    try { user = JSON.parse(localStorage.getItem('user') || '{}'); } catch { user = {}; }
     user.subscriptionStatus = 'expired_trial';
     localStorage.setItem('user', JSON.stringify(user));
     window.dispatchEvent(new Event('subscription:expired'));

@@ -14,12 +14,18 @@ import fileDocumentIcon from '@iconify/icons-mdi/file-document-outline';
 import currencyUsdIcon from '@iconify/icons-mdi/currency-usd';
 import checkDecagramIcon from '@iconify/icons-mdi/check-decagram';
 import alertCircleIcon from '@iconify/icons-mdi/alert-circle-outline';
+import menuIcon from '@iconify/icons-mdi/menu';
+import closeIcon from '@iconify/icons-mdi/close';
 import { API } from '../services/api';
 
 const trialWhatsAppUrl = 'https://wa.me/584127723148?text=Hola%2C%20quiero%20solicitar%20la%20activaci%C3%B3n%20del%20mes%20de%20prueba%20gratis%20para%20mi%20negocio.';
 
 export function LandingPage() {
   const [noticias, setNoticias] = useState([]);
+  // Menú plegable del header en móvil (≤767px). En escritorio el botón y el
+  // estado son inertes: el CSS sólo lo muestra en móvil.
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const cerrarMenu = () => setMenuAbierto(false);
 
   useEffect(() => {
     // Cargar noticias publicadas si existen
@@ -31,10 +37,10 @@ export function LandingPage() {
   }, []);
 
   return (
-    <div style={{ backgroundColor: '#0b0f17', color: '#f8fafc', minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <div className="landing-root" style={{ backgroundColor: '#0b0f17', color: '#f8fafc', minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif" }}>
 
       {/* ─── 1. NAVBAR (Dark Header) ───────────────────────────────────────── */}
-      <header style={{
+      <header className="landing-header" style={{
         backgroundColor: '#0b0f17',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
         padding: '16px 32px',
@@ -46,32 +52,40 @@ export function LandingPage() {
         zIndex: 100,
         backdropFilter: 'blur(10px)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '8px',
-            backgroundColor: '#2563eb',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Icon icon={packageIcon} className="h-6 w-6 text-white" />
-          </div>
+        <div className="landing-logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <img
+            src="/favicon.png"
+            alt=""
+            width="36"
+            height="36"
+            style={{ width: '36px', height: '36px', borderRadius: '8px', display: 'block', flexShrink: 0 }}
+          />
           <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
             GestorPOS<span style={{ color: '#38bdf8' }}>.dev</span>
           </span>
         </div>
 
-        <nav style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <a href="#beneficios" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Beneficios</a>
-          <a href="#modulos" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Módulos</a>
-          <Link to="/blog" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Blog</Link>
-          <a href="#preguntas" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Preguntas</a>
-          <a href="#contacto" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Contacto</a>
+        <button
+          type="button"
+          className="landing-menu-btn"
+          aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
+          aria-expanded={menuAbierto}
+          aria-controls="landing-nav-movil"
+          onClick={() => setMenuAbierto((v) => !v)}
+        >
+          <Icon icon={menuAbierto ? closeIcon : menuIcon} className="h-6 w-6" />
+        </button>
+
+        <nav id="landing-nav-movil" className="landing-nav" data-open={menuAbierto ? 'true' : 'false'} style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <a href="#beneficios" onClick={cerrarMenu} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Beneficios</a>
+          <a href="#modulos" onClick={cerrarMenu} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Módulos</a>
+          <Link to="/blog" onClick={cerrarMenu} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Blog</Link>
+          <Link to="/descargar" onClick={cerrarMenu} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Descargar</Link>
+          <a href="#preguntas" onClick={cerrarMenu} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Preguntas</a>
+          <a href="#contacto" onClick={cerrarMenu} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Contacto</a>
         </nav>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="landing-header-actions" data-open={menuAbierto ? 'true' : 'false'} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link to="/login" style={{
             color: '#ffffff',
             fontSize: '0.88rem',
@@ -100,7 +114,7 @@ export function LandingPage() {
 
 
       {/* ─── 2. HERO SECTION (Dark Code Backdrop & Hero Banner) ────────────── */}
-      <section id="inicio" style={{
+      <section id="inicio" className="landing-hero" style={{
         position: 'relative',
         padding: '80px 32px 100px',
         maxWidth: '1200px',
@@ -108,10 +122,10 @@ export function LandingPage() {
         backgroundImage: 'radial-gradient(circle at 70% 30%, rgba(37, 99, 235, 0.15) 0%, transparent 60%)'
       }}>
         <div style={{ maxWidth: '850px' }}>
-          <h1 style={{ fontSize: '2.7rem', fontWeight: 900, lineHeight: 1.12, color: '#ffffff', marginBottom: '12px' }}>
+          <h1 className="landing-hero-title" style={{ fontSize: '2.7rem', fontWeight: 900, lineHeight: 1.12, color: '#ffffff', marginBottom: '12px' }}>
             Sistema POS e inventario para comercios venezolanos
           </h1>
-          <h2 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#38bdf8', marginBottom: '20px' }}>
+          <h2 className="landing-hero-sub" style={{ fontSize: '1.35rem', fontWeight: 700, color: '#38bdf8', marginBottom: '20px' }}>
             Vende con orden. Controla cada producto, cobro y cierre.
           </h2>
 
@@ -133,7 +147,7 @@ export function LandingPage() {
           </div>
 
           {/* Translucent Glass Description Card */}
-          <div style={{
+          <div className="landing-glass" style={{
             backgroundColor: 'rgba(15, 23, 42, 0.75)',
             backdropFilter: 'blur(16px)',
             borderRadius: '16px',
@@ -153,7 +167,7 @@ export function LandingPage() {
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
+          <div className="landing-cta-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
             <a href={trialWhatsAppUrl} target="_blank" rel="noreferrer" style={{
               backgroundColor: '#2563eb',
               color: '#ffffff',
@@ -189,7 +203,7 @@ export function LandingPage() {
           </div>
 
           {/* Social Quick Links Row */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>
+          <div className="landing-social" style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>
             <span>CONTACTO & SOPORTE:</span>
             <a href="https://github.com/MoonPlay-Z/Gestor-Inventario" target="_blank" rel="noreferrer" aria-label="Proyecto GestorPOS en GitHub" style={{ color: '#94a3b8', backgroundColor: 'rgba(255,255,255,0.08)', padding: '8px', borderRadius: '50%', display: 'flex' }}>
               <Icon icon={githubIcon} className="h-4 w-4" />
@@ -209,8 +223,8 @@ export function LandingPage() {
 
 
       {/* ─── 3. SECTION 1: ARCHITECTURE & STATUS (White Container Split) ──── */}
-      <section id="beneficios" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '80px 32px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr minmax(320px, 400px)', gap: '48px', alignItems: 'start' }}>
+      <section id="beneficios" className="landing-section landing-section-white" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '80px 32px' }}>
+        <div className="landing-split" style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr minmax(320px, 400px)', gap: '48px', alignItems: 'start' }}>
           
           {/* Left Column: Specs & Features */}
           <div>
@@ -278,7 +292,7 @@ export function LandingPage() {
               <span>La tasa de cambio se configura desde los ajustes del negocio. Solicita por WhatsApp la activación de tu mes de prueba.</span>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div className="landing-card-actions" style={{ display: 'flex', gap: '10px' }}>
               <Link to={trialWhatsAppUrl} target="_blank" rel="noreferrer" style={{
                 backgroundColor: '#2563eb',
                 color: '#ffffff',
@@ -313,10 +327,10 @@ export function LandingPage() {
 
 
       {/* ─── 4. SECTION 2: PROYECTOS DESTACADOS / MÓDULOS (Light Grey) ─────── */}
-      <section id="modulos" style={{ backgroundColor: '#f8fafc', color: '#0f172a', padding: '80px 32px' }}>
+      <section id="modulos" className="landing-section" style={{ backgroundColor: '#f8fafc', color: '#0f172a', padding: '80px 32px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           
-          <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+          <div className="landing-head" style={{ textAlign: 'center', marginBottom: '56px' }}>
             <h2 style={{ fontSize: '2.2rem', fontWeight: 900, letterSpacing: '-0.02em', marginBottom: '8px' }}>
               Módulos & Herramientas Destacadas
             </h2>
@@ -325,7 +339,7 @@ export function LandingPage() {
             </p>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
+          <div className="landing-grid landing-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
             
             {/* Card 1 */}
             <div style={{
@@ -528,10 +542,10 @@ export function LandingPage() {
       </section>
 
 
-      <section style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '72px 32px' }}>
+      <section className="landing-section landing-section-white" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '72px 32px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '28px' }}>Más herramientas para administrar tu comercio</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '28px' }}>
+          <div className="landing-grid landing-grid-tools" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '28px' }}>
             <div style={{ borderTop: '3px solid #0f766e', paddingTop: '16px' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 8px' }}>Reportes del negocio</h3>
               <p style={{ color: '#475569', lineHeight: 1.6, margin: 0 }}>Consulta ventas, ganancias, impuestos, productos destacados y valor del inventario por período.</p>
@@ -548,7 +562,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="preguntas" style={{ backgroundColor: '#f1f5f9', color: '#0f172a', padding: '72px 32px' }}>
+      <section id="preguntas" className="landing-section" style={{ backgroundColor: '#f1f5f9', color: '#0f172a', padding: '72px 32px' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px' }}>Preguntas frecuentes</h2>
           <p style={{ color: '#475569', margin: '0 0 28px' }}>Lo que necesitas saber antes de comenzar.</p>
@@ -570,7 +584,7 @@ export function LandingPage() {
               <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>Escríbenos por WhatsApp para conocer las opciones y condiciones vigentes para tu negocio.</p>
             </details>
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px', marginTop: '28px' }}>
+          <div className="landing-cta-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px', marginTop: '28px' }}>
             <Link to={trialWhatsAppUrl} target="_blank" rel="noreferrer" style={{ backgroundColor: '#1d4ed8', color: '#ffffff', fontWeight: 800, padding: '12px 18px', borderRadius: '8px', textDecoration: 'none' }}>Solicitar mes gratis por WhatsApp</Link>
             <a href="https://wa.me/584127723148" target="_blank" rel="noreferrer" style={{ color: '#0f766e', fontWeight: 800, textDecoration: 'none' }}>Consultar por WhatsApp</a>
           </div>
@@ -579,16 +593,16 @@ export function LandingPage() {
 
       {/* ─── 5. SECTION 3: NOTICIAS & ANUNCIOS ────────────────────────────── */}
       {noticias.length > 0 && (
-        <section id="noticias" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '80px 32px', borderTop: '1px solid #e2e8f0' }}>
+        <section id="noticias" className="landing-section landing-section-white" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '80px 32px', borderTop: '1px solid #e2e8f0' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <div className="landing-head" style={{ textAlign: 'center', marginBottom: '48px' }}>
               <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px' }}>
                 Noticias & Anuncios de la Plataforma
               </h2>
               <p style={{ color: '#64748b' }}>Actualizaciones recientes y novedades de la versión SaaS.</p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+            <div className="landing-grid landing-grid-news" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
               {noticias.map(noticia => (
                 <div key={noticia.id} style={{
                   backgroundColor: '#f8fafc',
@@ -610,7 +624,7 @@ export function LandingPage() {
 
 
       {/* ─── 6. FOOTER (Deep Navy Footer) ─────────────────────────────────── */}
-      <footer id="contacto" style={{ backgroundColor: '#0b0f17', color: '#94a3b8', borderTop: '1px solid rgba(255, 255, 255, 0.1)', padding: '60px 32px 30px' }}>
+      <footer id="contacto" className="landing-footer" style={{ backgroundColor: '#0b0f17', color: '#94a3b8', borderTop: '1px solid rgba(255, 255, 255, 0.1)', padding: '60px 32px 30px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '32px', marginBottom: '40px' }}>
           <div style={{ maxWidth: '380px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
@@ -630,6 +644,7 @@ export function LandingPage() {
               <a href="#beneficios" style={{ color: '#cbd5e1' }}>Beneficios</a>
               <a href="#modulos" style={{ color: '#cbd5e1' }}>Módulos</a>
               <Link to="/blog" style={{ color: '#cbd5e1' }}>Blog</Link>
+              <Link to="/descargar" style={{ color: '#cbd5e1' }}>Descargar app</Link>
               <a href="#preguntas" style={{ color: '#cbd5e1' }}>Preguntas frecuentes</a>
               <Link to={trialWhatsAppUrl} target="_blank" rel="noreferrer" style={{ color: '#cbd5e1' }}>Solicitar mes de prueba</Link>
               <Link to="/login" style={{ color: '#cbd5e1' }}>Iniciar sesión</Link>

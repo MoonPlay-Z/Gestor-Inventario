@@ -1184,7 +1184,7 @@ export function AdminPage() {
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Descripción</label>
                     <textarea style={inputStyle(false)} rows={2} value={promocionForm.descripcion} onChange={e => setPromocionForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Descripción de la promoción..." />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Descuento (%)</label>
                       <input type="number" style={inputStyle(false)} value={promocionForm.descuentoPorc} onChange={e => setPromocionForm(f => ({ ...f, descuentoPorc: e.target.value }))} placeholder="Ej: 10" />
@@ -1194,7 +1194,7 @@ export function AdminPage() {
                       <input type="number" style={inputStyle(false)} value={promocionForm.diasExtraTrial} onChange={e => setPromocionForm(f => ({ ...f, diasExtraTrial: parseInt(e.target.value) || 0 }))} />
                     </div>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Usos Máximos</label>
                       <input type="number" style={inputStyle(false)} value={promocionForm.usosMaximos} onChange={e => setPromocionForm(f => ({ ...f, usosMaximos: parseInt(e.target.value) || 100 }))} />
@@ -1236,7 +1236,7 @@ export function AdminPage() {
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>URL de Imagen</label>
                     <input style={inputStyle(false)} value={noticiaForm.imagenUrl} onChange={e => setNoticiaForm(f => ({ ...f, imagenUrl: e.target.value }))} placeholder="https://ejemplo.com/imagen.jpg" />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '1rem' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>Categoría</label>
                       <input style={inputStyle(false)} value={noticiaForm.categoria} onChange={e => setNoticiaForm(f => ({ ...f, categoria: e.target.value }))} placeholder="Ej: Anuncio" />

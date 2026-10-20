@@ -112,9 +112,23 @@ img {
   display: block;
 }
 
+/* Chart.js fija un ancho en píxeles al canvas: sin estos topes, al ampliar la
+   ventana el canvas agranda su tarjeta y el documento gana scroll horizontal. */
+canvas { max-width: 100%; }
+
+.card { min-width: 0; }
+
 #main-content {
   background: var(--bg-page);
   color: var(--text-primary);
+  /* Ítem flex: sin esto su `min-width: auto` deja que una tabla ancha estire
+     el documento y aparezca scroll horizontal al pasar de móvil a escritorio. */
+  min-width: 0;
+  /* Pantalla completa (app Android): el contenido no se mete bajo el lente ni
+     bajo el gesto inferior. En navegador las insets valen 0. */
+  padding-top: var(--safe-top, 0px);
+  padding-left: var(--safe-left, 0px);
+  padding-right: var(--safe-right, 0px);
 }
 
 .page-header {

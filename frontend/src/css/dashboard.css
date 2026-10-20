@@ -1,0 +1,252 @@
+/* =========================================================================
+   Dashboard principal — escala y legibilidad de tablas.
+
+   - En escritorio el contenido se limita a 1440 px y el gráfico y la tabla
+     comparten fila (antes la tabla quedaba a todo el ancho, con columnas
+     separadas por cientos de píxeles y difícil de seguir).
+   - En teléfono la tabla de facturas se sustituye por fichas compactas: dos
+     líneas por factura en lugar de cinco filas apiladas, para ver varias de
+     un vistazo.
+   ========================================================================= */
+
+.dash-body {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 1200px) {
+  .dash-grid {
+    grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.dash-card {
+  padding: clamp(1rem, 0.7rem + 0.9vw, 1.6rem);
+  min-width: 0;
+}
+
+/* ── Cabecera de la tarjeta ───────────────────────────────────────────────── */
+.dash-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: clamp(0.75rem, 1.4vw, 1.1rem);
+}
+
+.dash-h3 {
+  margin: 0;
+  font-size: clamp(1rem, 0.94rem + 0.25vw, 1.15rem);
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.dash-sub {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.dash-link {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dash-link:hover { text-decoration: underline; }
+
+.dash-empty {
+  margin: 0;
+  padding: 24px 0;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+/* ── Tabla (escritorio / tablet) ──────────────────────────────────────────── */
+.dash-tabla {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.dash-tabla table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.dash-tabla th {
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--border);
+  color: var(--text-secondary);
+  font-size: clamp(0.66rem, 0.62rem + 0.1vw, 0.74rem);
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dash-tabla td {
+  padding: clamp(9px, 0.5rem + 0.3vw, 14px) 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: clamp(0.82rem, 0.76rem + 0.18vw, 0.95rem);
+  vertical-align: middle;
+}
+
+.dash-tabla tbody tr:last-child td { border-bottom: none; }
+
+.dash-tabla tbody tr:hover { background: var(--bg-hover); }
+
+.dash-tabla .num { text-align: right; }
+.dash-tabla .center { text-align: center; }
+
+.dash-tabla .mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.dash-tabla .strong { font-weight: 700; }
+
+.dash-cliente {
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.dash-rif {
+  margin-top: 1px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.dash-fecha {
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* ── Fichas (teléfono) ────────────────────────────────────────────────────── */
+.dash-facturas {
+  display: none;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dash-factura {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-card);
+  margin-bottom: 8px;
+}
+
+.dash-factura:last-child { margin-bottom: 0; }
+
+.dash-factura-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.dash-factura-top > span {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.dash-factura-top .badge { font-size: 0.68rem; }
+
+.dash-factura-cliente {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-factura-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.dash-factura-meta strong {
+  font-size: 1rem;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Error de carga ───────────────────────────────────────────────────────── */
+.dash-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 14px 16px;
+  border: 1px solid #fecaca;
+  border-left: 4px solid #ef4444;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.dash-error > svg {
+  flex: 0 0 auto;
+}
+
+.dash-error > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-error strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.dash-error p {
+  margin: 2px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+[data-theme='dark'] .dash-error {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
+/* ── Teléfono / teléfono girado ───────────────────────────────────────────── */
+@media (max-width: 767px), (max-width: 1023px) and (max-height: 520px) and (orientation: landscape) {
+  .dash-body {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .dash-grid { gap: 16px; }
+
+  .dash-tabla { display: none; }
+
+  .dash-facturas { display: block; }
+
+  .dash-card { padding: 14px; }
+}

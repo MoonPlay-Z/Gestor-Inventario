@@ -354,7 +354,7 @@ export function CotizacionesPage() {
         )}
 
         {activeTab === 'nueva' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '24px', alignItems: 'start' }}>
+          <div className="split-360">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div className="card">
                 <div className="form-group">

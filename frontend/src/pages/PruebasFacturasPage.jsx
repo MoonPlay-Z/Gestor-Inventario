@@ -203,7 +203,7 @@ export function PruebasFacturasPage() {
               <label className="form-label" htmlFor="invoice-code">Código de factura</label>
               <input
                 id="invoice-code"
-                className="form-input"
+                className="form-control"
                 value={codigo}
                 onChange={(event) => setCodigo(event.target.value)}
                 placeholder="Ej. 00042"
@@ -273,7 +273,7 @@ export function PruebasFacturasPage() {
                                   <span style={{ fontSize: '0.8rem' }}>$</span>
                                   <input
                                     aria-label={`Precio unitario de ${item.descripcionHistorica}`}
-                                    className="form-input"
+                                    className="form-control"
                                     type="number"
                                     min="0"
                                     step="0.01"
@@ -300,7 +300,7 @@ export function PruebasFacturasPage() {
                                     return (
                                   <input
                                     aria-label={`Cantidad de ${item.descripcionHistorica}`}
-                                    className="form-input"
+                                    className="form-control"
                                     type="number"
                                     min={quantityStep === '1' ? '1' : '0.0001'}
                                     step={quantityStep}
@@ -316,7 +316,7 @@ export function PruebasFacturasPage() {
                                   })()}
                                   <select
                                     aria-label={`Unidad de ${item.descripcionHistorica}`}
-                                    className="form-input"
+                                    className="form-control"
                                     disabled={factura.estado === 'VOIDED' || !item.producto || getCompatibleUnits(item).length === 1}
                                     value={editItems[index]?.unidadMedida || item.unidadMedida}
                                     onChange={(event) => setEditItems((current) => current.map((row, rowIndex) => (
@@ -360,7 +360,7 @@ export function PruebasFacturasPage() {
                               <label className="form-label" htmlFor={`payment-method-${pago.id}`}>Método de pago</label>
                               <select
                                 id={`payment-method-${pago.id}`}
-                                className="form-input"
+                                className="form-control"
                                 value={pago.metodoPago}
                                 onChange={(event) => setEditPayments((current) => current.map((row, rowIndex) => (
                                   rowIndex === index ? { ...row, metodoPago: event.target.value } : row
@@ -377,7 +377,7 @@ export function PruebasFacturasPage() {
                               <label className="form-label" htmlFor={`payment-amount-${pago.id}`}>Monto pagado</label>
                               <input
                                 id={`payment-amount-${pago.id}`}
-                                className="form-input"
+                                className="form-control"
                                 type="number"
                                 min="0"
                                 step="0.01"
@@ -392,7 +392,7 @@ export function PruebasFacturasPage() {
                               <label className="form-label" htmlFor={`payment-reference-${pago.id}`}>Folio o referencia</label>
                               <input
                                 id={`payment-reference-${pago.id}`}
-                                className="form-input"
+                                className="form-control"
                                 value={pago.referenciaTransaccion}
                                 maxLength={200}
                                 onChange={(event) => setEditPayments((current) => current.map((row, rowIndex) => (
@@ -413,7 +413,7 @@ export function PruebasFacturasPage() {
                     <label className="form-label" htmlFor="invoice-due-date">Fecha de vencimiento</label>
                     <input
                       id="invoice-due-date"
-                      className="form-input"
+                      className="form-control"
                       type="date"
                       value={fechaVencimiento}
                       onChange={(event) => setFechaVencimiento(event.target.value)}
@@ -424,7 +424,7 @@ export function PruebasFacturasPage() {
                     <label className="form-label" htmlFor="invoice-notes">Observaciones</label>
                     <textarea
                       id="invoice-notes"
-                      className="form-input"
+                      className="form-control"
                       rows={3}
                       maxLength={1000}
                       value={observaciones}

@@ -161,7 +161,7 @@ export function VentasPage() {
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Período
-              <select className="form-input" value={periodo} onChange={e => { setPeriodo(e.target.value); setPage(1); }}>
+              <select className="form-control" value={periodo} onChange={e => { setPeriodo(e.target.value); setPage(1); }}>
                 <option value="todos">Todos</option>
                 <option value="hoy">Hoy</option>
                 <option value="semana">Esta semana</option>
@@ -173,7 +173,7 @@ export function VentasPage() {
             {periodo === 'mesEspecifico' && (
               <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Mes
-                <select className="form-input" value={mes} onChange={e => { setMes(parseInt(e.target.value)); setPage(1); }}>
+                <select className="form-control" value={mes} onChange={e => { setMes(parseInt(e.target.value)); setPage(1); }}>
                   {['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].map((m, i) => (
                     <option key={i + 1} value={i + 1}>{m}</option>
                   ))}
@@ -183,12 +183,12 @@ export function VentasPage() {
             {(periodo === 'mesEspecifico' || periodo === 'anio') && (
               <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Año
-                <input type="number" className="form-input" value={anio} onChange={e => { setAnio(parseInt(e.target.value) || new Date().getFullYear()); setPage(1); }} style={{ width: '110px' }} />
+                <input type="number" className="form-control" value={anio} onChange={e => { setAnio(parseInt(e.target.value) || new Date().getFullYear()); setPage(1); }} style={{ width: '110px' }} />
               </label>
             )}
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Estado
-              <select className="form-input" value={estadoFiltro} onChange={e => { setEstadoFiltro(e.target.value); setPage(1); }}>
+              <select className="form-control" value={estadoFiltro} onChange={e => { setEstadoFiltro(e.target.value); setPage(1); }}>
                 <option value="">Todos</option>
                 <option value="PAID">Pagada</option>
                 <option value="PENDING">Pendiente</option>
@@ -200,7 +200,7 @@ export function VentasPage() {
               Buscar cliente, usuario o producto
               <input
                 type="text"
-                className="form-input"
+                className="form-control"
                 placeholder="Cliente, RIF, usuario o producto..."
                 value={busqueda}
                 onChange={e => setBusqueda(e.target.value)}

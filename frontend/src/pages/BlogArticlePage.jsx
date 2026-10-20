@@ -1,7 +1,6 @@
 import React from 'react';
 import { useParams, Link, Navigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
-import packageIcon from '@iconify/icons-mdi/package-variant';
 
 const articles = {
   'control-inventario-tienda': {
@@ -476,17 +475,13 @@ export function BlogArticlePage() {
         backdropFilter: 'blur(10px)'
       }}>
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-          <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '8px',
-            backgroundColor: '#2563eb',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <Icon icon={packageIcon} className="h-6 w-6 text-white" />
-          </div>
+          <img
+            src="/favicon.png"
+            alt=""
+            width="36"
+            height="36"
+            style={{ width: '36px', height: '36px', borderRadius: '8px', display: 'block', flexShrink: 0 }}
+          />
           <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
             GestorPOS<span style={{ color: '#38bdf8' }}>.dev</span>
           </span>

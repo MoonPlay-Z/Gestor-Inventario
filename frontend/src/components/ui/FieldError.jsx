@@ -6,7 +6,7 @@ export function FieldError({ message }) {
   if (!message) return null;
 
   return (
-    <div style={{
+    <div className="field-error" style={{
       display: 'flex',
       alignItems: 'flex-start',
       gap: '6px',

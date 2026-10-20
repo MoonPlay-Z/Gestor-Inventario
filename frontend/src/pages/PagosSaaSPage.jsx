@@ -75,7 +75,8 @@ export function PagosSaaSPage() {
             color: '#2563eb',
             fontWeight: 700,
             fontSize: '0.9rem',
-            textDecoration: 'none'
+            textDecoration: 'none',
+            minHeight: '44px'
           }}
         >
           <Icon icon={arrowLeftIcon} className="h-5 w-5" /> Volver al Inicio
@@ -83,20 +84,18 @@ export function PagosSaaSPage() {
       </div>
 
       {/* Main Split Card Container */}
-      <div style={{
+      <div className="auth-split" style={{
         width: '100%',
         maxWidth: '980px',
         backgroundColor: '#ffffff',
         borderRadius: '20px',
         boxShadow: '0 20px 35px -5px rgba(15, 23, 42, 0.1), 0 10px 15px -5px rgba(15, 23, 42, 0.04)',
-        display: 'grid',
-        gridTemplateColumns: 'minmax(320px, 420px) 1fr',
         overflow: 'hidden',
         border: '1px solid #e2e8f0'
       }}>
 
         {/* LEFT PANEL: Deep Royal Blue Gradient Card */}
-        <div style={{
+        <div className="auth-brand" style={{
           background: 'linear-gradient(180deg, #1d4ed8 0%, #1e1b4b 100%)',
           color: '#ffffff',
           padding: '40px 32px',
@@ -114,7 +113,7 @@ export function PagosSaaSPage() {
             </p>
 
             {/* Payment Method Option Cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div className="auth-features" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               
               {/* Option 1: Pago Móvil */}
               <div style={{

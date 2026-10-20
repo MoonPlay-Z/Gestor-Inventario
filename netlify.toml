@@ -3,6 +3,36 @@
   publish = "frontend/dist"
 
 # -----------------------------------------------------------
+# API PROXY (same-origin HTTPS → Render)
+# El frontend llama a /api (mismo origen, HTTPS) y Netlify lo reenvía al
+# backend de Render: sin CORS y sin contenido mixto (la cámara exige HTTPS).
+# Debe ir ANTES de la regla SPA para que no la capture.
+# -----------------------------------------------------------
+[[redirects]]
+  from = "/api/*"
+  to = "https://gestor-inventario-qamm.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# -----------------------------------------------------------
+# APK + manifiesto de actualizaciones
+# La app nativa (https://localhost) consulta version.json desde otro
+# origen: necesita CORS. El manifiesto no se cachea (se revisa a diario);
+# la APK sí puede cachearse, pero siempre se valida contra su SHA-256.
+# -----------------------------------------------------------
+[[headers]]
+  for = "/descargas/version.json"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "no-cache, must-revalidate"
+
+[[headers]]
+  for = "/descargas/*.apk"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "public, max-age=86400"
+
+# -----------------------------------------------------------
 # SPA REDIRECT (React Router)
 # -----------------------------------------------------------
 [[redirects]]

@@ -1,0 +1,222 @@
+/* =========================================================================
+   Escáner de códigos con ML Kit (app nativa).
+
+   La cámara la dibuja el nativo DETRÁS del WebView: mientras el escáner está
+   activo se oculta todo el documento (`body.barcode-scanner-active`) y encima
+   se pinta este marco. El fondo oscuro alrededor del recuadro lo genera la
+   sombra del propio marco (box-shadow de 100vmax), así el centro queda
+   transparente y deja ver la cámara.
+   ========================================================================= */
+
+/* El fondo del documento también tiene que desaparecer: `:root` trae
+   `background-color: var(--bg-page)` en main.css y ese color se propaga al
+   lienzo de la página, por encima de la cámara nativa. `visibility: hidden`
+   en <body> no basta porque el fondo del lienzo se pinta aparte. */
+html.barcode-scanner-active,
+html.barcode-scanner-active body,
+html.barcode-scanner-active #root {
+  background: transparent !important;
+}
+
+html.barcode-scanner-active body {
+  visibility: hidden;
+}
+
+html.barcode-scanner-active .mlkit-scan {
+  visibility: visible;
+}
+
+body.barcode-scanner-active {
+  visibility: hidden;
+  background: transparent !important;
+}
+
+body.barcode-scanner-active .mlkit-scan {
+  visibility: visible;
+}
+
+.mlkit-scan {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #fff;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Barra superior ──────────────────────────────────────────────────────── */
+.mlkit-scan__bar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding:
+    calc(10px + var(--safe-top, 0px))
+    calc(14px + var(--safe-right, 0px))
+    10px
+    calc(14px + var(--safe-left, 0px));
+  background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
+}
+
+.mlkit-scan__titulo {
+  flex: 1;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* ── Botones ─────────────────────────────────────────────────────────────── */
+.mlkit-scan__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.55);
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.mlkit-scan__btn:active {
+  transform: scale(0.94);
+}
+
+.mlkit-scan__btn.is-on {
+  background: #facc15;
+  border-color: #facc15;
+  color: #0f172a;
+}
+
+.mlkit-scan__btn--sm {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+}
+
+/* ── Recuadro de lectura ─────────────────────────────────────────────────── */
+.mlkit-scan__centro {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 16px;
+}
+
+.mlkit-scan__marco {
+  position: relative;
+  width: min(78vw, 520px);
+  height: min(30vh, 220px);
+  border: 3px solid rgba(52, 211, 153, 0.9);
+  border-radius: 18px;
+  box-shadow:
+    0 0 0 100vmax rgba(0, 0, 0, 0.55),
+    0 0 24px rgba(52, 211, 153, 0.35);
+}
+
+.mlkit-scan__linea {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  top: 50%;
+  height: 2px;
+  border-radius: 2px;
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+  opacity: 0.9;
+}
+
+.mlkit-scan__marco.is-activo .mlkit-scan__linea {
+  animation: mlkit-linea 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes mlkit-linea {
+  from { top: 9%; }
+  to { top: 91%; }
+}
+
+.mlkit-scan__pista {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
+}
+
+.mlkit-scan__aviso {
+  margin: 0;
+  max-width: 420px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(239, 68, 68, 0.18);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: #fecaca;
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* ── Pie: zoom y nota ────────────────────────────────────────────────────── */
+.mlkit-scan__pie {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding:
+    10px
+    calc(14px + var(--safe-right, 0px))
+    calc(12px + var(--safe-bottom, 0px))
+    calc(14px + var(--safe-left, 0px));
+  background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6));
+}
+
+.mlkit-scan__zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.mlkit-scan__nota {
+  margin: 0;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.66);
+  text-align: center;
+}
+
+/* ── Teléfono en horizontal: el recuadro se aplana y se gana alto ────────── */
+@media (max-width: 1023px) and (max-height: 520px) and (orientation: landscape) {
+  .mlkit-scan__bar { padding-top: calc(6px + var(--safe-top, 0px)); padding-bottom: 6px; }
+  .mlkit-scan__centro { gap: 8px; }
+  .mlkit-scan__marco {
+    width: min(58vw, 460px);
+    height: min(42vh, 150px);
+  }
+  .mlkit-scan__pista { font-size: 12.5px; }
+  .mlkit-scan__pie { flex-direction: row; justify-content: center; gap: 14px; padding-bottom: calc(8px + var(--safe-bottom, 0px)); }
+  .mlkit-scan__nota { display: none; }
+}

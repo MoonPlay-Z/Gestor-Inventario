@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="google-site-verification" content="Qz4WVNPaaU9wBBrk0SKpPpMiLR7pB5j06jnF2p6TbBc" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="description" content="Sistema POS e inventario para comercios en Venezuela. Controla ventas, stock y caja en USD y VES. Solicita un mes de prueba gratis por WhatsApp." />
   <meta name="keywords" content="sistema POS Venezuela, control de inventario, facturación comercios, gestión inventario, punto de venta, sistema ventas Venezuela" />
   <meta name="author" content="Juan Arcila - GestorPOS" />
@@ -28,7 +28,15 @@
   
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="/favicon.png" />
-  <link rel="apple-touch-icon" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="GestorPOS" />
   
   <!-- Preconnect para rendimiento -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -89,9 +97,88 @@
       document.documentElement.setAttribute('data-theme', savedTheme);
     })();
   </script>
+
+  <!-- Pantalla de carga: se pinta antes de que React monte y React la
+       reemplaza con la app. Mismo fondo que el splash nativo de Android. -->
+  <style>
+    #boot-splash {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: radial-gradient(circle at 50% 32%, #1e293b 0%, #0f172a 62%);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #boot-splash img {
+      width: 92px;
+      height: 92px;
+      border-radius: 22px;
+      display: block;
+      box-shadow: 0 16px 40px rgba(37, 99, 235, 0.38);
+      animation: boot-pop 0.5s ease-out both;
+    }
+    #boot-splash .boot-name {
+      font-size: 1.4rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      line-height: 1;
+    }
+    #boot-splash .boot-name span { color: #38bdf8; }
+    #boot-splash .boot-tag {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: rgba(255, 255, 255, 0.48);
+    }
+    #boot-splash .boot-bar {
+      width: 116px;
+      height: 3px;
+      border-radius: 99px;
+      background: rgba(255, 255, 255, 0.1);
+      overflow: hidden;
+    }
+    #boot-splash .boot-bar i {
+      display: block;
+      width: 42%;
+      height: 100%;
+      border-radius: 99px;
+      background: #38bdf8;
+      animation: boot-slide 1.1s ease-in-out infinite;
+    }
+    @keyframes boot-pop {
+      /* Sin fundido desde 0: el logo debe verse desde el primer frame */
+      from { transform: scale(0.94); }
+      to   { transform: scale(1); }
+    }
+    @keyframes boot-slide {
+      0%   { transform: translateX(-110%); }
+      100% { transform: translateX(300%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #boot-splash img { animation: none; }
+      #boot-splash .boot-bar i { animation: none; width: 100%; }
+    }
+    #boot-splash.boot-out {
+      opacity: 0;
+      transition: opacity 0.22s ease;
+      pointer-events: none;
+    }
+  </style>
 </head>
 <body>
   
+  <div id="boot-splash" role="status" aria-label="Cargando GestorPOS">
+    <img src="/favicon.png" alt="" width="92" height="92" />
+    <div class="boot-name">GestorPOS<span>.dev</span></div>
+    <div class="boot-tag">Sistema POS e inventario</div>
+    <div class="boot-bar"><i></i></div>
+  </div>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
 </body>

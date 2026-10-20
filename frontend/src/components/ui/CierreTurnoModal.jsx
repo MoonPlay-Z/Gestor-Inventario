@@ -137,7 +137,7 @@ export function CierreTurnoModal({ preview, submitting, onCancel, onConfirm }) {
 
           <div>
             <h4 style={{ margin: '0 0 10px' }}>Cobros Electrónicos y Bancarios Verificados <small style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>Conciliación bancaria y lotes POS — verificación contra reportes y extractos bancarios</small></h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: 12 }}>
               <VerificadoCard icon="mdi:cellphone-wireless" titulo="Pago Móvil P2P/C2P" subtitulo="Banesco Pay / Mercantil" registrado={preview?.desglose?.pagoMovil} lotesLabel="Lotes / Recibos" lotes={lotesPM} setLotes={setLotesPM} contravalor={preview?.desglose?.pagoMovil} verificado={verPM} setVerificado={setVerPM} diferencia={(parseFloat(verPM) || 0) - Number(preview?.desglose?.pagoMovil || 0)} />
               <VerificadoCard icon="mdi:credit-card" titulo="Punto de Venta (Tarjeta)" subtitulo="Terminal #8834" registrado={preview?.desglose?.punto} lotesLabel="Cierres de Lote POS" lotes={lotesPt} setLotes={setLotesPt} contravalor={preview?.desglose?.punto} verificado={verPt} setVerificado={setVerPt} diferencia={(parseFloat(verPt) || 0) - Number(preview?.desglose?.punto || 0)} />
               <VerificadoCard icon="mdi:bank" titulo="Transferencia Inmediata" subtitulo="Cuentas Custodia" registrado={preview?.desglose?.transferencia} lotesLabel="Comprobantes Bancarios" lotes={lotesTr} setLotes={setLotesTr} contravalor={preview?.desglose?.transferencia} verificado={verTr} setVerificado={setVerTr} diferencia={(parseFloat(verTr) || 0) - Number(preview?.desglose?.transferencia || 0)} />
@@ -146,7 +146,7 @@ export function CierreTurnoModal({ preview, submitting, onCancel, onConfirm }) {
 
           <div>
             <h4 style={{ margin: '0 0 10px' }}>Arqueo Físico en Gaveta por Moneda <small style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>Regla contable: Arqueo estricto e independiente sin compensación cruzada</small></h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 12 }}>
               <ArqueoCard moneda="USD" simbolo="$" color="#16a34a" fondoInicial={Number(preview?.caja?.montoInicial || 0)} ventas={Number(preview?.desglose?.efectivo || 0)} esVES={false} vueltos={vueltosUSD} setVueltos={setVueltosUSD} retiros={retirosUSD} setRetiros={setRetirosUSD} esperado={esperadoUSD} contado={contadoUSD} setContado={setContadoUSD} />
               <ArqueoCard moneda="VES" simbolo="Bs" color="#2563eb" fondoInicial={0} ventas={Number(preview?.desgloseVES?.efectivo || 0)} esVES={true} vueltos={vueltosVES} setVueltos={setVueltosVES} gastos={gastosVES} setGastos={setGastosVES} esperado={esperadoVES} contado={contadoVES} setContado={setContadoVES} />
             </div>

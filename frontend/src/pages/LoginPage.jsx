@@ -1,28 +1,48 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
-import arrowLeftIcon from '@iconify/icons-mdi/arrow-left';
-import packageIcon from '@iconify/icons-mdi/package-variant';
-import flashIcon from '@iconify/icons-mdi/flash';
-import cartIcon from '@iconify/icons-mdi/cart';
-import shieldCheckIcon from '@iconify/icons-mdi/shield-check';
+import accountIcon from '@iconify/icons-mdi/account-outline';
+import lockIcon from '@iconify/icons-mdi/lock-outline';
+import eyeIcon from '@iconify/icons-mdi/eye';
+import eyeOffIcon from '@iconify/icons-mdi/eye-off';
 import loginIcon from '@iconify/icons-mdi/login';
+import shieldLockIcon from '@iconify/icons-mdi/shield-lock-outline';
+import whatsappIcon from '@iconify/icons-mdi/whatsapp';
 import { API } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { FieldError, FormError } from '../components/ui';
 import { ValidationRules, getErrorMessage } from '../utils/validation';
+import { AuthLayout } from '../components/auth/AuthLayout';
+
+// El sistema todavía no tiene recuperación automática de contraseña: el
+// enlace abre WhatsApp con el mensaje ya escrito para que soporte la restablezca.
+const SOPORTE_WHATSAPP =
+  'https://wa.me/584127723148?text=' +
+  encodeURIComponent('Hola, necesito ayuda para recuperar el acceso a mi cuenta de GestorPOS.');
+
+const CLASES_INPUT =
+  'w-full rounded-[12px] border bg-slate-50 px-4 py-3.5 text-base font-medium text-slate-900 placeholder:font-normal placeholder:text-slate-400 transition-colors focus:bg-white focus:outline-none focus:ring-2';
 
 export function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [verPassword, setVerPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState('');
-  const { user, token } = useAuth();
-  const { loginUser } = useAuth();
+  const { token, loginUser } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const usuarioRef = useRef(null);
+
+  // En escritorio el foco ahorra un clic; en teléfono abriría el teclado al
+  // entrar y taparía el formulario, así que solo se enfoca desde 1024 px.
+  useEffect(() => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      usuarioRef.current?.focus();
+    }
+  }, []);
 
   // Redirect to dashboard if already logged in
   React.useEffect(() => {
@@ -33,13 +53,13 @@ export function LoginPage() {
 
   const validateForm = () => {
     const errors = {};
-    
+
     const usernameError = ValidationRules.required(username, 'El usuario');
     if (usernameError) errors.username = usernameError;
-    
+
     const passwordError = ValidationRules.required(password, 'La contraseña');
     if (passwordError) errors.password = passwordError;
-    
+
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -47,7 +67,7 @@ export function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError('');
-    
+
     if (!validateForm()) {
       return;
     }
@@ -55,7 +75,7 @@ export function LoginPage() {
     setLoading(true);
     try {
       const res = await API.login({ username, password });
-      loginUser(res.usuario, res.token, res.empresa);
+      loginUser(res.usuario, res.token, res.empresa, res.refreshToken);
       showToast(`¡Bienvenido de nuevo, ${res.usuario.nombre || res.usuario.username}!`, 'success');
       navigate('/dashboard');
     } catch (err) {
@@ -72,7 +92,7 @@ export function LoginPage() {
         });
         return;
       }
-      
+
       const errorMessage = err.status === 401 && err.message
         ? err.message
         : getErrorMessage(err, 'Usuario o contraseña incorrectos. Verifica tus credenciales.');
@@ -83,277 +103,148 @@ export function LoginPage() {
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#f8fafc',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '30px 16px',
-      fontFamily: "'Inter', system-ui, sans-serif"
-    }}>
-      {/* Top Left Navigation Link */}
-      <div style={{ width: '100%', maxWidth: '980px', marginBottom: '16px' }}>
+    <AuthLayout titulo="¡Bienvenido!">
+      <div className="auth-head mb-5">
+        <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+          Iniciar Sesión
+        </h2>
+        <p className="auth-subtitulo mt-1.5 text-sm leading-relaxed text-slate-500">
+          Introduce tus credenciales para acceder al sistema
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+        <FormError message={formError} onDismiss={() => setFormError('')} />
+
+        <div>
+          <label
+            htmlFor="username"
+            className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-700"
+          >
+            Usuario o correo *
+          </label>
+
+          <div className="relative">
+            <input
+              id="username"
+              ref={usuarioRef}
+              name="username"
+              type="text"
+              autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
+              placeholder="ej: admin o tu_usuario"
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                if (fieldErrors.username) {
+                  setFieldErrors((prev) => ({ ...prev, username: null }));
+                }
+              }}
+              className={`${CLASES_INPUT} pr-12 ${
+                fieldErrors.username
+                  ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/30'
+                  : 'border-slate-200 focus:border-brand-600 focus:ring-brand-600/30'
+              }`}
+              aria-invalid={Boolean(fieldErrors.username)}
+              required
+            />
+            <span className="pointer-events-none absolute inset-y-0 right-0 flex w-12 items-center justify-center text-slate-400">
+              <Icon icon={accountIcon} className="h-5 w-5" />
+            </span>
+          </div>
+
+          <FieldError message={fieldErrors.username} />
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <label
+              htmlFor="password"
+              className="block text-xs font-semibold uppercase tracking-wider text-slate-700"
+            >
+              Contraseña *
+            </label>
+
+            <a
+              href={SOPORTE_WHATSAPP}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-600 transition-colors hover:text-brand-800"
+            >
+              <Icon icon={whatsappIcon} className="h-3.5 w-3.5" />
+              ¿Olvidaste tu contraseña?
+            </a>
+          </div>
+
+          <div className="relative">
+            <input
+              id="password"
+              name="password"
+              type={verPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) {
+                  setFieldErrors((prev) => ({ ...prev, password: null }));
+                }
+              }}
+              className={`${CLASES_INPUT} pr-12 ${
+                fieldErrors.password
+                  ? 'border-rose-400 focus:border-rose-500 focus:ring-rose-500/30'
+                  : 'border-slate-200 focus:border-brand-600 focus:ring-brand-600/30'
+              }`}
+              aria-invalid={Boolean(fieldErrors.password)}
+              required
+            />
+
+            <button
+              type="button"
+              onClick={() => setVerPassword((v) => !v)}
+              className="absolute inset-y-0 right-0 flex w-12 items-center justify-center rounded-r-[12px] text-slate-400 transition-colors hover:text-brand-600 focus:outline-none focus-visible:text-brand-600"
+              aria-label={verPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              aria-pressed={verPassword}
+              tabIndex={0}
+            >
+              <Icon icon={verPassword ? eyeOffIcon : eyeIcon} className="h-5 w-5" />
+            </button>
+          </div>
+
+          <FieldError message={fieldErrors.password} />
+        </div>
+
+        <div className="pt-1">
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[12px] bg-brand-600 px-5 py-3.5 text-base font-bold text-white shadow-btn-glow transition-all hover:bg-brand-700 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
+          >
+            <Icon icon={loading ? lockIcon : loginIcon} className="h-5 w-5" />
+            {loading ? 'Ingresando…' : 'Iniciar Sesión'}
+          </button>
+        </div>
+      </form>
+
+      <div className="auth-cta mt-5 text-center text-sm text-slate-600">
+        ¿No tienes una cuenta?{' '}
         <Link
-          to="/"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            color: '#2563eb',
-            fontWeight: 700,
-            fontSize: '0.9rem',
-            textDecoration: 'none'
-          }}
+          to="/registro"
+          className="font-bold text-brand-600 transition-colors hover:text-brand-800"
         >
-          <Icon icon={arrowLeftIcon} className="h-5 w-5" /> Volver al Inicio
+          Prueba gratis 7 días
         </Link>
       </div>
 
-      {/* Main Split Container */}
-      <div style={{
-        width: '100%',
-        maxWidth: '980px',
-        backgroundColor: '#ffffff',
-        borderRadius: '20px',
-        boxShadow: '0 20px 35px -5px rgba(15, 23, 42, 0.1), 0 10px 15px -5px rgba(15, 23, 42, 0.04)',
-        display: 'grid',
-        gridTemplateColumns: 'minmax(320px, 420px) 1fr',
-        overflow: 'hidden',
-        border: '1px solid #e2e8f0'
-      }}>
-
-        {/* LEFT PANEL: Royal Blue Gradient Card */}
-        <div style={{
-          background: 'linear-gradient(180deg, #1d4ed8 0%, #1e1b4b 100%)',
-          color: '#ffffff',
-          padding: '40px 32px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          gap: '32px'
-        }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-              <div style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <Icon icon={packageIcon} className="h-6 w-6 text-white" />
-              </div>
-              <span style={{ fontSize: '1.2rem', fontWeight: 800 }}>GestorPOS<span style={{ color: '#38bdf8' }}>.dev</span></span>
-            </div>
-
-            <h2 style={{ fontSize: '1.85rem', fontWeight: 800, marginBottom: '12px', letterSpacing: '-0.02em' }}>
-              ¡Bienvenido de Nuevo!
-            </h2>
-            <p style={{ color: 'rgba(255, 255, 255, 0.85)', fontSize: '0.9rem', lineHeight: '1.55', marginBottom: '28px' }}>
-              Ingresa al panel para gestionar ventas en tiempo real, sincronización con tasa BCV, cierres de caja e inventario multimoneda.
-            </p>
-
-            {/* Feature Highlights */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              
-              <div style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '14px',
-                padding: '14px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-                border: '1px solid rgba(255, 255, 255, 0.15)'
-              }}>
-                <div style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <Icon icon={flashIcon} className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>Tasa Oficial BCV</div>
-                  <div style={{ fontSize: '0.75rem', opacity: 0.85, marginTop: '2px' }}>Conversión automática USD / VES</div>
-                </div>
-              </div>
-
-              <div style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '14px',
-                padding: '14px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-                border: '1px solid rgba(255, 255, 255, 0.15)'
-              }}>
-                <div style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <Icon icon={cartIcon} className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>Punto de Venta POS</div>
-                  <div style={{ fontSize: '0.75rem', opacity: 0.85, marginTop: '2px' }}>Facturación rápida y cierres de caja</div>
-                </div>
-              </div>
-
-              <div style={{
-                backgroundColor: 'rgba(255, 255, 255, 0.12)',
-                backdropFilter: 'blur(10px)',
-                borderRadius: '14px',
-                padding: '14px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '14px',
-                border: '1px solid rgba(255, 255, 255, 0.15)'
-              }}>
-                <div style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '10px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <Icon icon={shieldCheckIcon} className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>Seguridad Multi-Tenant</div>
-                  <div style={{ fontSize: '0.75rem', opacity: 0.85, marginTop: '2px' }}>Aislamiento total por empresa</div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.15)', paddingTop: '16px', fontSize: '0.75rem', opacity: 0.8 }}>
-            Soporte técnico y atención WhatsApp: <strong>+58 412-7723148</strong>
-          </div>
-        </div>
-
-        {/* RIGHT PANEL: Form */}
-        <div style={{ padding: '44px 40px', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a', marginBottom: '4px' }}>
-            Iniciar Sesión
-          </h3>
-          <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '28px' }}>
-            Introduce tus credenciales para acceder al sistema
-          </p>
-
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <FormError message={formError} onDismiss={() => setFormError('')} />
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', letterSpacing: '0.05em' }}>
-                USUARIO O CORREO *
-              </label>
-              <input
-                type="text"
-                style={{
-                  border: fieldErrors.username ? '1px solid #ef4444' : '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '12px 14px',
-                  fontSize: '0.9rem',
-                  color: '#0f172a',
-                  outline: 'none',
-                  backgroundColor: '#ffffff',
-                  transition: 'border-color 0.2s'
-                }}
-                placeholder="ej: admin o tu_usuario"
-                value={username}
-                onChange={e => {
-                  setUsername(e.target.value);
-                  if (fieldErrors.username) {
-                    setFieldErrors(prev => ({ ...prev, username: null }));
-                  }
-                }}
-                required
-                autoFocus
-              />
-              <FieldError message={fieldErrors.username} />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: 700, color: '#334155', letterSpacing: '0.05em' }}>
-                CONTRASEÑA *
-              </label>
-              <input
-                type="password"
-                style={{
-                  border: fieldErrors.password ? '1px solid #ef4444' : '1px solid #cbd5e1',
-                  borderRadius: '8px',
-                  padding: '12px 14px',
-                  fontSize: '0.9rem',
-                  color: '#0f172a',
-                  outline: 'none',
-                  backgroundColor: '#ffffff',
-                  transition: 'border-color 0.2s'
-                }}
-                placeholder="••••••••"
-                value={password}
-                onChange={e => {
-                  setPassword(e.target.value);
-                  if (fieldErrors.password) {
-                    setFieldErrors(prev => ({ ...prev, password: null }));
-                  }
-                }}
-                required
-              />
-              <FieldError message={fieldErrors.password} />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                backgroundColor: '#2563eb',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '0.95rem',
-                padding: '14px 20px',
-                borderRadius: '10px',
-                border: 'none',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                marginTop: '8px',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
-                transition: 'all 0.2s ease'
-              }}
-            >
-              <Icon icon={loginIcon} className="h-5 w-5" />
-              {loading ? 'Ingresando...' : 'Iniciar Sesión'}
-            </button>
-          </form>
-
-          <div style={{ marginTop: '28px', textAlign: 'center', fontSize: '0.88rem', color: '#64748b' }}>
-            ¿No tienes una cuenta? <Link to="/registro" style={{ color: '#2563eb', fontWeight: 700, textDecoration: 'none' }}>Prueba Gratis (7 Días)</Link>
-          </div>
-        </div>
+      <div className="auth-nota mt-5 flex items-start gap-2.5 rounded-[12px] border border-slate-100 bg-slate-50 px-3.5 py-3 text-[11px] leading-relaxed text-slate-500">
+        <Icon icon={shieldLockIcon} className="mt-px h-4 w-4 shrink-0 text-emerald-600" />
+        <span>
+          Conexión cifrada. Tus datos viajan protegidos y cada empresa opera en un
+          espacio aislado.
+        </span>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Icon } from '@iconify/react';
 import closeIcon from '@iconify/icons-mdi/close';
 import cashIcon from '@iconify/icons-mdi/cash';
@@ -11,6 +11,11 @@ import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { Button } from '../components/ui';
 import { ReceiptModal } from '../components/ui/ReceiptModal';
+import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
+import { escanerNativoDisponible } from '../utils/lectorCodigos';
+import { EscanerMLKit } from '../components/scanner/EscanerMLKit';
+import { useMediaQuery } from '../hooks/useMediaQuery';
+import { initOutbox, encolarVenta, obtenerPendientes, obtenerTodos, syncOutbox, onOutboxChange } from '../services/outbox';
 
 const EMPTY_CLIENT = { razonSocial: '', rifCedula: '', direccion: '', telefono: '', correo: '' };
 
@@ -61,6 +66,19 @@ export function PosPage() {
   const [tipoUltimoDocumento, setTipoUltimoDocumento] = useState('factura');
 
   const [initialLoading, setInitialLoading] = useState(true);
+
+  const [showScanner, setShowScanner] = useState(false);
+  const [escanerNativo, setEscanerNativo] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const [syncHistory, setSyncHistory] = useState([]);
+
+  // Adaptación móvil: en <1024px el panel de cobro se abre en una hoja
+  // inferior (al alcance del pulgar), no en la columna lateral de escritorio.
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
+  const [showCobro, setShowCobro] = useState(false);
 
   const loadInitialData = async () => {
     try {
@@ -174,6 +192,66 @@ export function PosPage() {
     }
   };
 
+  // ── Outbox offline ──
+  const refreshPendingCount = useCallback(async () => {
+    try {
+      const pendientes = await obtenerPendientes();
+      setPendingCount(pendientes.length);
+    } catch (_) { /* IndexedDB no disponible: se oculta el indicador */ }
+  }, []);
+
+  const sincronizarAhora = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const res = await syncOutbox();
+      if (res.synced > 0) showToast(`${res.synced} venta(s) enviada(s) correctamente`, 'success');
+      if (res.failed > 0) showToast(`${res.failed} venta(s) con error (requieren revisión)`, 'warning');
+      await refreshPendingCount();
+    } catch (e) {
+      showToast('Error sincronizando: ' + e.message, 'error');
+    } finally {
+      setSyncing(false);
+    }
+  }, [refreshPendingCount]);
+
+  const cargarHistorial = useCallback(async () => {
+    try {
+      setSyncHistory(await obtenerTodos());
+    } catch (_) {
+      setSyncHistory([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    initOutbox().then(() => refreshPendingCount()).catch(() => {});
+    const unsub = onOutboxChange(() => refreshPendingCount());
+    const onOnline = () => { setIsOffline(false); sincronizarAhora(); };
+    const onOffline = () => setIsOffline(true);
+    const onSynced = (e) => {
+      const { factura, tipoDocumento } = e.detail || {};
+      if (factura) {
+        setLastFactura(factura);
+        setTipoUltimoDocumento(tipoDocumento || 'factura');
+        setShowReceipt(true);
+      }
+    };
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    window.addEventListener('outbox:synced', onSynced);
+    return () => {
+      unsub();
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+      window.removeEventListener('outbox:synced', onSynced);
+    };
+  }, [refreshPendingCount, sincronizarAhora]);
+
+  // Al vaciarse el carrito (venta emitida, guardada offline o borrada) se
+  // cierra la hoja de cobro para dejar libre la vista de venta.
+  useEffect(() => {
+    if (cart.length === 0) setShowCobro(false);
+  }, [cart.length]);
+
   const rawTasa = parseFloat(config?.moneda?.tasaDolar);
   const tasaDolar = (isFinite(rawTasa) && rawTasa > 0) ? rawTasa : 1;
   const currencySymbol = config?.moneda?.simbolo || '$';
@@ -214,6 +292,58 @@ export function PosPage() {
       }];
     });
     setSearchTerm('');
+  };
+
+  // ── Escáner de cámara (hook compartido con Visor de Precios) ──────────────
+  // Al detectar un código se busca el producto y se agrega al carrito.
+  // En la app Android manda el escáner de Google ML Kit; la cámara interna
+  // (ZXing) queda como respaldo para la web y para cuando ML Kit no está.
+  const agregarPorCodigo = async (code) => {
+    const texto = String(code || '').trim();
+    if (!texto) return;
+    try {
+      const product = await API.lookupProducto(texto);
+      addToCart(product);
+    } catch (err) {
+      // Dejar el texto leído a la vista permite corregirlo o buscar por nombre.
+      setSearchTerm(texto);
+      showToast(`No se encontró el producto con el código "${texto}"`, 'error');
+    }
+  };
+
+  const { videoRef, cameraActive, cameraError, scanning, start: startScanner, stop: stopScanner } =
+    useBarcodeScanner({
+      onDetect: async (code) => {
+        stopScanner();
+        setShowScanner(false);
+        await agregarPorCodigo(code);
+      },
+    });
+
+  // En la app nativa el escáner de ML Kit ocupa la pantalla (cámara nativa
+  // detrás del WebView); en la web se usa la cámara interna con ZXing.
+  const abrirEscaner = () => {
+    if (escanerNativoDisponible()) {
+      setEscanerNativo(true);
+      return;
+    }
+    setShowScanner(true);
+    startScanner();
+  };
+
+  const cerrarEscanerNativo = () => setEscanerNativo(false);
+
+  const codigoDelEscaner = async (texto) => {
+    setEscanerNativo(false);
+    await agregarPorCodigo(texto);
+  };
+
+  const respaldoCamaraInterna = (err) => {
+    setEscanerNativo(false);
+    console.warn('[POS] ML Kit no disponible, se usa la cámara interna:', err);
+    showToast('No se pudo abrir el escáner de ML Kit; se usará la cámara interna.', 'warning');
+    setShowScanner(true);
+    startScanner();
   };
 
   const updateQuantity = (productoId, newQty) => {
@@ -303,32 +433,33 @@ export function PosPage() {
       requestIdRef.current = (crypto.randomUUID?.()
         ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
     }
+
+    const paymentMethodMap = {
+      'EFECTIVO_USD': 'CASH',
+      'EFECTIVO_VES': 'CASH',
+      'PAGO_MOVIL': 'MOBILE_PAYMENT',
+      'PUNTO': 'CREDIT_CARD',
+      'TRANSFERENCIA': 'BANK_TRANSFER'
+    };
+
+    const payload = {
+      requestId: requestIdRef.current,
+      clienteId: selectedClienteId,
+      moneda: 'USD',
+      tasaCambio: tasaDolar,
+      monedaPago: metodoPago === 'EFECTIVO_VES' ? 'VES' : 'USD',
+      items: cart.map(item => ({
+        productoId: item.productoId,
+        cantidad: item.cantidad,
+        unidadPeso: item.unidadPeso || 'kg', // Enviar la unidad de peso al backend
+      })),
+      metodoPago: metodoPago ? paymentMethodMap[metodoPago] : null,
+      referenciaTransaccion: referencia || null,
+      fechaVencimiento: new Date().toISOString(),
+      cuotas: parseInt(cuotas) || 1,
+    };
+
     try {
-      const paymentMethodMap = {
-        'EFECTIVO_USD': 'CASH',
-        'EFECTIVO_VES': 'CASH',
-        'PAGO_MOVIL': 'MOBILE_PAYMENT',
-        'PUNTO': 'CREDIT_CARD',
-        'TRANSFERENCIA': 'BANK_TRANSFER'
-      };
-
-      const payload = {
-        requestId: requestIdRef.current,
-        clienteId: selectedClienteId,
-        moneda: 'USD',
-        tasaCambio: tasaDolar,
-        monedaPago: metodoPago === 'EFECTIVO_VES' ? 'VES' : 'USD',
-        items: cart.map(item => ({
-          productoId: item.productoId,
-          cantidad: item.cantidad,
-          unidadPeso: item.unidadPeso || 'kg', // Enviar la unidad de peso al backend
-        })),
-        metodoPago: metodoPago ? paymentMethodMap[metodoPago] : null,
-        referenciaTransaccion: referencia || null,
-        fechaVencimiento: new Date().toISOString(),
-        cuotas: parseInt(cuotas) || 1,
-      };
-
       const res = await API.emitirFactura(payload);
       showToast(
         tipoDocumentoEmitido === 'nota-entrega'
@@ -340,7 +471,7 @@ export function PosPage() {
       setReferencia('');
       setCuotas(1);
       setTipoDocumento('factura');
-      
+
       // Mostrar el recibo
       setLastFactura(res);
       setTipoUltimoDocumento(tipoDocumentoEmitido);
@@ -351,9 +482,24 @@ export function PosPage() {
       // Venta confirmada: la próxima venta es una venta nueva, con clave nueva.
       requestIdRef.current = null;
     } catch (err) {
-      showToast('Error al emitir factura: ' + err.message, 'error');
-      // Se conserva requestId para que un reintento no duplique la venta: el
-      // backend devolverá la factura ya creada si llegó a crearse.
+      // Sin conexión: guardar en el outbox para enviar después. El requestId
+      // evita duplicados y el backend valida stock/saldos, así que es seguro.
+      if (err.status === 0 || err.code === 'NETWORK_ERROR' || err.code === 'TIMEOUT') {
+        try {
+          await encolarVenta(payload, tipoDocumentoEmitido);
+          showToast('Sin conexión: venta guardada. Se enviará automáticamente cuando vuelva la red.', 'warning');
+          setCart([]);
+          setReferencia('');
+          setCuotas(1);
+          setTipoDocumento('factura');
+        } catch (e) {
+          showToast('No se pudo guardar la venta offline: ' + e.message, 'error');
+        }
+      } else {
+        showToast('Error al emitir factura: ' + err.message, 'error');
+        // Se conserva requestId para que un reintento no duplique la venta:
+        // el backend devolverá la factura ya creada si llegó a crearse.
+      }
     } finally {
       emitiendoRef.current = false;
       setLoadingEmitir(false);
@@ -508,8 +654,49 @@ export function PosPage() {
           </div>
         </div>
       ) : (
-      <div className="page-body">
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
+      <div className="page-body pos-body">
+        {/* Indicador de outbox offline */}
+        {(pendingCount > 0 || isOffline) && (
+          <div
+            className="card"
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', marginBottom: '16px', flexWrap: 'wrap' }}
+          >
+            <Icon
+              icon="mdi:cloud-sync"
+              className="h-5 w-5"
+              style={{ color: isOffline ? 'var(--warning)' : 'var(--accent)', flexShrink: 0 }}
+            />
+            <div style={{ flex: 1, minWidth: '180px' }}>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-primary)' }}>
+                {isOffline ? 'Sin conexión' : `${pendingCount} venta(s) por sincronizar`}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                {isOffline
+                  ? 'Las ventas se guardan en el dispositivo y se envían automáticamente.'
+                  : 'Se enviarán automáticamente. También puedes forzar el envío.'}
+              </div>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              icon="mdi:history"
+              onClick={async () => { await cargarHistorial(); setShowSyncModal(true); }}
+            >
+              Historial
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon="mdi:cloud-upload"
+              onClick={sincronizarAhora}
+              disabled={syncing || isOffline}
+            >
+              {syncing ? 'Sincronizando...' : 'Sincronizar'}
+            </Button>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
           {/* Panel Izquierdo: Selección de Cliente y Buscador de Productos */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div className="card">
@@ -556,6 +743,16 @@ export function PosPage() {
                   <div className="small text-muted mt-2">No se encontraron productos.</div>
                 )}
               </div>
+
+              <Button
+                variant="secondary"
+                icon="mdi:barcode-scan"
+                onClick={abrirEscaner}
+                className="w-full"
+                style={{ marginTop: '10px' }}
+              >
+                Escanear con cámara
+              </Button>
 
               {filteredProducts.length > 0 && (
                 <div style={{ marginTop: '12px', maxHeight: '280px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)' }}>
@@ -752,8 +949,22 @@ export function PosPage() {
             </div>
           </div>
 
-          {/* Panel Derecho: Resumen Financiero y Pago */}
-          <div className="card" style={{ position: 'sticky', top: '20px' }}>
+          {/* Panel Derecho: Resumen Financiero y Pago.
+              En escritorio es la columna lateral (sticky); en móvil el CSS lo
+              convierte en una hoja inferior que abre el botón "Cobrar". */}
+          {!isDesktop && showCobro && (
+            <div className="pos-cobro-backdrop" onClick={() => setShowCobro(false)} aria-hidden="true" />
+          )}
+          <div className={`card pos-cobro-panel${showCobro ? ' open' : ''}`}>
+            <span className="pos-cobro-grip" aria-hidden="true" />
+            <button
+              type="button"
+              className="pos-cobro-close"
+              onClick={() => setShowCobro(false)}
+              aria-label="Cerrar resumen de cobro"
+            >
+              <Icon icon={closeIcon} className="h-4 w-4" />
+            </button>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 className="card-title" style={{ margin: 0 }}>Resumen de Cobro</h3>
               <div style={{ display: 'flex', gap: '4px' }}>
@@ -881,6 +1092,26 @@ export function PosPage() {
             </form>
           </div>
         </div>
+
+        {/* Barra de cobro móvil: total y acción principal al alcance del pulgar */}
+        {!isDesktop && cart.length > 0 && (
+          <div className="pos-mobile-bar">
+            <div className="pos-mobile-bar-total">
+              <strong>{Utils.formatMoney(totalUsd, '$')}</strong>
+              <span>
+                {cart.length} ítem(s) · {totalVes.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.
+              </span>
+            </div>
+            <Button
+              variant="primary"
+              icon="mdi:cart-check"
+              onClick={() => setShowCobro(true)}
+              className="ml-auto"
+            >
+              Cobrar
+            </Button>
+          </div>
+        )}
       </div>
       )} {/* end caja ternary */}
 
@@ -940,6 +1171,137 @@ export function PosPage() {
           onClose={() => setShowReceipt(false)}
           type={tipoUltimoDocumento}
         />
+      )}
+
+      {/* Escáner de código de barras (cámara) */}
+      <EscanerMLKit
+        activo={escanerNativo}
+        titulo="Escanear producto"
+        onCodigo={codigoDelEscaner}
+        onCerrar={cerrarEscanerNativo}
+        onError={respaldoCamaraInterna}
+      />
+
+      {showScanner && (
+        <div className="modal-overlay open" onClick={() => { stopScanner(); setShowScanner(false); }}>
+          <div className="modal" style={{ maxWidth: 480, width: '95%' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Escanear código</h3>
+              <Button variant="ghost" size="icon" onClick={() => { stopScanner(); setShowScanner(false); }} icon="mdi:close" />
+            </div>
+            <div className="modal-body">
+              {cameraError ? (
+                <div
+                  role="alert"
+                  style={{
+                    padding: '12px 14px',
+                    background: 'var(--danger-dim)',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--danger)',
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    textAlign: 'center',
+                  }}
+                >
+                  {cameraError}
+                </div>
+              ) : (
+                <>
+                  <div style={{ position: 'relative', borderRadius: 'var(--radius-md)', overflow: 'hidden', background: '#0f172a', border: '2px solid var(--accent)' }}>
+                    <video
+                      ref={videoRef}
+                      playsInline
+                      muted
+                      autoPlay
+                      style={{ width: '100%', display: 'block', maxHeight: 320, objectFit: 'cover' }}
+                    />
+                    {/* Retícula de enfoque */}
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                      <div style={{ width: 200, height: 100, border: '2px solid var(--success)', borderRadius: 8, position: 'relative', boxShadow: '0 0 0 2000px rgba(0,0,0,0.35)' }}>
+                        <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: 2, background: 'var(--danger)', boxShadow: '0 0 6px var(--danger)' }} />
+                      </div>
+                    </div>
+                    {scanning && (
+                      <div style={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,.7)', color: '#fff', fontSize: 11, padding: '3px 12px', borderRadius: 99 }}>
+                        Apunte al código de barras...
+                      </div>
+                    )}
+                  </div>
+                  {cameraActive && (
+                    <Button variant="secondary" className="w-full" style={{ marginTop: '12px' }} onClick={() => { stopScanner(); setShowScanner(false); }}>
+                      Cerrar escáner
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Historial de sincronización (outbox) */}
+      {showSyncModal && (
+        <div className="modal-overlay open" onClick={() => setShowSyncModal(false)}>
+          <div className="modal modal-lg" style={{ maxWidth: '640px', width: '95%' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">Sincronización de ventas</h3>
+              <Button variant="ghost" size="icon" onClick={() => setShowSyncModal(false)} icon="mdi:close" />
+            </div>
+            <div className="modal-body">
+              {syncHistory.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">🧾</div>
+                  <p>No hay ventas registradas en el dispositivo.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {syncHistory.map(v => (
+                    <div
+                      key={v.id}
+                      style={{
+                        border: '1px solid var(--border)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '10px 12px',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '12px',
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                          {v.tipoDocumento === 'nota-entrega' ? 'Nota de entrega' : 'Factura'} · {v.payload?.items?.length ?? 0} ítem(s)
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                          {new Date(v.createdAt).toLocaleString('es-VE')}
+                          {v.facturaId ? ` · Factura #${v.facturaId}` : ''}
+                        </div>
+                        {v.error && (
+                          <div style={{ fontSize: '0.72rem', color: 'var(--danger)', marginTop: '2px' }}>{v.error}</div>
+                        )}
+                      </div>
+                      <span
+                        className={`badge ${
+                          v.estado === 'SYNCED' ? 'badge-success'
+                          : v.estado === 'FAILED' ? 'badge-danger'
+                          : v.estado === 'SYNCING' ? 'badge-info'
+                          : 'badge-warning'
+                        }`}
+                        style={{ flexShrink: 0 }}
+                      >
+                        {v.estado}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <Button variant="secondary" onClick={() => setShowSyncModal(false)}>Cerrar</Button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

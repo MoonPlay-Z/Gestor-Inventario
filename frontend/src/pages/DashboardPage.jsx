@@ -1,15 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Icon } from '@iconify/react';
 import refreshIcon from '@iconify/icons-mdi/refresh';
-import cashIcon from '@iconify/icons-mdi/cash';
-import receiptIcon from '@iconify/icons-mdi/file-document-outline';
-import timerIcon from '@iconify/icons-mdi/timer-sand';
 import alertIcon from '@iconify/icons-mdi/alert-circle-outline';
 import cashCheckIcon from '@iconify/icons-mdi/cash-check';
 import { useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { DolarWidget } from '../components/widgets/DolarWidget';
-import { API, Utils } from '../services/api';
+import { MetricasDashboard } from '../components/dashboard/MetricasDashboard';
+import { FacturasRecientes } from '../components/dashboard/FacturasRecientes';
+import { useDashboardStats } from '../features/dashboard/useDashboardStats';
+import { useCxcResumen } from '../features/dashboard/useCxcResumen';
+import { construirGraficoIngresos } from '../features/dashboard/graficoIngresos';
+import { Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import {
   Chart as ChartJS,
@@ -23,6 +25,7 @@ import {
   Filler
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import '../css/dashboard.css';
 
 ChartJS.register(
   CategoryScale,
@@ -35,108 +38,70 @@ ChartJS.register(
   Filler
 );
 
+const PERIODOS = [
+  { key: 'dia', label: 'Días', descripcion: 'Evolución diaria de facturación' },
+  { key: 'semana', label: 'Semanas', descripcion: 'Evolución semanal de facturación' },
+  { key: 'mes', label: 'Meses', descripcion: 'Evolución mensual de facturación' },
+  { key: 'anio', label: 'Años', descripcion: 'Evolución anual de facturación' },
+];
+
+/** Widget de Cuentas por Cobrar (solo presentación). */
+const ResumenCxc = ({ resumen, moneda }) => {
+  if (!resumen) return null;
+
+  const tarjetas = [
+    { etiqueta: 'Total Pendiente', valor: resumen.totalPendiente, detalle: `${resumen.cantidadPendientes} facturas`, color: 'var(--text-primary)' },
+    { etiqueta: 'Vencido', valor: resumen.totalVencido, detalle: `${resumen.cantidadVencidas} facturas`, color: '#ef4444' },
+    { etiqueta: '0-30 días', valor: resumen.aging?.['0_30'], detalle: '', color: '#10b981' },
+    { etiqueta: '61+ días', valor: resumen.aging?.['61_90'], detalle: '', color: '#f59e0b' },
+  ];
+
+  return (
+    <div className="card" style={{ padding: '1.25rem', marginBottom: '24px', border: '1px solid var(--border)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Icon icon={cashCheckIcon} style={{ color: 'var(--accent)' }} className="h-5 w-5" />
+          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Cuentas por Cobrar</h3>
+        </div>
+        <a href="/cxc" style={{ fontSize: '0.8rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
+          Ver todas →
+        </a>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+        {tarjetas.map(({ etiqueta, valor, detalle, color }) => (
+          <div key={etiqueta} style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '10px', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>{etiqueta}</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color, marginTop: '4px' }}>{Utils.formatMoney(valor || 0, moneda)}</div>
+            {detalle && (
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{detalle}</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export function DashboardPage() {
   const { toggleSidebar } = useOutletContext();
   const { showToast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState(null);
-  const [cxcResumen, setCxcResumen] = useState(null);
-  const [currencySymbol, setCurrencySymbol] = useState('$');
   const [periodo, setPeriodo] = useState('mes');
 
-  const loadData = async (periodoSeleccionado = periodo) => {
-    setLoading(true);
-    try {
-      const config = await API.getConfig();
-      if (config?.moneda?.simbolo) {
-        setCurrencySymbol(config.moneda.simbolo);
-      }
-      const data = await API.getDashboardStats(periodoSeleccionado);
-      setStats(data);
-    } catch (err) {
-      showToast('Error cargando el dashboard: ' + err.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const alFallar = useCallback(
+    (mensaje) => showToast('Error cargando el dashboard: ' + mensaje, 'error'),
+    [showToast],
+  );
 
-  const loadCxcResumen = async () => {
-    try {
-      const data = await API.getCxcResumen();
-      setCxcResumen(data);
-    } catch (err) {
-      console.error('Error loading CxC resumen:', err);
-    }
-  };
+  const { estado, moneda, recargar } = useDashboardStats(periodo, { alFallar });
+  const cxcResumen = useCxcResumen();
 
-  useEffect(() => {
-    loadData(periodo);
-    loadCxcResumen();
-  }, [periodo]);
-
-  // Prepara datos de Chart.js
-  const chartData = stats?.ingresosHistorico ? [...stats.ingresosHistorico].reverse() : [];
-  const labels = chartData.map(d => d.mes);
-  const values = chartData.map(d => parseFloat(d.total));
+  const datos = estado.datos;
+  const cargando = estado.tipo === 'cargando' && !datos;
+  const error = estado.tipo === 'error' ? estado.error : '';
+  const periodoActivo = PERIODOS.find((p) => p.key === periodo) || PERIODOS[2];
 
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-  const textColor = isDark ? '#9099c4' : '#4b5280';
-  const gridColor = isDark ? '#2d3150' : '#e2e6f0';
-
-  const lineChartData = {
-    labels,
-    datasets: [
-      {
-        label: `Ingresos (${currencySymbol})`,
-        data: values,
-        borderColor: '#6366f1',
-        backgroundColor: 'rgba(99, 102, 241, 0.1)',
-        borderWidth: 2,
-        tension: 0.4,
-        fill: true,
-        pointBackgroundColor: '#6366f1',
-        pointBorderColor: isDark ? '#1e2130' : '#ffffff',
-        pointBorderWidth: 2,
-        pointRadius: 4,
-        pointHoverRadius: 6
-      }
-    ]
-  };
-
-  const lineChartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: isDark ? '#1e2130' : '#ffffff',
-        titleColor: isDark ? '#e8eaf6' : '#1a1d2e',
-        bodyColor: isDark ? '#9099c4' : '#4b5280',
-        borderColor: isDark ? '#2d3150' : '#e2e6f0',
-        borderWidth: 1,
-        padding: 12,
-        callbacks: {
-          label: (context) => `${context.dataset.label}: ${Utils.formatMoney(context.parsed.y, currencySymbol)}`
-        }
-      }
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        grid: { color: gridColor, drawBorder: false },
-        ticks: {
-          color: textColor,
-          callback: (value) => Utils.formatMoney(value, currencySymbol)
-        }
-      },
-      x: {
-        grid: { display: false, drawBorder: false },
-        ticks: { color: textColor }
-      }
-    }
-  };
-
-  const totalFacturas = stats?.totalesPorEstado?.reduce((acc, curr) => acc + curr._count.id, 0) || 0;
+  const grafico = construirGraficoIngresos({ datos, moneda, isDark });
 
   return (
     <>
@@ -145,132 +110,53 @@ export function DashboardPage() {
         subtitle="Resumen de rendimiento y métricas del negocio"
         toggleSidebar={toggleSidebar}
         actions={
-          <button onClick={loadData} className="btn btn-secondary btn-sm inline-flex items-center gap-2">
+          <button onClick={recargar} className="btn btn-secondary btn-sm inline-flex items-center gap-2">
             <Icon icon={refreshIcon} className="h-4 w-4" />
             Recargar
           </button>
         }
       />
 
-      <div className="page-body">
+      <div className="page-body dash-body">
         <DolarWidget />
 
-        {/* Widget de Cuentas por Cobrar */}
-        {cxcResumen && (
-          <div className="card" style={{ padding: '1.25rem', marginBottom: '24px', border: '1px solid var(--border)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: "0.5rem" }}>
-                <Icon icon={cashCheckIcon} style={{ color: 'var(--accent)' }} className="h-5 w-5" />
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Cuentas por Cobrar</h3>
-              </div>
-              <a href="/cxc" style={{ fontSize: '0.8rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
-                Ver todas →
-              </a>
+        <ResumenCxc resumen={cxcResumen} moneda={moneda} />
+
+        {/* Un fallo de red ya no deja la página en blanco: se muestra el
+            estado de error y se conservan las métricas anteriores si había. */}
+        {error && (
+          <div className="card dash-error" role="alert">
+            <Icon icon={alertIcon} className="h-5 w-5" />
+            <div>
+              <strong>No se pudieron cargar las métricas.</strong>
+              <p>{error}</p>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
-              <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '10px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Total Pendiente</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--text-primary)', marginTop: '4px' }}>{Utils.formatMoney(cxcResumen.totalPendiente, currencySymbol)}</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{cxcResumen.cantidadPendientes} facturas</div>
-              </div>
-              <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '10px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>Vencido</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#ef4444', marginTop: '4px' }}>{Utils.formatMoney(cxcResumen.totalVencido, currencySymbol)}</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{cxcResumen.cantidadVencidas} facturas</div>
-              </div>
-              <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '10px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>0-30 días</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#10b981', marginTop: '4px' }}>{Utils.formatMoney(cxcResumen.aging['0_30'], currencySymbol)}</div>
-              </div>
-              <div style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '10px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>61+ días</div>
-                <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f59e0b', marginTop: '4px' }}>{Utils.formatMoney(cxcResumen.aging['61_90'], currencySymbol)}</div>
-              </div>
-            </div>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={recargar}>
+              Reintentar
+            </button>
           </div>
         )}
 
-        {loading ? (
+        {cargando ? (
           <div className="card" style={{ textAlign: 'center', padding: '60px' }}>
             <div className="spinner" style={{ width: '32px', height: '32px' }} />
             <p style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>Cargando métricas...</p>
           </div>
-        ) : (
+        ) : datos ? (
           <>
-            {/* Grid de Métricas */}
-            <div className="metric-grid" style={{ marginBottom: '24px' }}>
-              <div className="metric-card accent" style={{ 
-                background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                border: 'none',
-                color: '#fff'
-              }}>
-                <div className="metric-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
-                  <Icon icon={cashIcon} className="h-6 w-6" />
-                </div>
-                <div>
-                  <div className="metric-value" style={{ color: '#fff' }}>{Utils.formatMoney(stats?.ingresosDelMes || 0, currencySymbol)}</div>
-                  <div className="metric-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Ingresos del Mes</div>
-                </div>
-              </div>
+            <MetricasDashboard datos={datos} moneda={moneda} />
 
-              <div className="metric-card success" style={{ 
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                border: 'none',
-                color: '#fff'
-              }}>
-                <div className="metric-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
-                  <Icon icon={receiptIcon} className="h-6 w-6" />
-                </div>
-                <div>
-                  <div className="metric-value" style={{ color: '#fff' }}>{totalFacturas}</div>
-                  <div className="metric-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Facturas Emitidas</div>
-                </div>
-              </div>
-
-              <div className="metric-card warning" style={{ 
-                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                border: 'none',
-                color: '#fff'
-              }}>
-                <div className="metric-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
-                  <Icon icon={timerIcon} className="h-6 w-6" />
-                </div>
-                <div>
-                  <div className="metric-value" style={{ color: '#fff' }}>{stats?.facturasVencidas || 0}</div>
-                  <div className="metric-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Facturas Vencidas</div>
-                </div>
-              </div>
-
-              <div className="metric-card danger" style={{ 
-                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                border: 'none',
-                color: '#fff'
-              }}>
-                <div className="metric-icon" style={{ background: 'rgba(255,255,255,0.2)' }}>
-                  <Icon icon={alertIcon} className="h-6 w-6" />
-                </div>
-                <div>
-                  <div className="metric-value" style={{ color: '#fff' }}>{stats?.productosStockBajo || 0}</div>
-                  <div className="metric-label" style={{ color: 'rgba(255,255,255,0.8)' }}>Productos Stock Bajo</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Gráfico y Tabla */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
-              <div className="card" style={{ padding: '1.5rem' }}>
+            <div className="dash-grid">
+              <div className="card dash-card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Histórico de Ingresos</h3>
                     <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                      {periodo === 'dia' && 'Evolución diaria de facturación'}
-                      {periodo === 'semana' && 'Evolución semanal de facturación'}
-                      {periodo === 'mes' && 'Evolución mensual de facturación'}
-                      {periodo === 'anio' && 'Evolución anual de facturación'}
+                      {periodoActivo.descripcion}
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: '6px', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '10px' }}>
-                    {[{ key: 'dia', label: 'Días' }, { key: 'semana', label: 'Semanas' }, { key: 'mes', label: 'Meses' }, { key: 'anio', label: 'Años' }].map(({ key, label }) => (
+                    {PERIODOS.map(({ key, label }) => (
                       <button
                         key={key}
                         onClick={() => setPeriodo(key)}
@@ -293,62 +179,17 @@ export function DashboardPage() {
                   </div>
                 </div>
                 <div style={{ height: '320px', width: '100%' }}>
-                  <Line data={lineChartData} options={lineChartOptions} />
+                  <Line data={grafico.data} options={grafico.options} />
                 </div>
               </div>
 
-              <div className="card" style={{ padding: '1.5rem' }}>
-                <div style={{ marginBottom: '1rem' }}>
-                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Facturas Recientes</h3>
-                </div>
-                <div className="table-wrapper">
-                  <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0' }}>
-                    <thead>
-                      <tr>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Número</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Cliente</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Fecha</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'right', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Monto Total</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', borderBottom: '2px solid var(--border)' }}>Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {stats?.facturasRecientes?.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="empty-state" style={{ padding: '32px' }}>No hay facturas recientes</td>
-                        </tr>
-                      ) : (
-                        stats?.facturasRecientes?.map(f => {
-                          let estadoHtml = <span className="badge badge-danger">Anulada</span>;
-                          if (f.estado === 'PAID') estadoHtml = <span className="badge badge-success">Pagada</span>;
-                          else if (f.estado === 'PENDING') estadoHtml = <span className="badge badge-warning">Pendiente</span>;
-                          else if (f.estado === 'PARTIALLY_PAID') estadoHtml = <span className="badge badge-info">Abonada</span>;
-
-                          return (
-                            <tr key={f.id} style={{ transition: 'background 0.15s' }}
-                              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                            >
-                              <td style={{ padding: '14px 16px', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>#{f.numeroFactura.toString().padStart(5, '0')}</td>
-                              <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
-                                <div style={{ fontWeight: 500 }}>{f.cliente.razonSocial}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{f.cliente.rifCedula}</div>
-                              </td>
-                              <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{Utils.formatDate(f.fechaEmision)}</td>
-                              <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, textAlign: 'right' }}>{Utils.formatMoney(f.total, currencySymbol)}</td>
-                              <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>{estadoHtml}</td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              <FacturasRecientes facturas={datos?.facturasRecientes} moneda={moneda} />
             </div>
           </>
-        )}
+        ) : null}
       </div>
     </>
   );
 }
+
+export default DashboardPage;

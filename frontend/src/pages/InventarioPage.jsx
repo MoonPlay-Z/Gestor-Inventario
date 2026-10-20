@@ -561,7 +561,7 @@ export function InventarioPage() {
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Información Básica
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '0.75rem' }}>
                     <div className="form-group" style={{ gridColumn: '1/-1' }}>
                       <label className="form-label">Nombre del Producto <span style={{ color: 'var(--danger)' }}>*</span></label>
                       <input className={`form-control${fieldErrors.nombre ? ' is-invalid' : ''}`} value={form.nombre}
@@ -616,7 +616,7 @@ export function InventarioPage() {
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Unidad de Medida y Tipo de Venta
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '0.75rem' }}>
                     <div className="form-group">
                       <label className="form-label">Unidad de Medida</label>
                       <select className="form-control" value={form.unidadMedida}
@@ -654,7 +654,7 @@ export function InventarioPage() {
                       borderRadius: '8px',
                       border: '1px solid rgba(16, 185, 129, 0.2)'
                     }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '0.75rem' }}>
                         <div className="form-group" style={{ marginBottom: 0 }}>
                           <label className="form-label">Precio por Kilo (USD) <span style={{ color: 'var(--danger)' }}>*</span></label>
                           <input type="number" step="0.01" min="0.01" className="form-control" 
@@ -682,7 +682,7 @@ export function InventarioPage() {
                   <h4 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                     Precios y Stock
                   </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '0.75rem' }}>
                     <div className="form-group">
                       <label className="form-label">
                         Precio de Venta (USD) <span style={{ color: 'var(--danger)' }}>*</span>

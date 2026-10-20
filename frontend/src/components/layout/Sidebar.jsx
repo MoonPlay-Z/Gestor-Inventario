@@ -20,6 +20,7 @@ import bellRingIcon from '@iconify/icons-mdi/bell-ring';
 import cogIcon from '@iconify/icons-mdi/cog';
 import chartBarIcon from '@iconify/icons-mdi/chart-bar';
 import cashCheckIcon from '@iconify/icons-mdi/cash-check';
+import downloadIcon from '@iconify/icons-mdi/download';
 
 const ROL_LABEL = {
   SUPER_ADMIN: 'Super Admin',
@@ -29,7 +30,7 @@ const ROL_LABEL = {
   VISOR: 'Visor de Precios',
 };
 
-export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSidebar, brandName }) {
+export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSidebar, brandName, esTelefono = false }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [cxCvencidas, setCxCvencidas] = useState(0);
@@ -61,11 +62,17 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
     <aside
       id="sidebar"
       className={`fixed top-0 left-0 z-50 h-full overflow-y-auto border-r border-[#1e40af]/40 transition-all duration-300 w-72 ${
-        isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-      } md:translate-x-0`}
+        esTelefono
+          ? (isMobileOpen ? 'translate-x-0 mobile-open' : '-translate-x-full')
+          : 'translate-x-0'
+      }`}
       style={{
         background: 'linear-gradient(180deg, #0b4f9c 0%, #022a5e 100%)',
-        color: '#ffffff'
+        color: '#ffffff',
+        // Pantalla completa: el panel sigue llegando al borde, pero el
+        // contenido no queda bajo el lente ni bajo la barra de estado.
+        paddingTop: 'var(--safe-top, 0px)',
+        paddingLeft: 'var(--safe-left, 0px)'
       }}
     >
       {/* ── Brand & Toggle Button Header ───────────────────────── */}
@@ -84,7 +91,7 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
 
         {/* Mobile Close Button */}
         <button
-          className="p-1.5 rounded-lg bg-white/10 text-white hover:bg-white/20 transition md:hidden"
+          className={`inline-flex items-center justify-center min-h-[44px] min-w-[44px] p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition ${esTelefono ? '' : 'hidden'}`}
           onClick={closeMobile}
           aria-label="Cerrar menú"
         >
@@ -141,6 +148,11 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
               <NavItem to="/config" icon={cogIcon} label="Configuración"
                 roles={ROLE_GROUPS.ADMIN_ONLY} onClick={closeMobile} isCollapsed={false} />
             </NavSection>
+
+            <NavSection label="Aplicación" isCollapsed={false}>
+              <NavItem to="/descargar" icon={downloadIcon} label="Descargar app"
+                roles={ROLE_GROUPS.ALL} onClick={closeMobile} isCollapsed={false} />
+            </NavSection>
           </>
         )}
 
@@ -170,7 +182,7 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
         <button
           onClick={handleLogout}
           title="Cerrar Sesión"
-          className={`rounded-xl border border-red-400/30 bg-red-500/20 hover:bg-red-500/30 text-white text-xs font-bold py-2.5 transition flex items-center justify-center gap-2 ${
+          className={`min-h-[44px] rounded-xl border border-red-400/30 bg-red-500/20 hover:bg-red-500/30 text-white text-xs font-bold py-2.5 transition flex items-center justify-center gap-2 ${
             isCollapsed ? 'w-10 h-10 p-0' : 'w-full px-3'
           }`}
         >
