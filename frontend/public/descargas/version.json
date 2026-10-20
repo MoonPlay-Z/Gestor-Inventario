@@ -1,13 +1,14 @@
 {
-  "versionCode": 8,
-  "versionName": "1.7",
+  "versionCode": 9,
+  "versionName": "1.8",
   "url": "https://gestor-pos.netlify.app/descargas/gestorpos-android.apk",
-  "size": 9347095,
-  "sha256": "53c405cd71f05102bab3a4fdb2452b40097fa3ce1b22dce441128facf4ea409b",
+  "size": 9349676,
+  "sha256": "656d8d7a28e4b9e988f48d60440a309919b81b43ad17052336e28dc2003fddf2",
   "publishedAt": "2026-10-20",
   "minVersionCode": 0,
   "notes": [
-    "Actualización automática desde la app (descarga y verificación)",
-    "Dashboard con fichas compactas y tablas más legibles"
+    "Actualizador reescrito: el aviso ya no puede bloquear la app",
+    "Escáner: el botón atrás cierra el lector y la cámara se suelta en segundo plano",
+    "Dashboard: estado de error sin pantalla en blanco"
   ]
 }
