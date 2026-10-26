@@ -28,6 +28,15 @@ enum MetodoPago {
   CREDIT_CARD
   MOBILE_PAYMENT
   PAGO_MOVIL
+  TARJETA_DEBITO
+  TARJETA_CREDITO
+  EFECTIVO_VES
+  EFECTIVO_USD
+  TRANSFERENCIA
+  BIOPAGO
+  BINANCE
+  CASHEA
+  FINANCIAMIENTO
 }
 
 enum UnidadMedida {
@@ -76,6 +85,13 @@ model Empresa {
   trialStartsAt          DateTime?
   trialEndsAt            DateTime?
   currentPeriodEnd       DateTime?
+  // ── Archivado (borrado diferido) ──
+  // Al archivar una empresa se desactiva el acceso y se programa su borrado
+  // físico. Durante la ventana de gracia (30 días por defecto) el Super Admin
+  // puede restaurarla. `activo=false` sigue siendo la fuente de verdad para
+  // login y subscriptionGuard.
+  archivedAt             DateTime?
+  scheduledDeletionAt    DateTime?
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
@@ -228,8 +244,11 @@ model Factura {
   tasaCambio       Decimal       @default(1.0) @db.Decimal(10, 4)
   cuotasTotales    Int           @default(1)
   observaciones    String?
-  anuladoPor       String?
-  motivoAnulacion  String?
+  anuladoPor           String?
+  motivoAnulacion      String?
+  descripcionAnulacion String?
+  fechaAnulacion       DateTime?
+  tasaAnulacion        Decimal?      @db.Decimal(10, 4)
 
   // ── Idempotencia de emisión ──
   // Clave enviada por el cliente (POS) para impedir que un doble clic, una
@@ -250,6 +269,7 @@ model Factura {
   @@index([clienteId])
   @@index([estado])
   @@index([empresaId])
+  @@index([fechaAnulacion])
   @@map("facturas")
 }
 
@@ -286,10 +306,20 @@ model Pago {
   fechaPago             DateTime   @default(now())
   notas                 String?
   tasaBCV               Decimal?   @db.Decimal(10, 4)
+  // ── Anulación lógica ──
+  // Un pago nunca se borra: se marca ANULADO para conservar el rastro
+  // contable y la descripción del fraude/error que motivó la anulación.
+  estado               String    @default("ACTIVO")
+  motivoAnulacion      String?
+  descripcionAnulacion String?
+  anuladoPor           String?
+  fechaAnulacion       DateTime?
   createdAt             DateTime   @default(now())
 
   @@index([facturaId])
   @@index([fechaPago])
+  @@index([estado])
+  @@index([fechaAnulacion])
   @@map("pagos")
 }
 
@@ -401,7 +431,10 @@ model Usuario {
   registrationLongitude Float?
   lastLoginIp           String?
   lastLoginAt           DateTime?
+  // `deletedAt` marca la baja lógica; `scheduledDeletionAt` es la fecha en que
+  // el job de purga borra físicamente al usuario y sus datos.
   deletedAt             DateTime?
+  scheduledDeletionAt   DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -428,6 +461,10 @@ model SolicitudActivacion {
   metodoPago String
   referencia String
   estado     String   @default("PENDIENTE")
+  // Revisión del Super Admin: notas internas, quién resolvió la solicitud y cuándo.
+  notas       String?
+  revisadoPor String?
+  revisadoEn  DateTime?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -442,6 +479,7 @@ model Noticia {
   subtitulo String?
   contenido String
   imagenUrl String?
+  videoUrl  String?
   categoria String   @default("Anuncio")
   destacado Boolean  @default(false)
   publicado Boolean  @default(true)

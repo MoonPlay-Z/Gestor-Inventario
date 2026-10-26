@@ -1,19 +1,41 @@
+const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 
-const isSqlite = (process.env.DATABASE_URL || '').startsWith('file:') || process.env.DB_PROVIDER === 'sqlite';
+let dbUrl = process.env.DATABASE_URL || '';
+const isSqlite = dbUrl.startsWith('file:') || process.env.DB_PROVIDER === 'sqlite';
 const Prisma = isSqlite
   ? require('../../src/generated/prisma-sqlite').PrismaClient
   : PrismaClient;
 
-const prisma = global.__prisma || new Prisma({
+const prismaOptions = {
   log: process.env.NODE_ENV === 'development' ? ['warn', 'error'] : ['error'],
-});
+};
+
+if (isSqlite) {
+  // Asegura resolución de ruta absoluta para SQLite independientemente del CWD
+  let sqlitePath;
+  if (dbUrl.startsWith('file:')) {
+    const raw = dbUrl.replace(/^file:/, '');
+    sqlitePath = path.isAbsolute(raw)
+      ? raw
+      : path.resolve(__dirname, '../../prisma', path.basename(raw));
+  } else {
+    // Si DB_PROVIDER=sqlite pero DATABASE_URL apuntaba a postgres, usa dev.db local
+    sqlitePath = path.resolve(__dirname, '../../prisma/dev.db');
+  }
+  prismaOptions.datasources = {
+    db: { url: `file:${sqlitePath}` },
+  };
+}
+
+const prisma = global.__prisma || new Prisma(prismaOptions);
 
 if (isSqlite && !global.__sqliteNumericMiddleware) {
   const numericFields = new Set([
     'precioVenta', 'costoCompra', 'tasaImpuesto', 'subtotal', 'impuestoTotal', 'total',
     'tasaCambio', 'precioUnitarioHistorico', 'costoUnitarioHistoricoUSD', 'tasaImpuestoAplicada', 'subtotalLinea',
     'impuestoLinea', 'totalLinea', 'monto', 'montoInicial', 'montoFinal',
+    'montoOriginal', 'montoCobrado', 'montoPendiente', 'tasaBCV',
     'ingresosEfectivo', 'ingresosBanco', 'precioUnitario',
   ]);
   const convert = (value, key) => {

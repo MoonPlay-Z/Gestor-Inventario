@@ -125,12 +125,20 @@ exports.Prisma.EmpresaScalarFieldEnum = {
   rif: 'rif',
   direccion: 'direccion',
   telefono: 'telefono',
+  email: 'email',
+  monedaSimbolo: 'monedaSimbolo',
+  monedaCodigo: 'monedaCodigo',
+  tasaDolar: 'tasaDolar',
+  tasaDolarModo: 'tasaDolarModo',
+  tasaDolarActualizadaEn: 'tasaDolarActualizadaEn',
   activo: 'activo',
   subscriptionStatus: 'subscriptionStatus',
   planType: 'planType',
   trialStartsAt: 'trialStartsAt',
   trialEndsAt: 'trialEndsAt',
   currentPeriodEnd: 'currentPeriodEnd',
+  archivedAt: 'archivedAt',
+  scheduledDeletionAt: 'scheduledDeletionAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -221,6 +229,10 @@ exports.Prisma.FacturaScalarFieldEnum = {
   observaciones: 'observaciones',
   anuladoPor: 'anuladoPor',
   motivoAnulacion: 'motivoAnulacion',
+  descripcionAnulacion: 'descripcionAnulacion',
+  fechaAnulacion: 'fechaAnulacion',
+  tasaAnulacion: 'tasaAnulacion',
+  requestId: 'requestId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -251,6 +263,12 @@ exports.Prisma.PagoScalarFieldEnum = {
   referenciaTransaccion: 'referenciaTransaccion',
   fechaPago: 'fechaPago',
   notas: 'notas',
+  tasaBCV: 'tasaBCV',
+  estado: 'estado',
+  motivoAnulacion: 'motivoAnulacion',
+  descripcionAnulacion: 'descripcionAnulacion',
+  anuladoPor: 'anuladoPor',
+  fechaAnulacion: 'fechaAnulacion',
   createdAt: 'createdAt'
 };
 
@@ -270,6 +288,8 @@ exports.Prisma.CierreCajaScalarFieldEnum = {
   montoFinal: 'montoFinal',
   ingresosEfectivo: 'ingresosEfectivo',
   ingresosBanco: 'ingresosBanco',
+  ingresosEfectivoVES: 'ingresosEfectivoVES',
+  ingresosBancoVES: 'ingresosBancoVES',
   estado: 'estado',
   observaciones: 'observaciones',
   arqueoDetalle: 'arqueoDetalle',
@@ -289,7 +309,8 @@ exports.Prisma.CotizacionScalarFieldEnum = {
   impuestoTotal: 'impuestoTotal',
   total: 'total',
   moneda: 'moneda',
-  estado: 'estado'
+  estado: 'estado',
+  facturaId: 'facturaId'
 };
 
 exports.Prisma.ItemCotizacionScalarFieldEnum = {
@@ -321,6 +342,7 @@ exports.Prisma.UsuarioScalarFieldEnum = {
   mfaEnabled: 'mfaEnabled',
   mfaSecret: 'mfaSecret',
   sessionVersion: 'sessionVersion',
+  refreshTokenId: 'refreshTokenId',
   sudoModeExpiresAt: 'sudoModeExpiresAt',
   registrationIp: 'registrationIp',
   registrationLatitude: 'registrationLatitude',
@@ -328,6 +350,7 @@ exports.Prisma.UsuarioScalarFieldEnum = {
   lastLoginIp: 'lastLoginIp',
   lastLoginAt: 'lastLoginAt',
   deletedAt: 'deletedAt',
+  scheduledDeletionAt: 'scheduledDeletionAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -339,6 +362,9 @@ exports.Prisma.SolicitudActivacionScalarFieldEnum = {
   metodoPago: 'metodoPago',
   referencia: 'referencia',
   estado: 'estado',
+  notas: 'notas',
+  revisadoPor: 'revisadoPor',
+  revisadoEn: 'revisadoEn',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -349,6 +375,7 @@ exports.Prisma.NoticiaScalarFieldEnum = {
   subtitulo: 'subtitulo',
   contenido: 'contenido',
   imagenUrl: 'imagenUrl',
+  videoUrl: 'videoUrl',
   categoria: 'categoria',
   destacado: 'destacado',
   publicado: 'publicado',
@@ -370,6 +397,36 @@ exports.Prisma.PromocionScalarFieldEnum = {
   activo: 'activo',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.CuentaPorCobrarScalarFieldEnum = {
+  id: 'id',
+  empresaId: 'empresaId',
+  facturaId: 'facturaId',
+  clienteId: 'clienteId',
+  usuarioId: 'usuarioId',
+  montoOriginal: 'montoOriginal',
+  montoCobrado: 'montoCobrado',
+  montoPendiente: 'montoPendiente',
+  fechaEmision: 'fechaEmision',
+  fechaVencimiento: 'fechaVencimiento',
+  estado: 'estado',
+  diasVencido: 'diasVencido',
+  ultimaGestion: 'ultimaGestion',
+  notas: 'notas',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.GestionCobranzaScalarFieldEnum = {
+  id: 'id',
+  cuentaPorCobrarId: 'cuentaPorCobrarId',
+  empresaId: 'empresaId',
+  usuarioId: 'usuarioId',
+  accion: 'accion',
+  notas: 'notas',
+  fecha: 'fecha',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -401,7 +458,9 @@ exports.Prisma.ModelName = {
   Usuario: 'Usuario',
   SolicitudActivacion: 'SolicitudActivacion',
   Noticia: 'Noticia',
-  Promocion: 'Promocion'
+  Promocion: 'Promocion',
+  CuentaPorCobrar: 'CuentaPorCobrar',
+  GestionCobranza: 'GestionCobranza'
 };
 
 /**

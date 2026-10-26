@@ -3,6 +3,7 @@ const { getSystemConfig } = require('../routes/config');
 const { obtenerTasaEmpresa, guardarTasaEmpresa } = require('./tasaEmpresaCache');
 const { tasaBCVActual } = require('./bcvHistorico');
 const prisma = require('../db/prisma');
+const { ESTADOS_PAGO } = require('../config/pagos');
 
 const MONEDAS_PAGO = ['USD', 'VES'];
 
@@ -96,6 +97,10 @@ async function convertirAFactura(monto, monedaOrigen, factura, empresaId = null)
 }
 
 async function normalizarPagoAFactura(pago, factura, empresaId = null) {
+  // Un pago anulado no reduce el saldo. El filtro vive aquí para que todas las
+  // puertas (facturas, pagos, CxC y reportes) usen la misma regla.
+  if (pago?.estado === ESTADOS_PAGO.ANULADO) return new Decimal(0);
+
   return convertirAFactura(
     pago.monto,
     pago.monedaPago || factura.moneda || 'USD',
@@ -126,6 +131,10 @@ async function sumarPagosNormalizados(pagos, factura, empresaId = null) {
  * facturas en Bs).
  */
 async function pagoCxcAUsd(pago, factura, empresaId = null) {
+  // Mismo criterio que `normalizarPagoAFactura`: un pago anulado no suma al
+  // monto cobrado ni reduce el pendiente de la cuenta por cobrar.
+  if (pago?.estado === ESTADOS_PAGO.ANULADO) return new Decimal(0);
+
   return convertirMontoMoneda(
     pago.monto,
     pago.monedaPago || factura?.moneda || 'USD',

@@ -199,6 +199,7 @@ export const API = {
 
     return clientes;
   },
+  buscarClientes: (q, limit = 20) => request(`/clientes/buscar?q=${encodeURIComponent(q)}&limit=${limit}`),
   getCliente: (id) => request(`/clientes/${id}`),
   crearCliente: (data) => request('/clientes', { method: 'POST', body: data }),
   actualizarCliente: (id, data) => request(`/clientes/${id}`, { method: 'PUT', body: data }),
@@ -211,6 +212,8 @@ export const API = {
   },
   getMetricasInventario: () => request('/productos/metricas'),
   getAlertasInventario: () => request('/productos/alertas'),
+  getCategoriasProductos: () => request('/productos/categorias'),
+  getIntegridadInventario: () => request('/productos/integridad'),
   getProducto: (id) => request(`/productos/${id}`),
   lookupProducto: (codigo) => request(`/productos/lookup/${encodeURIComponent(codigo)}`),
   getNextSku: () => request('/productos/next-sku'),
@@ -242,7 +245,11 @@ export const API = {
   // Pagos
   getPagos: (facturaId) => request(`/pagos?facturaId=${facturaId}`),
   registrarPago: (data) => request('/pagos', { method: 'POST', body: data }),
-  eliminarPago: (id) => request(`/pagos/${id}`, { method: 'DELETE' }),
+  anularPago: (id, data) => request(`/pagos/${id}/anular`, { method: 'PATCH', body: data }),
+  getPagosAnulados: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/pagos/anulados${qs ? `?${qs}` : ''}`);
+  },
   backfillTasaBcv: () => request('/pagos/backfill-tasa-bcv', { method: 'POST' }),
 
   // Caja
@@ -275,12 +282,31 @@ export const API = {
     method: 'DELETE',
     body: { nameConfirmation, deleteConfirmation },
   }),
+  restaurarEmpresa: (id) => request(`/activaciones/empresas/${id}/restaurar`, { method: 'POST' }),
   activarManual: (id, data) => request(`/activaciones/${id}/activar-manual`, { method: 'PUT', body: data }),
+  aprobarSolicitud: (id, data) => request(`/activaciones/${id}/aprobar`, { method: 'PUT', body: data }),
+  rechazarSolicitud: (id, data) => request(`/activaciones/${id}/rechazar`, { method: 'PUT', body: data }),
+  getSaludSuscripciones: () => request('/activaciones/salud'),
+  getAuditoria: async (params = {}) => {
+    const limit = 100;
+    const firstPage = await request(`/activaciones/auditoria?${new URLSearchParams({ ...params, page: 1, limit })}`);
+    const logs = firstPage.data || [];
+    const totalPages = Math.ceil((Number(firstPage.total) || logs.length) / limit);
+
+    for (let page = 2; page <= Math.min(totalPages, 5); page++) {
+      const response = await request(`/activaciones/auditoria?${new URLSearchParams({ ...params, page, limit })}`);
+      logs.push(...(response.data || []));
+    }
+
+    return logs;
+  },
   resetPassword: (userId, newPassword) => request(`/activaciones/usuarios/${userId}/reset-password`, { method: 'PUT', body: { newPassword } }),
   eliminarAdminUsuario: (id, usernameConfirmation, deleteConfirmation) => request(`/activaciones/usuarios/${id}`, {
     method: 'DELETE',
     body: { usernameConfirmation, deleteConfirmation },
   }),
+  restaurarAdminUsuario: (id) => request(`/activaciones/usuarios/${id}/restaurar`, { method: 'POST' }),
+  purgarArchivados: () => request('/activaciones/archivados/purgar', { method: 'POST' }),
   getAdminUsuarios: async (params = {}) => {
     const limit = 100;
     const firstPage = await request(`/activaciones/usuarios?${new URLSearchParams({ ...params, page: 1, limit })}`);
@@ -383,6 +409,24 @@ export const Utils = {
     const num = Number(amount || 0);
     if (!isFinite(num)) return `${symbol} 0.00`;
     return `${symbol} ${num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  },
+
+  // Tasa aplicable a una factura. `tasaCambio` solo es una tasa real cuando la
+  // factura se emitió en VES; en USD vale 1 (no lleva tasa), así que se usa la
+  // tasa de la empresa. Nunca un valor fijo.
+  tasaFactura: (factura, tasaEmpresa) => {
+    const tasaDeFactura = Number(factura?.tasaCambio);
+    if (factura?.moneda === 'VES' && tasaDeFactura > 0) return tasaDeFactura;
+    const tasa = Number(tasaEmpresa);
+    return tasa > 0 ? tasa : 1;
+  },
+
+  // Total de la factura normalizado a USD.
+  montoUsdFactura: (factura, tasaEmpresa) => {
+    const total = Number(factura?.total || 0);
+    if (factura?.moneda !== 'VES') return total;
+    const tasa = Utils.tasaFactura(factura, tasaEmpresa);
+    return tasa > 0 ? total / tasa : total;
   },
 
   formatDate: (dateString) => {

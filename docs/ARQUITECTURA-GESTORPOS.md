@@ -397,3 +397,9 @@ npm run apk:publicar -- --bump --notas "…"
 | Netlify sirviendo `index.html` por el manifiesto | `version.json` real + validación de `content-type` en el cliente |
 | Crecimiento del repo | ~9 MB por release en `public/descargas`; migrable a GitHub Releases |
 | Cambio de dominio | `VITE_UPDATE_URL` queda incrustado en la APK: hay que mantener el dominio actual con redirección |
+
+## 13. Arquitectura de la app móvil
+
+La arquitectura específica de la app móvil —UI responsive, integración Android,
+modo offline del POS, escáner, descargas y actualización segura de la APK— está
+documentada en [ARQUITECTURA-APP-MOVIL.md](./ARQUITECTURA-APP-MOVIL.md).

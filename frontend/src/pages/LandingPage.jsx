@@ -17,8 +17,75 @@ import alertCircleIcon from '@iconify/icons-mdi/alert-circle-outline';
 import menuIcon from '@iconify/icons-mdi/menu';
 import closeIcon from '@iconify/icons-mdi/close';
 import { API } from '../services/api';
+import { parseVideoUrl } from '../utils/media';
 
 const trialWhatsAppUrl = 'https://wa.me/584127723148?text=Hola%2C%20quiero%20solicitar%20la%20activaci%C3%B3n%20del%20mes%20de%20prueba%20gratis%20para%20mi%20negocio.';
+
+const mediaContenedorStyle = {
+  position: 'relative',
+  width: '100%',
+  aspectRatio: '16 / 9',
+  backgroundColor: '#e2e8f0',
+  overflow: 'hidden',
+};
+
+const mediaElementoStyle = {
+  width: '100%',
+  height: '100%',
+  display: 'block',
+  border: 0,
+  objectFit: 'cover',
+};
+
+/**
+ * Pinta el medio de una noticia. El video tiene prioridad sobre la imagen;
+ * si la URL no es embebible se muestra un enlace "Ver video" en la tarjeta.
+ */
+function NoticiaMedia({ noticia }) {
+  const [imagenRota, setImagenRota] = useState(false);
+  const video = parseVideoUrl(noticia.videoUrl);
+
+  if (video?.tipo === 'iframe') {
+    return (
+      <div style={mediaContenedorStyle}>
+        <iframe
+          src={video.src}
+          title={`Video: ${noticia.titulo}`}
+          style={mediaElementoStyle}
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+
+  if (video?.tipo === 'video') {
+    return (
+      <div style={mediaContenedorStyle}>
+        <video src={video.src} controls preload="metadata" style={mediaElementoStyle}>
+          Tu navegador no puede reproducir este video.
+        </video>
+      </div>
+    );
+  }
+
+  if (noticia.imagenUrl && !imagenRota) {
+    return (
+      <div style={mediaContenedorStyle}>
+        <img
+          src={noticia.imagenUrl}
+          alt={noticia.titulo}
+          loading="lazy"
+          style={mediaElementoStyle}
+          onError={() => setImagenRota(true)}
+        />
+      </div>
+    );
+  }
+
+  return null;
+}
 
 export function LandingPage() {
   const [noticias, setNoticias] = useState([]);
@@ -603,20 +670,43 @@ export function LandingPage() {
             </div>
 
             <div className="landing-grid landing-grid-news" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-              {noticias.map(noticia => (
-                <div key={noticia.id} style={{
-                  backgroundColor: '#f8fafc',
-                  borderRadius: '14px',
-                  padding: '24px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <span style={{ backgroundColor: '#eff6ff', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '999px' }}>
-                    {noticia.categoria}
-                  </span>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '12px 0 8px' }}>{noticia.titulo}</h3>
-                  <p style={{ color: '#475569', fontSize: '0.88rem', lineHeight: '1.5' }}>{noticia.contenido}</p>
-                </div>
-              ))}
+              {noticias.map(noticia => {
+                const video = parseVideoUrl(noticia.videoUrl);
+                return (
+                  <div key={noticia.id} style={{
+                    backgroundColor: '#f8fafc',
+                    borderRadius: '14px',
+                    overflow: 'hidden',
+                    border: '1px solid #e2e8f0',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    <NoticiaMedia noticia={noticia} />
+                    <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ backgroundColor: '#eff6ff', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '999px' }}>
+                          {noticia.categoria}
+                        </span>
+                        {noticia.destacado && (
+                          <span style={{ backgroundColor: '#fef3c7', color: '#b45309', fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '999px' }}>
+                            Destacado
+                          </span>
+                        )}
+                      </div>
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0 }}>{noticia.titulo}</h3>
+                      {noticia.subtitulo && (
+                        <p style={{ color: '#334155', fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>{noticia.subtitulo}</p>
+                      )}
+                      <p style={{ color: '#475569', fontSize: '0.88rem', lineHeight: '1.5', margin: 0, whiteSpace: 'pre-line' }}>{noticia.contenido}</p>
+                      {video?.tipo === 'link' && (
+                        <a href={video.src} target="_blank" rel="noreferrer" style={{ color: '#1d4ed8', fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none' }}>
+                          Ver video →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>

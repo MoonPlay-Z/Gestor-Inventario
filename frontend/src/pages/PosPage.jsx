@@ -16,6 +16,12 @@ import { escanerNativoDisponible } from '../utils/lectorCodigos';
 import { EscanerMLKit } from '../components/scanner/EscanerMLKit';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { initOutbox, encolarVenta, obtenerPendientes, obtenerTodos, syncOutbox, onOutboxChange } from '../services/outbox';
+import {
+  METODOS_PAGO,
+  METODOS_PAGO_POS,
+  requiereReferencia,
+  esFinanciamiento,
+} from '../constants/metodosPago';
 
 const EMPTY_CLIENT = { razonSocial: '', rifCedula: '', direccion: '', telefono: '', correo: '' };
 
@@ -32,6 +38,11 @@ export function PosPage() {
   const [productos, setProductos] = useState([]);
 
   const [selectedClienteId, setSelectedClienteId] = useState('');
+  const [selectedCliente, setSelectedCliente] = useState(null);
+  const [clienteSearch, setClienteSearch] = useState('');
+  const [clienteSearchResults, setClienteSearchResults] = useState([]);
+  const [clienteSearchLoading, setClienteSearchLoading] = useState(false);
+  const [showClienteDropdown, setShowClienteDropdown] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searchResultsTerm, setSearchResultsTerm] = useState('');
@@ -82,18 +93,15 @@ export function PosPage() {
 
   const loadInitialData = async () => {
     try {
-      const [confRes, cliRes, prodRes, cajaRes] = await Promise.all([
+      const [confRes, prodRes, cajaRes] = await Promise.all([
         API.getConfig(),
-        API.getAllClientes(),
         API.getProductos({ limite: 100 }),
         API.getCajaActual().catch(() => ({ status: 'CLOSED' }))
       ]);
       setConfig(confRes);
-      setClientes(cliRes);
       setProductos(prodRes.data || []);
-      if (cliRes.length > 0) {
-        setSelectedClienteId(cliRes[0].id);
-      }
+      // No cargar todos los clientes al inicio; se buscan bajo demanda
+      setClientes([]);
       setCajaStatus(cajaRes?.estado === 'OPEN' ? 'OPEN' : 'CLOSED');
     } catch (err) {
       showToast('Error cargando datos del POS: ' + err.message, 'error');
@@ -165,6 +173,37 @@ export function PosPage() {
       clearTimeout(timeoutId);
     };
   }, [searchTerm]);
+
+  // ── Búsqueda de clientes (debounced y lista controlada inicial) ────────────
+  const clienteSearchTermRef = useRef('');
+  useEffect(() => {
+    const term = clienteSearch.trim();
+    clienteSearchTermRef.current = term;
+
+    let cancelled = false;
+    setClienteSearchLoading(true);
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const res = await API.buscarClientes(term, 20);
+        if (!cancelled) {
+          setClienteSearchResults(res.data || []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Error buscando clientes:', err);
+          setClienteSearchResults([]);
+        }
+      } finally {
+        if (!cancelled) setClienteSearchLoading(false);
+      }
+    }, term ? 200 : 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [clienteSearch]);
 
   const loadMoreSearchResults = async () => {
     const term = searchTerm.trim();
@@ -434,29 +473,33 @@ export function PosPage() {
         ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`);
     }
 
-    const paymentMethodMap = {
-      'EFECTIVO_USD': 'CASH',
-      'EFECTIVO_VES': 'CASH',
-      'PAGO_MOVIL': 'MOBILE_PAYMENT',
-      'PUNTO': 'CREDIT_CARD',
-      'TRANSFERENCIA': 'BANK_TRANSFER'
-    };
+    const esFinan = esFinanciamiento(metodoPago);
+    const reqRef = requiereReferencia(metodoPago);
+    if (reqRef && !referencia?.trim()) {
+      emitiendoRef.current = false;
+      setLoadingEmitir(false);
+      showToast('La referencia de transacción es obligatoria para este método de pago', 'error');
+      return;
+    }
+
+    const metodoInfo = METODOS_PAGO_POS.find(m => m.value === metodoPago);
+    const monedaPagoCalculada = metodoInfo?.moneda || (metodoPago === 'EFECTIVO_VES' ? 'VES' : 'USD');
 
     const payload = {
       requestId: requestIdRef.current,
       clienteId: selectedClienteId,
       moneda: 'USD',
       tasaCambio: tasaDolar,
-      monedaPago: metodoPago === 'EFECTIVO_VES' ? 'VES' : 'USD',
+      monedaPago: monedaPagoCalculada,
       items: cart.map(item => ({
         productoId: item.productoId,
         cantidad: item.cantidad,
         unidadPeso: item.unidadPeso || 'kg', // Enviar la unidad de peso al backend
       })),
-      metodoPago: metodoPago ? paymentMethodMap[metodoPago] : null,
-      referenciaTransaccion: referencia || null,
+      metodoPago: metodoPago || null,
+      referenciaTransaccion: reqRef ? referencia.trim() : null,
       fechaVencimiento: new Date().toISOString(),
-      cuotas: parseInt(cuotas) || 1,
+      cuotas: esFinan ? (parseInt(cuotas) || 1) : 1,
     };
 
     try {
@@ -468,6 +511,9 @@ export function PosPage() {
         'success'
       );
       setCart([]);
+      setSelectedClienteId('');
+      setSelectedCliente(null);
+      setClienteSearch('');
       setReferencia('');
       setCuotas(1);
       setTipoDocumento('factura');
@@ -517,6 +563,8 @@ export function PosPage() {
       setClientes(clienteList);
       // Auto-seleccionar el nuevo cliente
       setSelectedClienteId(res.id);
+      setSelectedCliente(res);
+      setClienteSearch('');
       setShowClienteModal(false);
       setNewCliente(EMPTY_CLIENT);
     } catch (err) {
@@ -699,25 +747,111 @@ export function PosPage() {
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
           {/* Panel Izquierdo: Selección de Cliente y Buscador de Productos */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Buscador de Clientes */}
             <div className="card">
-              <div className="form-group">
+              <div className="form-group" style={{ position: 'relative' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label className="form-label" style={{ margin: 0 }}>Cliente Seleccionado</label>
+                  <label className="form-label" style={{ margin: 0 }}>Buscar Cliente</label>
                   <Button variant="ghost" size="sm" icon="mdi:account-plus" onClick={() => setShowClienteModal(true)}>
                     Nuevo Cliente
                   </Button>
                 </div>
-                <select
+                <input
+                  type="text"
                   className="form-control"
-                  value={selectedClienteId}
-                  onChange={e => setSelectedClienteId(e.target.value)}
-                >
-                  {clientes.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.razonSocial} — ({c.rifCedula})
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Escribe nombre, RIF o haz clic para ver la lista..."
+                  value={clienteSearch}
+                  onChange={e => {
+                    setClienteSearch(e.target.value);
+                    setShowClienteDropdown(true);
+                  }}
+                  onFocus={() => setShowClienteDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowClienteDropdown(false), 250)}
+                  autoComplete="off"
+                />
+                {clienteSearchLoading && (
+                  <div className="small text-muted mt-2">Cargando clientes...</div>
+                )}
+                {showClienteDropdown && !clienteSearchLoading && clienteSearchResults.length === 0 && (
+                  <div className="small text-muted mt-2">No se encontraron clientes coincidentes.</div>
+                )}
+                {showClienteDropdown && clienteSearchResults.length > 0 && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '100%', 
+                    left: 0, 
+                    right: 0, 
+                    zIndex: 20,
+                    marginTop: '4px',
+                    maxHeight: '260px', 
+                    overflowY: 'auto', 
+                    border: '1px solid var(--border)', 
+                    borderRadius: 'var(--radius-md)', 
+                    background: 'var(--bg-secondary)',
+                    boxShadow: 'var(--shadow-lg)'
+                  }}>
+                    <div style={{ padding: '6px 12px', fontSize: '0.72rem', color: 'var(--text-secondary)', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                      {clienteSearch.trim() ? `Coincidencias (${clienteSearchResults.length})` : `Clientes disponibles (${clienteSearchResults.length})`}
+                    </div>
+                    {clienteSearchResults.map(c => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedClienteId(c.id);
+                          setSelectedCliente(c);
+                          setClienteSearch('');
+                          setShowClienteDropdown(false);
+                        }}
+                        style={{ 
+                          width: '100%', 
+                          padding: '10px 12px', 
+                          textAlign: 'left', 
+                          borderBottom: '1px solid var(--border)',
+                          background: 'transparent',
+                          cursor: 'pointer'
+                        }}
+                        className="nav-item hover:bg-[var(--surface3)]"
+                      >
+                        <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{c.razonSocial}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                          Doc: {c.rifCedula} {c.telefono ? `· Tel: ${c.telefono}` : ''}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {selectedCliente && (
+                  <div style={{ 
+                    marginTop: '8px', 
+                    padding: '8px 12px', 
+                    background: 'rgba(59, 130, 246, 0.08)', 
+                    borderRadius: 'var(--radius-md)', 
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>
+                        ✓ {selectedCliente.razonSocial}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        Documento: <strong>{selectedCliente.rifCedula}</strong>
+                        {selectedCliente.telefono && ` · Tel: ${selectedCliente.telefono}`}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedClienteId(''); setSelectedCliente(null); }}
+                      className="btn btn-ghost btn-xs text-danger"
+                      title="Quitar cliente seleccionado"
+                      style={{ padding: '4px 6px' }}
+                    >
+                      <Icon icon="mdi:close" className="h-4 w-4" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1038,20 +1172,20 @@ export function PosPage() {
                   className="form-control"
                   value={metodoPago}
                   onChange={e => {
-                    setMetodoPago(e.target.value);
-                    if (e.target.value !== '') setCuotas(1); // Si paga al contado, cuotas = 1
+                    const val = e.target.value;
+                    setMetodoPago(val);
+                    if (!esFinanciamiento(val)) setCuotas(1);
                   }}
                 >
-                  <option value="EFECTIVO_USD">Efectivo en USD</option>
-                  <option value="EFECTIVO_VES">Efectivo en Bs.</option>
-                  <option value="PAGO_MOVIL">Pago Móvil</option>
-                  <option value="PUNTO">Punto de Venta</option>
-                  <option value="TRANSFERENCIA">Transferencia Bancaria</option>
-                  <option value="">(Facturar a Crédito / Financiado)</option>
+                  {METODOS_PAGO_POS.map(m => (
+                    <option key={m.value} value={m.value}>
+                      {m.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              {!metodoPago && (
+              {esFinanciamiento(metodoPago) && (
                 <div className="form-group">
                   <label className="form-label">Número de Cuotas</label>
                   <select
@@ -1067,13 +1201,13 @@ export function PosPage() {
                 </div>
               )}
 
-              {metodoPago && !['EFECTIVO_USD', 'EFECTIVO_VES'].includes(metodoPago) && (
+              {requiereReferencia(metodoPago) && (
                 <div className="form-group">
                   <label className="form-label">Número de Referencia</label>
                   <input
                     type="text"
                     className="form-control"
-                    placeholder="Ej: 987654"
+                    placeholder="Ej: 987654 / Nro. Operación / Lote"
                     value={referencia}
                     onChange={e => setReferencia(e.target.value)}
                     required

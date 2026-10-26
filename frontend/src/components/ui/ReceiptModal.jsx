@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Icon } from '@iconify/react';
 import { Button } from './Button';
 import { Utils } from '../../services/api';
+import { ESTADOS_PAGO, getMetodoPagoLabel } from '../../constants/pagos';
 
 export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
   const [monedaImpresion, setMonedaImpresion] = useState('VES'); // 'VES' o 'USD'
@@ -9,6 +10,11 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
   if (!factura) return null;
   const isCotizacion = type === 'cotizacion';
   const isNotaEntrega = type === 'nota-entrega';
+  // El recibo refleja los pagos vigentes. Un pago anulado ya no forma parte
+  // del cobro y su descripción es información interna, no del comprobante.
+  const pagosActivos = (factura.pagos || []).filter(
+    (pago) => pago.estado !== ESTADOS_PAGO.ANULADO
+  );
   const numero = isCotizacion ? factura.numero : factura.numeroFactura;
   const tasaBcv = Number(factura?.tasaCambio) > 1
     ? Number(factura.tasaCambio)
@@ -30,7 +36,7 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
       .toISOString()
       .slice(0, 10);
     const referencia = sanitizeFilenamePart(
-      factura.pagos?.find(pago => pago.referenciaTransaccion)?.referenciaTransaccion ||
+      pagosActivos.find(pago => pago.referenciaTransaccion)?.referenciaTransaccion ||
       factura.referenciaTransaccion ||
       'sin-referencia'
     );
@@ -273,15 +279,12 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
             </div>
             
             {/* Método de Pago */}
-            {factura.pagos && factura.pagos.length > 0 && (
+            {pagosActivos.length > 0 && (
               <div style={{ marginTop: '6px' }}>
                 <strong>METODO DE PAGO:</strong>
-                {factura.pagos.map((pago, i) => (
+                {pagosActivos.map((pago, i) => (
                   <div key={i} style={{ marginLeft: '10px' }}>
-                    {pago.metodoPago === 'CASH' ? 'EFECTIVO' :
-                     pago.metodoPago === 'MOBILE_PAYMENT' ? 'PAGO MOVIL' :
-                     pago.metodoPago === 'CREDIT_CARD' ? 'PUNTO DE VENTA' :
-                     pago.metodoPago === 'BANK_TRANSFER' ? 'TRANSFERENCIA' : pago.metodoPago}
+                    {getMetodoPagoLabel(pago.metodoPago).toUpperCase()}
                     {pago.monedaPago && ` (${pago.monedaPago === 'VES' ? 'Bs.' : 'USD'})`}
                     {pago.monto !== undefined && ` - ${pago.monedaPago === 'VES' ? 'Bs.' : '$'} ${formatValue(Number(pago.monto))}`}
                     {pago.referenciaTransaccion && ` - Ref: ${pago.referenciaTransaccion}`}

@@ -31,7 +31,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [fieldErrors, setFieldErrors] = useState({});
   const [formError, setFormError] = useState('');
-  const { token, loginUser } = useAuth();
+  const { token, loginUser, user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const usuarioRef = useRef(null);
@@ -44,12 +44,13 @@ export function LoginPage() {
     }
   }, []);
 
-  // Redirect to dashboard if already logged in
+  // Redirect to dashboard if already logged in. El Super Admin no tiene
+  // dashboard operativo: su panel es /admin.
   React.useEffect(() => {
     if (token && navigate) {
-      navigate('/dashboard', { replace: true });
+      navigate(user?.rol === 'SUPER_ADMIN' ? '/admin' : '/dashboard', { replace: true });
     }
-  }, [token, navigate]);
+  }, [token, user, navigate]);
 
   const validateForm = () => {
     const errors = {};
@@ -77,7 +78,7 @@ export function LoginPage() {
       const res = await API.login({ username, password });
       loginUser(res.usuario, res.token, res.empresa, res.refreshToken);
       showToast(`¡Bienvenido de nuevo, ${res.usuario.nombre || res.usuario.username}!`, 'success');
-      navigate('/dashboard');
+      navigate(res.usuario.rol === 'SUPER_ADMIN' ? '/admin' : '/dashboard');
     } catch (err) {
       if (err.code === 'PAYMENT_REQUIRED' || (err.data && err.data.code === 'PAYMENT_REQUIRED')) {
         const payload = err.data || {};

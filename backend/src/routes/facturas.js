@@ -11,10 +11,31 @@ const { MONEDAS_PAGO, convertirMontoMoneda, sumarPagosNormalizados, normalizarPa
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaParaEmpresa } = require('../utils/tasaAPI');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
+const { containsInsensitive, extraerTerminosBusqueda } = require('../utils/textSearch');
+const { ESTADOS_PAGO } = require('../config/pagos');
+const { registrarAuditoria } = require('../utils/auditLog');
+const { lockFactura } = require('../utils/locks');
+const cxcRouter = require('./cxc');
+const {
+  MOTIVOS_ANULACION_FACTURA,
+  MOTIVOS_ANULACION_FACTURA_VALIDOS,
+  DESCRIPCION_ANULACION_FACTURA_MIN,
+  DESCRIPCION_ANULACION_FACTURA_MAX,
+  CONFIRMACION_ANULACION_FACTURA,
+  getMotivoAnulacionFacturaLabel,
+  esMotivoAnulacionFacturaValido,
+} = require('../constants/anulacionesFactura');
+const {
+  METODOS_PAGO,
+  esMetodoPagoValido,
+  requiereReferenciaMetodo,
+  esMetodoFinanciado,
+} = require('../constants/metodosPago');
 
 // SUPER_ADMIN no genera facturas
 router.use(requireRole('EMPRESA', 'CAJA'));
 
+const ESTADOS_FACTURA = ['PENDING', 'PAID', 'PARTIALLY_PAID', 'VOIDED'];
 const getEmpresaId = (req) => req.user?.empresaId || req.user?.id;
 // Las sub-cuentas (CAJA/INVENTARIO/VISOR) nacen con empresaRefId=NULL, así que
 // hay que subir por el Usuario padre para obtener el Empresa real.
@@ -42,16 +63,20 @@ router.get('/', async (req, res, next) => {
 
     if (estados) {
       const estadosFiltro = [...new Set(estados.split(',').map(valor => valor.trim()).filter(Boolean))];
-      const estadosValidos = ['PENDING', 'PAID', 'PARTIALLY_PAID', 'VOIDED'];
-      if (estadosFiltro.length === 0 || estadosFiltro.some(valor => !estadosValidos.includes(valor))) {
+      if (estadosFiltro.length === 0 || estadosFiltro.some(valor => !ESTADOS_FACTURA.includes(valor))) {
         throw createValidationError('El filtro de estados de factura no es válido');
       }
       where.estado = estadosFiltro.length === 1 ? estadosFiltro[0] : { in: estadosFiltro };
     } else if (estado) {
+      if (!ESTADOS_FACTURA.includes(estado)) {
+        throw createValidationError('El filtro de estado de factura no es válido');
+      }
       where.estado = estado;
     }
     if (clienteId) where.clienteId = clienteId;
-    if (usuarioId) where.usuarioId = usuarioId;
+    // Para CAJA `where.usuarioId` es el aislamiento de tenant: un query param
+    // no puede reemplazarlo o la caja vería facturas de otros usuarios.
+    if (usuarioId && req.user.rol !== 'CAJA') where.usuarioId = usuarioId;
     if (vencidas === 'true') {
       where.estado            = { in: ['PENDING', 'PARTIALLY_PAID'] };
       where.fechaVencimiento  = { lt: hoy.toISOString() };
@@ -67,24 +92,29 @@ router.get('/', async (req, res, next) => {
       if (h) where.fechaEmision.lte = h;
     }
     if (q) {
-      const terms = q.trim().split(/\s+/).filter(Boolean);
+      const terms = extraerTerminosBusqueda(q);
       if (terms.length > 0) {
+        // OJO: el filtro de tenant vive en `where.OR` (o en `where.usuarioId`
+        // para CAJA). Prisma combina el AND de nivel superior con ese OR, así
+        // que se conserva: borrar `where.OR` aquí devolvía facturas de otras
+        // empresas al buscar.
         where.AND = [
           ...(where.AND || []),
-          facturaTenantFilter(empresaId),
           ...terms.map(term => ({
             OR: [
-              { cliente: { razonSocial: { contains: term, mode: 'insensitive' } } },
-              { cliente: { rifCedula: { contains: term, mode: 'insensitive' } } },
-              { usuario: { username: { contains: term, mode: 'insensitive' } } },
-              { usuario: { nombre: { contains: term, mode: 'insensitive' } } },
+              { cliente: { razonSocial: containsInsensitive(term) } },
+              { cliente: { rifCedula: containsInsensitive(term) } },
+              { usuario: { username: containsInsensitive(term) } },
+              { usuario: { nombre: containsInsensitive(term) } },
+              // Búsqueda por número de factura (solo si el término es numérico).
+              ...(/^\d+$/.test(term) ? [{ numeroFactura: parseInt(term, 10) }] : []),
               {
                 items: {
                   some: {
                     OR: [
-                      { descripcionHistorica: { contains: term, mode: 'insensitive' } },
-                      { producto: { sku: { contains: term, mode: 'insensitive' } } },
-                      { producto: { nombre: { contains: term, mode: 'insensitive' } } },
+                      { descripcionHistorica: containsInsensitive(term) },
+                      { producto: { sku: containsInsensitive(term) } },
+                      { producto: { nombre: containsInsensitive(term) } },
                     ],
                   },
                 },
@@ -92,7 +122,6 @@ router.get('/', async (req, res, next) => {
             ],
           })),
         ];
-        delete where.OR;
       }
     }
 
@@ -121,18 +150,51 @@ router.get('/', async (req, res, next) => {
     const pagos = facturaIds.length > 0
       ? await prisma.pago.findMany({
           where: { facturaId: { in: facturaIds } },
-          select: { facturaId: true, monto: true, monedaPago: true, factura: { select: { moneda: true, tasaCambio: true } } },
+          select: {
+            id: true,
+            facturaId: true,
+            monto: true,
+            monedaPago: true,
+            metodoPago: true,
+            referenciaTransaccion: true,
+            fechaPago: true,
+            estado: true,
+            motivoAnulacion: true,
+            descripcionAnulacion: true,
+            anuladoPor: true,
+            fechaAnulacion: true,
+            factura: { select: { moneda: true, tasaCambio: true } },
+          },
         })
       : [];
     const pagosMap = new Map();
+    const pagosAnuladosMap = new Map();
     const empresaRefIdListado = await getEmpresaRefId(req);
     for (const pago of pagos) {
+      if (pago.estado === ESTADOS_PAGO.ANULADO) {
+        const anulados = pagosAnuladosMap.get(pago.facturaId) || [];
+        anulados.push({
+          id: pago.id,
+          monto: pago.monto,
+          monedaPago: pago.monedaPago,
+          metodoPago: pago.metodoPago,
+          referenciaTransaccion: pago.referenciaTransaccion,
+          fechaPago: pago.fechaPago,
+          motivoAnulacion: pago.motivoAnulacion,
+          descripcionAnulacion: pago.descripcionAnulacion,
+          anuladoPor: pago.anuladoPor,
+          fechaAnulacion: pago.fechaAnulacion,
+        });
+        pagosAnuladosMap.set(pago.facturaId, anulados);
+        continue;
+      }
+
       const pagado = pagosMap.get(pago.facturaId) || new Decimal(0);
       const normalizado = await normalizarPagoAFactura(pago, pago.factura, empresaRefIdListado);
       pagosMap.set(pago.facturaId, pagado.add(normalizado));
     }
 
-    // Agregar campos derivados (estaVencida y saldoPendiente)
+    // Agregar campos derivados (estaVencida, saldoPendiente y anulaciones)
     const facturasConEstado = facturas.map(f => {
       const totalPagado = pagosMap.get(f.id) || new Decimal(0);
       const saldoPendiente = new Decimal(f.total.toString()).sub(totalPagado);
@@ -141,6 +203,8 @@ router.get('/', async (req, res, next) => {
         ...f,
         estaVencida: ['PENDING', 'PARTIALLY_PAID'].includes(f.estado) && new Date(f.fechaVencimiento) < hoy,
         saldoPendiente: saldoPendiente.toFixed(2),
+        totalPagado: totalPagado.toFixed(2),
+        pagosAnulados: pagosAnuladosMap.get(f.id) || [],
       };
     });
 
@@ -177,6 +241,9 @@ router.get('/:id', async (req, res, next) => {
         observaciones: true,
         anuladoPor: true,
         motivoAnulacion: true,
+        descripcionAnulacion: true,
+        fechaAnulacion: true,
+        tasaAnulacion: true,
         createdAt: true,
         updatedAt: true,
         cliente: { select: { id: true, razonSocial: true, rifCedula: true, direccion: true, telefono: true, correo: true } },
@@ -205,6 +272,11 @@ router.get('/:id', async (req, res, next) => {
             referenciaTransaccion: true,
             fechaPago: true,
             notas: true,
+            estado: true,
+            motivoAnulacion: true,
+            descripcionAnulacion: true,
+            anuladoPor: true,
+            fechaAnulacion: true,
           },
           orderBy: { fechaPago: 'asc' },
         },
@@ -291,16 +363,17 @@ router.post('/', async (req, res, next) => {
     if (isNaN(fVencimiento.getTime())) throw createValidationError('La fecha de vencimiento es inválida');
 
     const cuotasTotales = [2, 3, 4].includes(parseInt(cuotas)) ? parseInt(cuotas) : 1;
-    const esFinanciada = cuotasTotales > 1;
+    const esFinanciada = cuotasTotales > 1 || esMetodoFinanciado(metodoPago) || !metodoPago;
+    const esPagoContado = Boolean(metodoPago && !esMetodoFinanciado(metodoPago));
 
-    if (metodoPago && !['CASH', 'BANK_TRANSFER', 'CREDIT_CARD', 'MOBILE_PAYMENT', 'PAGO_MOVIL'].includes(metodoPago)) {
+    if (metodoPago && !esMetodoPagoValido(metodoPago)) {
       throw createValidationError('Método de pago inválido');
     }
-    if (metodoPago && metodoPago !== 'CASH' && !referenciaTransaccion) {
-      throw createValidationError('La referencia es obligatoria para pagos electrónicos');
+    if (metodoPago && requiereReferenciaMetodo(metodoPago) && !referenciaTransaccion?.trim()) {
+      throw createValidationError('La referencia es obligatoria para este método de pago');
     }
     // Financiada no puede ser pagada de contado simultáneamente
-    if (esFinanciada && metodoPago) {
+    if (esFinanciada && esPagoContado) {
       throw createValidationError('Una factura financiada no puede marcarse como pagada al contado en el mismo acto');
     }
 
@@ -420,9 +493,7 @@ router.post('/', async (req, res, next) => {
       const numeroFactura = await obtenerSiguienteNumeroFactura(tx);
 
       // 1. Crear factura con ítems
-      let estadoInicial = 'PENDING';
-      if (metodoPago) estadoInicial = 'PAID';
-      else if (esFinanciada) estadoInicial = 'PENDING'; // primer cuota pendiente
+      const estadoInicial = esPagoContado ? 'PAID' : 'PENDING';
 
       const nuevaFactura = await tx.factura.create({
         data: {
@@ -488,31 +559,36 @@ router.post('/', async (req, res, next) => {
         },
       });
 
-      // 1.5. Crear CuentaPorCobrar asociada (montos siempre en USD normalizado)
-      const totalFacturaUSD = convertirMontoMoneda(totalFactura, moneda, 'USD', tasaFacturacion);
-      const estadoCxC = metodoPago ? 'PAID' : 'PENDING';
-      const montoCobradoInicial = metodoPago ? totalFacturaUSD.toFixed(2) : '0.00';
-      const montoPendienteInicial = metodoPago ? '0.00' : totalFacturaUSD.toFixed(2);
+      // 1.5. Crear CuentaPorCobrar asociada EXCLUSIVAMENTE si es financiada (montos siempre en USD normalizado)
+      if (!esPagoContado) {
+        const totalFacturaUSD = convertirMontoMoneda(totalFactura, moneda, 'USD', tasaFacturacion);
 
-      await tx.cuentaPorCobrar.create({
-        data: {
-          empresaId: empresaRefId,
-          facturaId: nuevaFactura.id,
-          clienteId,
-          usuarioId: req.user?.id || null,
-          montoOriginal: totalFacturaUSD.toFixed(2),
-          montoCobrado: montoCobradoInicial,
-          montoPendiente: montoPendienteInicial,
-          fechaEmision: nuevaFactura.fechaEmision,
-          fechaVencimiento: fVencimiento.toISOString(),
-          estado: estadoCxC,
-          diasVencido: 0
-        }
-      });
+        await tx.cuentaPorCobrar.create({
+          data: {
+            empresaId: empresaRefId,
+            facturaId: nuevaFactura.id,
+            clienteId,
+            usuarioId: req.user?.id || null,
+            montoOriginal: totalFacturaUSD.toFixed(2),
+            montoCobrado: '0.00',
+            montoPendiente: totalFacturaUSD.toFixed(2),
+            fechaEmision: nuevaFactura.fechaEmision,
+            fechaVencimiento: fVencimiento.toISOString(),
+            estado: 'PENDING',
+            diasVencido: 0
+          }
+        });
+      }
 
       // 2. Crear el registro de pago inmediato si aplica (CONTADO)
-      if (metodoPago) {
-        const monedaRecibida = metodoPago === 'CASH' ? monedaPago : moneda;
+      if (esPagoContado) {
+        const monedaRecibida = monedaPago || (
+          [METODOS_PAGO.EFECTIVO_VES, METODOS_PAGO.BIOPAGO, METODOS_PAGO.PAGO_MOVIL].includes(metodoPago)
+            ? 'VES'
+            : [METODOS_PAGO.EFECTIVO_USD, METODOS_PAGO.BINANCE, METODOS_PAGO.CASHEA].includes(metodoPago)
+              ? 'USD'
+              : moneda
+        );
         const montoRecibido = convertirMontoMoneda(
           totalFactura,
           moneda,
@@ -525,7 +601,7 @@ router.post('/', async (req, res, next) => {
             monto: montoRecibido.toDecimalPlaces(2).toFixed(2),
             monedaPago: monedaRecibida,
             metodoPago,
-            referenciaTransaccion: metodoPago === 'CASH' ? null : referenciaTransaccion,
+            referenciaTransaccion: requiereReferenciaMetodo(metodoPago) ? referenciaTransaccion.trim() : null,
             notas: 'Pago de contado al momento de emisión',
             tasaBCV: tasaBCVPago ? tasaBCVPago.toFixed(4) : null,
           },
@@ -603,82 +679,120 @@ router.post('/', async (req, res, next) => {
 
     res.status(201).json({
       ...factura,
-      totalPagado: metodoPago ? totalFactura.toFixed(2) : '0.00',
-      balancePendiente: metodoPago ? '0.00' : totalFactura.toFixed(2),
+      totalPagado: esPagoContado ? totalFactura.toFixed(2) : '0.00',
+      balancePendiente: esPagoContado ? '0.00' : totalFactura.toFixed(2),
       cuotasTotales,
       montoCuota,
     });
   } catch (err) { next(err); }
 });
 
-// PATCH /api/facturas/:id/anular — Anular factura (requiere código para rol CAJA)
+// PATCH /api/facturas/:id/anular — Anular factura (protocolo de seguridad, auditoría e integridad de tasa)
 router.patch('/:id/anular', async (req, res, next) => {
   try {
-    const { codigoAnulacion, confirmacion, motivo } = req.body;
+    const { codigoAnulacion, confirmacion, motivo, descripcion } = req.body || {};
     const userRole = req.user?.rol;
 
-    if (confirmacion !== 'anular') {
-      throw createValidationError('Debes escribir "anular" para confirmar la anulación', { confirmacion: 'Escribe anular exactamente' });
-    }
-    if (typeof motivo !== 'string' || !motivo.trim()) {
-      throw createValidationError('Debes describir el motivo de la anulación', { motivo: 'La descripción es obligatoria' });
-    }
-    if (motivo.trim().length > 500) {
-      throw createValidationError('La descripción no puede superar 500 caracteres', { motivo: 'Máximo 500 caracteres' });
+    if (userRole === 'INVENTARIO' || userRole === 'VISOR') {
+      return res.status(403).json({
+        error: 'Acceso denegado',
+        message: 'Tu rol no tiene permisos para anular facturas de venta.'
+      });
     }
 
-    if (userRole === 'INVENTARIO') {
-      return res.status(403).json({ error: 'Acceso denegado: El personal de inventario no tiene permiso para anular facturas.' });
-    }
-
-    // Para el rol CAJA, se requiere código de anulación obligatorio
+    // Para el rol CAJA, se requiere código de anulación obligatorio del supervisor
     if (userRole === 'CAJA') {
       const systemVoidCode = process.env.VOID_CODE || '1234';
       if (typeof codigoAnulacion !== 'string' || codigoAnulacion.trim() !== systemVoidCode) {
         return res.status(403).json({
           error: 'Código de anulación inválido',
-          message: 'Los usuarios de Caja requieren el código de autorización del supervisor/empresa para anular una venta.'
+          message: 'Los usuarios de Caja requieren el código de autorización del supervisor/empresa para anular una venta.',
+          fields: { codigoAnulacion: 'Código de supervisor incorrecto' }
         });
       }
     }
 
-    const empresaId = getEmpresaId(req);
-    const factura = await prisma.factura.findFirstOrThrow({
-      where: {
-        id: req.params.id,
-        ...facturaTenantFilter(empresaId),
-      },
-      select: {
-        id: true,
-        estado: true,
-        items: {
-          select: {
-            id: true,
-            productoId: true,
-            cantidad: true,
-          },
-        },
-        pagos: {
-          select: {
-            id: true,
-            monto: true,
-          },
-        },
-      },
-    });
-
-    if (factura.estado === 'VOIDED') {
-      return res.status(400).json({ error: 'La factura ya está anulada' });
+    if (typeof confirmacion !== 'string' || confirmacion.trim().toLowerCase() !== CONFIRMACION_ANULACION_FACTURA) {
+      throw createValidationError(
+        `Debes escribir "${CONFIRMACION_ANULACION_FACTURA}" para confirmar la anulación`,
+        { confirmacion: `Escribe ${CONFIRMACION_ANULACION_FACTURA} exactamente` }
+      );
     }
 
-    // Transacción: anular factura + restaurar stock
+    let motivoFinal = typeof motivo === 'string' ? motivo.trim() : '';
+    let descripcionFinal = typeof descripcion === 'string' ? descripcion.trim() : '';
+
+    if (esMotivoAnulacionFacturaValido(motivoFinal)) {
+      if (!descripcionFinal || descripcionFinal.length < DESCRIPCION_ANULACION_FACTURA_MIN) {
+        throw createValidationError(
+          `La justificación detallada debe tener al menos ${DESCRIPCION_ANULACION_FACTURA_MIN} caracteres`,
+          { descripcion: `Mínimo ${DESCRIPCION_ANULACION_FACTURA_MIN} caracteres explicando por qué se anula` }
+        );
+      }
+      if (descripcionFinal.length > DESCRIPCION_ANULACION_FACTURA_MAX) {
+        throw createValidationError(
+          `La justificación no puede exceder ${DESCRIPCION_ANULACION_FACTURA_MAX} caracteres`,
+          { descripcion: `Máximo ${DESCRIPCION_ANULACION_FACTURA_MAX} caracteres` }
+        );
+      }
+    } else if (motivoFinal.length >= DESCRIPCION_ANULACION_FACTURA_MIN) {
+      // Compatibilidad con clientes antiguos que enviaban solo texto libre en "motivo"
+      descripcionFinal = motivoFinal;
+      motivoFinal = 'OTRO';
+    } else {
+      throw createValidationError('Debe seleccionar un motivo válido y explicar la justificación', {
+        motivo: `Seleccione un motivo válido (${MOTIVOS_ANULACION_FACTURA_VALIDOS.join(', ')})`
+      });
+    }
+
+    const empresaId = getEmpresaId(req);
+    const empresaRefId = await getEmpresaRefId(req);
+    const tasaSistemaActual = await tasaParaEmpresa(empresaRefId);
+
+    // Transacción atómica: anular factura + anular pagos + restaurar stock + auditoría
     const anulada = await prisma.$transaction(async (tx) => {
+      await lockFactura(tx, req.params.id);
+
+      const factura = await tx.factura.findFirstOrThrow({
+        where: {
+          id: req.params.id,
+          ...facturaTenantFilter(empresaId),
+        },
+        include: {
+          items: true,
+          pagos: true,
+          cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
+        },
+      });
+
+      if (factura.estado === 'VOIDED') {
+        throw createBusinessError('La factura ya está anulada');
+      }
+
+      const fechaAnulacion = new Date();
+      // Integridad de tasa: preservar la tasa efectiva exacta de la factura
+      const tasaEfectiva = factura.moneda === 'VES' && Number(factura.tasaCambio) > 0
+        ? new Decimal(factura.tasaCambio.toString())
+        : tasaSistemaActual;
+
+      const totalFacturaUSD = convertirMontoMoneda(
+        new Decimal(factura.total.toString()),
+        factura.moneda || 'USD',
+        'USD',
+        tasaEfectiva
+      );
+      const totalFacturaVES = totalFacturaUSD.mul(tasaEfectiva);
+
+      // 1. Actualizar Factura con motivo estructurado, justificación y congelamiento de tasa
       const updated = await tx.factura.update({
         where: { id: req.params.id },
         data: {
           estado: 'VOIDED',
-          anuladoPor: req.user?.nombre || req.user?.username || 'Anónimo',
-          motivoAnulacion: motivo.trim(),
+          anuladoPor: req.user?.nombre || req.user?.username || 'Usuario',
+          motivoAnulacion: motivoFinal,
+          descripcionAnulacion: descripcionFinal,
+          fechaAnulacion,
+          tasaAnulacion: tasaEfectiva.toNumber(),
         },
         select: {
           id: true,
@@ -698,6 +812,9 @@ router.patch('/:id/anular', async (req, res, next) => {
           observaciones: true,
           anuladoPor: true,
           motivoAnulacion: true,
+          descripcionAnulacion: true,
+          fechaAnulacion: true,
+          tasaAnulacion: true,
           createdAt: true,
           updatedAt: true,
           cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
@@ -719,28 +836,77 @@ router.patch('/:id/anular', async (req, res, next) => {
         },
       });
 
-      // Eliminar CuentaPorCobrar asociada
+      // 2. Anulación lógica de todos los pagos activos asociados
+      if (factura.pagos?.length > 0) {
+        await tx.pago.updateMany({
+          where: {
+            facturaId: factura.id,
+            estado: { not: ESTADOS_PAGO.ANULADO },
+          },
+          data: {
+            estado: ESTADOS_PAGO.ANULADO,
+            motivoAnulacion: 'FACTURA_ANULADA',
+            descripcionAnulacion: `Anulado por anulación de Factura #${factura.numeroFactura} (${getMotivoAnulacionFacturaLabel(motivoFinal)}: ${descripcionFinal.slice(0, 80)})`,
+            anuladoPor: req.user?.nombre || req.user?.username || 'Usuario',
+            fechaAnulacion,
+          },
+        });
+      }
+
+      // 3. Eliminar CuentaPorCobrar asociada si existía
       await tx.cuentaPorCobrar.deleteMany({
         where: { facturaId: req.params.id }
       });
 
-      // Restaurar stock de los productos
+      // 4. Restaurar stock de los productos con verificación de empresa
       for (const item of factura.items) {
         if (item.productoId) {
-          const updated = await tx.producto.updateMany({
+          const updatedStock = await tx.producto.updateMany({
             where: { id: item.productoId, empresaId },
             data: { stockActual: { increment: Number(item.cantidad) } },
           });
-          if (updated.count === 0) {
+          if (updatedStock.count === 0) {
             throw new Error('No se pudo restaurar el stock del producto porque no pertenece a tu empresa');
           }
         }
       }
 
+      // 5. Registrar en auditoría
+      await registrarAuditoria(req, {
+        accion: 'FACTURA_ANULADA',
+        entidad: 'Factura',
+        entidadId: factura.id,
+        empresaId: factura.empresaId || empresaRefId,
+        datosAnteriores: {
+          numeroFactura: factura.numeroFactura,
+          estado: factura.estado,
+          total: factura.total,
+          moneda: factura.moneda,
+          tasaCambio: factura.tasaCambio,
+        },
+        datosNuevos: {
+          numeroFactura: factura.numeroFactura,
+          estado: 'VOIDED',
+          motivoAnulacion: motivoFinal,
+          descripcionAnulacion: descripcionFinal,
+          anuladoPor: updated.anuladoPor,
+          fechaAnulacion,
+          tasaAnulacion: tasaEfectiva.toNumber(),
+          impactoEconomico: {
+            totalUSD: totalFacturaUSD.toFixed(2),
+            totalVES: totalFacturaVES.toFixed(2),
+          },
+          itemsRestaurados: factura.items.length,
+          pagosAfectados: factura.pagos.length,
+        },
+        tx,
+      });
+
       return updated;
     });
 
     invalidarCacheVentas();
+    cxcRouter.invalidarCacheCxcResumen?.();
     res.json(anulada);
   } catch (err) { next(err); }
 });

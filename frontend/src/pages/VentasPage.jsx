@@ -8,6 +8,7 @@ import { useToast } from '../context/ToastContext';
 import { Button } from '../components/ui';
 import { ReceiptModal } from '../components/ui/ReceiptModal';
 import { useAuth } from '../context/AuthContext';
+import { getMotivoAnulacionLabel, getMetodoPagoLabel } from '../constants/pagos';
 
 export function VentasPage() {
   const { toggleSidebar } = useOutletContext();
@@ -29,6 +30,7 @@ export function VentasPage() {
   const [config, setConfig] = useState(null);
   const [showReceipt, setShowReceipt] = useState(false);
   const [selectedFactura, setSelectedFactura] = useState(null);
+  const [modalAnulados, setModalAnulados] = useState(null);
 
   const calcularRango = () => {
     const ahora = new Date();
@@ -266,10 +268,17 @@ export function VentasPage() {
                       </td>
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{Utils.formatDateTime(f.fechaEmision)}</td>
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, textAlign: 'right' }}>
-                        {(() => { const tasa = f.tasaDolar || f.tasaCambio || config?.moneda?.tasaDolar || 1; const totalUSD = f.moneda === 'VES' && tasa > 0 ? (f.total || 0) / tasa : (f.total || 0); return Utils.formatMoney(totalUSD); })()}
+                        {(() => { const totalUSD = Utils.montoUsdFactura(f, config?.moneda?.tasaDolar); return Utils.formatMoney(totalUSD); })()}
                       </td>
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', color: 'var(--success)', fontWeight: 600, textAlign: 'right' }}>
-                        {(() => { const tasa = f.tasaDolar || f.tasaCambio || config?.moneda?.tasaDolar || 1; const totalUSD = f.moneda === 'VES' && tasa > 0 ? (f.total || 0) / tasa : (f.total || 0); const totalBS = f.moneda === 'VES' ? (f.total || 0) : totalUSD * tasa; return `${totalBS.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.`; })()}
+                        {(() => {
+                          // En facturas USD, `tasaCambio` vale 1 y no lleva tasa:
+                          // el monto en Bs se calcula con la tasa de la empresa.
+                          const totalUSD = Utils.montoUsdFactura(f, config?.moneda?.tasaDolar);
+                          const tasa = Utils.tasaFactura(f, config?.moneda?.tasaDolar);
+                          const totalBS = f.moneda === 'VES' ? (f.total || 0) : totalUSD * tasa;
+                          return `${totalBS.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Bs.`;
+                        })()}
                       </td>
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
                         {f.estado === 'PAID' ? (
@@ -280,6 +289,37 @@ export function VentasPage() {
                           <span className="badge badge-info">Abonada</span>
                         ) : (
                           <span className="badge badge-danger">Anulada</span>
+                        )}
+                        {f.pagosAnulados?.length > 0 && (
+                          <div style={{ marginTop: '6px', maxWidth: '200px', marginLeft: 'auto', marginRight: 'auto' }}>
+                            <button
+                              type="button"
+                              onClick={() => setModalAnulados({ numero: f.numeroFactura, cliente: f.cliente?.razonSocial, pagos: f.pagosAnulados })}
+                              className="badge badge-danger"
+                              style={{ fontSize: '0.65rem', cursor: 'pointer', border: 'none' }}
+                              title="Clic para ver detalles y descripción de la anulación"
+                            >
+                              {f.pagosAnulados.length === 1 ? '⚠️ Pago anulado (ver)' : `⚠️ ${f.pagosAnulados.length} anulados (ver)`}
+                            </button>
+                            {f.pagosAnulados.slice(0, 1).map((pago) => (
+                              <div
+                                key={pago.id}
+                                onClick={() => setModalAnulados({ numero: f.numeroFactura, cliente: f.cliente?.razonSocial, pagos: f.pagosAnulados })}
+                                title="Clic para ver descripción completa"
+                                style={{
+                                  marginTop: '4px',
+                                  fontSize: '0.7rem',
+                                  color: 'var(--danger)',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {getMotivoAnulacionLabel(pago.motivoAnulacion)}: {pago.descripcionAnulacion}
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </td>
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', textAlign: 'center' }}>
@@ -326,6 +366,61 @@ export function VentasPage() {
           config={config}
           onClose={() => setShowReceipt(false)}
         />
+      )}
+
+      {modalAnulados && (
+        <div className="modal-overlay open" onClick={() => setModalAnulados(null)}>
+          <div className="modal" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                Pagos Anulados · Factura #{modalAnulados.numero}
+              </h3>
+              <button type="button" className="modal-close" onClick={() => setModalAnulados(null)}>
+                <Icon icon="mdi:close" className="h-5 w-5" />
+              </button>
+            </div>
+            <div style={{ marginBottom: '14px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+              Cliente: <strong>{modalAnulados.cliente || 'Consumidor Final'}</strong>
+            </div>
+            <div className="space-y-3" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              {modalAnulados.pagos.map((pago) => (
+                <div
+                  key={pago.id}
+                  style={{
+                    padding: '14px',
+                    borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    marginBottom: '10px'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
+                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                      {Utils.formatMoney(pago.monto)} {pago.monedaPago} · {getMetodoPagoLabel(pago.metodoPago)}
+                    </span>
+                    <span className="badge badge-danger">ANULADO</span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: 600, marginBottom: '4px' }}>
+                    Motivo: {getMotivoAnulacionLabel(pago.motivoAnulacion)}
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-primary)', marginBottom: '8px', lineHeight: 1.4 }}>
+                    <strong>Descripción:</strong> {pago.descripcionAnulacion || 'Sin descripción registrada'}
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                    Anulado por: <strong>{pago.anuladoPor || 'Usuario'}</strong>
+                    {pago.fechaAnulacion && ` · ${Utils.formatDateTime(pago.fechaAnulacion)}`}
+                    {pago.referenciaTransaccion && ` · Ref: ${pago.referenciaTransaccion}`}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+              <Button variant="secondary" onClick={() => setModalAnulados(null)}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

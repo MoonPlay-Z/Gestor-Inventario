@@ -17,6 +17,21 @@ const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
 const { toDecimalSeguro } = require('../utils/decimal');
 const { lockFactura, lockCuenta } = require('../utils/locks');
+const { containsInsensitive } = require('../utils/textSearch');
+const { registrarAuditoria } = require('../utils/auditLog');
+const { invalidarCacheVentas } = require('../services/reportesService');
+const cxcRouter = require('./cxc');
+const {
+  ESTADOS_PAGO,
+  MOTIVOS_ANULACION_PAGO_VALIDOS,
+  DESCRIPCION_ANULACION_PAGO_MIN,
+  DESCRIPCION_ANULACION_PAGO_MAX,
+  CONFIRMACION_ANULACION_PAGO,
+  METODOS_ABONO_VALIDOS,
+  esMetodoPagoValido,
+  requiereReferenciaMetodo,
+  esMetodoFinanciado,
+} = require('../config/pagos');
 
 // Medio centavo de tolerancia: absorber el excedente de redondeo que aparece al
 // convertir un abono en Bs a USD (p. ej. 10 Bs = 0.0116 USD contra 0.01 USD).
@@ -36,18 +51,182 @@ const facturaTenantFilter = (empresaId) => ({
   ]
 });
 
-const METODOS_VALIDOS = ['CASH', 'BANK_TRANSFER', 'CREDIT_CARD', 'MOBILE_PAYMENT'];
+const METODOS_VALIDOS = METODOS_ABONO_VALIDOS;
+
+// Forma única de un pago con su factura. Evita que el listado, el historial de
+// anulados y la respuesta de anulación devuelvan columnas distintas.
+const PAGO_CON_FACTURA_SELECT = {
+  id: true,
+  facturaId: true,
+  monto: true,
+  monedaPago: true,
+  metodoPago: true,
+  referenciaTransaccion: true,
+  fechaPago: true,
+  notas: true,
+  tasaBCV: true,
+  estado: true,
+  motivoAnulacion: true,
+  descripcionAnulacion: true,
+  anuladoPor: true,
+  fechaAnulacion: true,
+  createdAt: true,
+  factura: {
+    select: {
+      id: true,
+      numeroFactura: true,
+      estado: true,
+      total: true,
+      moneda: true,
+      tasaCambio: true,
+      cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
+      cuentaPorCobrar: { select: { id: true } },
+    },
+  },
+};
+
+// El CAJA solo administra sus propias ventas; EMPRESA ve todo su tenant.
+// Se aplica en la anulación y en el historial de anulados. `GET /api/pagos`
+// conserva su alcance histórico de empresa para no romper consumidores.
+const pagoTenantFilter = (req) => {
+  if (req.user.rol === 'CAJA') {
+    return { factura: { usuarioId: req.user.id } };
+  }
+  return { factura: facturaTenantFilter(getEmpresaId(req)) };
+};
+
+/**
+ * Valida el cuerpo de una anulación. La descripción es obligatoria porque es
+ * el dato que luego se muestra en el historial y en la auditoría; no se acepta
+ * un motivo genérico sin explicación.
+ */
+function validarAnulacionPago(req) {
+  const { motivo, descripcion, codigoAnulacion, confirmacion } = req.body || {};
+
+  if (confirmacion !== CONFIRMACION_ANULACION_PAGO) {
+    throw createValidationError(
+      `Debes escribir "${CONFIRMACION_ANULACION_PAGO}" para confirmar la anulación`,
+      { confirmacion: `Escribe ${CONFIRMACION_ANULACION_PAGO} exactamente` }
+    );
+  }
+  if (!MOTIVOS_ANULACION_PAGO_VALIDOS.includes(motivo)) {
+    throw createValidationError(
+      `Motivo inválido. Valores permitidos: ${MOTIVOS_ANULACION_PAGO_VALIDOS.join(', ')}`,
+      { motivo: 'Seleccione un motivo' }
+    );
+  }
+  if (typeof descripcion !== 'string') {
+    throw createValidationError('La descripción de la anulación es obligatoria', {
+      descripcion: 'Campo requerido',
+    });
+  }
+
+  const descripcionLimpia = descripcion.trim();
+  if (descripcionLimpia.length < DESCRIPCION_ANULACION_PAGO_MIN) {
+    throw createValidationError(
+      `La descripción debe tener al menos ${DESCRIPCION_ANULACION_PAGO_MIN} caracteres`,
+      { descripcion: `Mínimo ${DESCRIPCION_ANULACION_PAGO_MIN} caracteres` }
+    );
+  }
+  if (descripcionLimpia.length > DESCRIPCION_ANULACION_PAGO_MAX) {
+    throw createValidationError(
+      `La descripción no puede superar ${DESCRIPCION_ANULACION_PAGO_MAX} caracteres`,
+      { descripcion: `Máximo ${DESCRIPCION_ANULACION_PAGO_MAX} caracteres` }
+    );
+  }
+
+  if (req.user.rol === 'CAJA') {
+    const systemVoidCode = process.env.VOID_CODE || '1234';
+    if (typeof codigoAnulacion !== 'string' || codigoAnulacion.trim() !== systemVoidCode) {
+      throw createBusinessError(
+        'Código de anulación inválido. Un usuario de Caja requiere autorización del supervisor.',
+        { code: 'CODIGO_ANULACION_INVALIDO' }
+      );
+    }
+  }
+
+  return { motivo, descripcion: descripcionLimpia };
+}
+
+// GET /api/pagos/anulados — Historial de pagos anulados con su descripción
+router.get('/anulados', async (req, res, next) => {
+  try {
+    const { q, motivo, desde, hasta } = req.query;
+    const { skip, take, page, limit } = paginate(req.query, { limit: 25 });
+    const where = {
+      estado: ESTADOS_PAGO.ANULADO,
+      ...pagoTenantFilter(req),
+    };
+
+    if (motivo) {
+      if (!MOTIVOS_ANULACION_PAGO_VALIDOS.includes(motivo)) {
+        throw createValidationError('El filtro de motivo de anulación no es válido');
+      }
+      where.motivoAnulacion = motivo;
+    }
+
+    const rango = {};
+    if (desde) {
+      const fecha = new Date(desde);
+      if (isNaN(fecha.getTime())) throw createValidationError('La fecha "desde" no es válida');
+      rango.gte = fecha;
+    }
+    if (hasta) {
+      const fecha = new Date(hasta);
+      if (isNaN(fecha.getTime())) throw createValidationError('La fecha "hasta" no es válida');
+      rango.lte = fecha;
+    }
+    if (Object.keys(rango).length > 0) where.fechaAnulacion = rango;
+
+    if (q) {
+      const terms = q.trim().split(/\s+/).filter(Boolean);
+      if (terms.length > 0) {
+        where.AND = terms.map(term => ({
+          OR: [
+            { descripcionAnulacion: containsInsensitive(term) },
+            { motivoAnulacion: containsInsensitive(term) },
+            { referenciaTransaccion: containsInsensitive(term) },
+            { anuladoPor: containsInsensitive(term) },
+            { factura: { cliente: { razonSocial: containsInsensitive(term) } } },
+            { factura: { cliente: { rifCedula: containsInsensitive(term) } } },
+            ...(/^\d+$/.test(term) ? [{ factura: { numeroFactura: parseInt(term, 10) } }] : []),
+          ],
+        }));
+      }
+    }
+
+    const [pagos, total] = await Promise.all([
+      prisma.pago.findMany({
+        where,
+        skip,
+        take,
+        orderBy: [{ fechaAnulacion: 'desc' }, { fechaPago: 'desc' }],
+        select: PAGO_CON_FACTURA_SELECT,
+      }),
+      prisma.pago.count({ where }),
+    ]);
+
+    res.json(paginatedResponse(pagos, total, page, limit));
+  } catch (err) { next(err); }
+});
 
 // GET /api/pagos?facturaId= (con paginación)
 router.get('/', async (req, res, next) => {
   try {
-    const { facturaId } = req.query;
+    const { facturaId, estado } = req.query;
     const { skip, take, page, limit } = paginate(req.query, { limit: 50 });
     const empresaId = getEmpresaId(req);
     const where = {
       factura: facturaTenantFilter(empresaId),
       ...(facturaId ? { facturaId } : {}),
     };
+
+    if (estado) {
+      if (!Object.values(ESTADOS_PAGO).includes(estado)) {
+        throw createValidationError('El filtro de estado de pago no es válido');
+      }
+      where.estado = estado;
+    }
 
     const [pagos, total] = await Promise.all([
       prisma.pago.findMany({
@@ -58,29 +237,7 @@ router.get('/', async (req, res, next) => {
         // Un solo bloque `select` de nivel superior: Prisma no admite `include`
         // y `select` juntos (devolvía 500 en todos los listados de pagos). Los
         // campos de `factura` van anidados dentro del `select`.
-        select: {
-          id: true,
-          facturaId: true,
-          monto: true,
-          monedaPago: true,
-          metodoPago: true,
-          referenciaTransaccion: true,
-          fechaPago: true,
-          notas: true,
-          tasaBCV: true,
-          createdAt: true,
-          factura: {
-            select: {
-              id: true,
-              numeroFactura: true,
-              estado: true,
-              total: true,
-              moneda: true,
-              tasaCambio: true,
-              cliente: { select: { id: true, razonSocial: true, rifCedula: true } },
-            },
-          },
-        },
+        select: PAGO_CON_FACTURA_SELECT,
       }),
       prisma.pago.count({ where }),
     ]);
@@ -96,7 +253,7 @@ router.post('/', async (req, res, next) => {
     // ── Validaciones ──────────────────────────────────────────────────────────
     if (!facturaId)   throw createValidationError('El ID de factura es obligatorio', { facturaId: 'Campo requerido' });
     if (!metodoPago)  throw createValidationError('El método de pago es obligatorio', { metodoPago: 'Seleccione un método' });
-    if (!METODOS_VALIDOS.includes(metodoPago)) {
+    if (!esMetodoPagoValido(metodoPago) || esMetodoFinanciado(metodoPago)) {
       throw createValidationError(`Método de pago inválido. Valores permitidos: ${METODOS_VALIDOS.join(', ')}`);
     }
 
@@ -106,8 +263,8 @@ router.post('/', async (req, res, next) => {
       throw createValidationError('La moneda del pago debe ser USD o VES', { monedaPago: 'Moneda inválida' });
     }
 
-    // Si el método NO es CASH, la referencia es obligatoria
-    if (metodoPago !== 'CASH' && !referenciaTransaccion?.trim()) {
+    // Si el método exige referencia, es obligatoria
+    if (requiereReferenciaMetodo(metodoPago) && !referenciaTransaccion?.trim()) {
       throw createValidationError('La referencia de transacción es obligatoria para este método de pago', {
         referenciaTransaccion: 'Campo requerido',
       });
@@ -181,7 +338,7 @@ router.post('/', async (req, res, next) => {
           monto:                 montoPago.toFixed(2),
           monedaPago:            monedaDelPagoTx,
           metodoPago,
-          referenciaTransaccion: referenciaTransaccion?.trim() || null,
+          referenciaTransaccion: requiereReferenciaMetodo(metodoPago) ? referenciaTransaccion.trim() : null,
           fechaPago:             fechaPagoFinal.toISOString(),
           notas:                 notas?.trim() || null,
           tasaBCV:               tasaBCV ? tasaBCV.toFixed(4) : null,
@@ -219,6 +376,7 @@ router.post('/', async (req, res, next) => {
               monedaPago: true,
               metodoPago: true,
               fechaPago: true,
+              estado: true,
             },
           },
         },
@@ -233,7 +391,7 @@ router.post('/', async (req, res, next) => {
         await lockCuenta(tx, cxc.id);
 
         const cobradoPrevioUSD = await sumarPagosCxcUSD(factura.pagos, factura, empresaRefId);
-        const montoAplicarUSD = await convertirMontoMoneda(
+        const montoAplicarUSD = convertirMontoMoneda(
           montoAplicar,
           factura.moneda || 'USD',
           'USD',
@@ -264,6 +422,7 @@ router.post('/', async (req, res, next) => {
 
     // Calcular totales para la respuesta
     const balanceFinal = new Decimal(facturaActualizada.total.toString()).sub(totalPagadoFinal);
+    cxcRouter.invalidarCacheCxcResumen?.();
 
     res.status(201).json({
       pago,
@@ -276,72 +435,203 @@ router.post('/', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
-// DELETE /api/pagos/:id — Eliminar pago y revertir estado factura
-router.delete('/:id', async (req, res, next) => {
+// PATCH /api/pagos/:id/anular — Anular un pago sin borrarlo
+// La factura y la CxC se recalculan con los pagos ACTIVOS restantes. La fila
+// original se conserva con motivo, descripción, autor y fecha de anulación.
+router.patch('/:id/anular', async (req, res, next) => {
   try {
-    const empresaId = getEmpresaId(req);
+    const { motivo, descripcion } = validarAnulacionPago(req);
     const empresaRefId = await getEmpresaRefId(req);
 
-    await prisma.$transaction(async (tx) => {
-      const pago = await tx.pago.findFirstOrThrow({
-        where: {
-          id: req.params.id,
-          factura: facturaTenantFilter(empresaId),
-        },
+    const resultado = await prisma.$transaction(async (tx) => {
+      const pagoRef = await tx.pago.findFirstOrThrow({
+        where: { id: req.params.id, ...pagoTenantFilter(req) },
         select: { id: true, facturaId: true },
       });
 
-      await lockFactura(tx, pago.facturaId);
+      await lockFactura(tx, pagoRef.facturaId);
 
-      // Relectura dentro de la transacción: el listado pudo cambiar entre la
-      // lectura previa y el borrado (p. ej. otro pago simultáneo).
       const factura = await tx.factura.findUniqueOrThrow({
-        where: { id: pago.facturaId },
-        include: { pagos: true },
+        where: { id: pagoRef.facturaId },
+        select: {
+          id: true,
+          numeroFactura: true,
+          usuarioId: true,
+          empresaId: true,
+          clienteId: true,
+          total: true,
+          moneda: true,
+          tasaCambio: true,
+          estado: true,
+        },
       });
 
       if (factura.estado === 'VOIDED') {
-        throw createBusinessError('No se puede eliminar un pago de una factura anulada');
+        throw createBusinessError('No se puede anular un pago de una factura anulada');
       }
 
-      await tx.pago.delete({ where: { id: req.params.id } });
+      const pagoAntes = await tx.pago.findUniqueOrThrow({ where: { id: pagoRef.id } });
+      const pagosDeFactura = await tx.pago.findMany({
+        where: { facturaId: factura.id },
+        select: { id: true, monto: true, monedaPago: true, estado: true },
+      });
+      // El pago que se está anulando todavía figura ACTIVO en esta lectura:
+      // se excluye explícitamente para que el recálculo no lo cuente.
+      const pagosActivos = pagosDeFactura.filter(
+        pago => pago.id !== pagoRef.id && pago.estado !== ESTADOS_PAGO.ANULADO
+      );
+      const totalPagado = await sumarPagosNormalizados(pagosActivos, factura, empresaRefId);
 
-      const otrosPagos = factura.pagos.filter(p => p.id !== req.params.id);
-      const totalOtros = await sumarPagosNormalizados(otrosPagos, factura, empresaRefId);
+      // Un reintento (doble clic) no debe volver a escribir ni duplicar auditoría.
+      if (pagoAntes.estado === ESTADOS_PAGO.ANULADO) {
+        const pago = await tx.pago.findUniqueOrThrow({
+          where: { id: pagoRef.id },
+          select: PAGO_CON_FACTURA_SELECT,
+        });
+        const cuenta = await tx.cuentaPorCobrar.findUnique({
+          where: { facturaId: factura.id },
+        });
+        return { pago, factura, cuenta, totalPagado, yaAnulado: true };
+      }
+
+      const pagoAnulado = await tx.pago.update({
+        where: { id: pagoRef.id },
+        data: {
+          estado: ESTADOS_PAGO.ANULADO,
+          motivoAnulacion: motivo,
+          descripcionAnulacion: descripcion,
+          anuladoPor: req.user?.nombre || req.user?.username || 'Usuario',
+          fechaAnulacion: new Date(),
+        },
+        select: PAGO_CON_FACTURA_SELECT,
+      });
+
+      await registrarAuditoria(req, {
+        accion: 'PAGO_ANULADO',
+        entidad: 'Pago',
+        entidadId: pagoAnulado.id,
+        empresaId: factura.empresaId || empresaRefId,
+        datosAnteriores: pagoAntes,
+        datosNuevos: pagoAnulado,
+        tx,
+      });
+
       const totalFactura = new Decimal(factura.total.toString());
+      let nuevoEstadoFactura;
+      if (totalPagado.gte(totalFactura)) nuevoEstadoFactura = 'PAID';
+      else if (totalPagado.gt(0)) nuevoEstadoFactura = 'PARTIALLY_PAID';
+      else nuevoEstadoFactura = 'PENDING';
 
-      let nuevoEstado;
-      if (totalOtros.lte(0))          nuevoEstado = 'PENDING';
-      else if (totalOtros.gte(totalFactura)) nuevoEstado = 'PAID';
-      else                            nuevoEstado = 'PARTIALLY_PAID';
+      const facturaActualizada = await tx.factura.update({
+        where: { id: factura.id },
+        data: { estado: nuevoEstadoFactura },
+        select: {
+          id: true,
+          numeroFactura: true,
+          usuarioId: true,
+          empresaId: true,
+          total: true,
+          moneda: true,
+          tasaCambio: true,
+          estado: true,
+        },
+      });
 
-      await tx.factura.update({ where: { id: factura.id }, data: { estado: nuevoEstado } });
-
-      // CxC en USD, igual que al registrar el pago (misma normalización).
-      const cxc = await tx.cuentaPorCobrar.findUnique({ where: { facturaId: factura.id } });
+      // Actualizar o crear CuentaPorCobrar.
+      // Si la factura era de contado y el pago se anula por FRAUDE o inconsistencia,
+      // la factura reabre como PENDING/PARTIALLY_PAID y se genera la CuentaPorCobrar
+      // para que administración y cobranzas pueda gestionar la recuperación del saldo.
+      let cuentaActualizada = null;
+      const cxc = await tx.cuentaPorCobrar.findUnique({
+        where: { facturaId: factura.id },
+      });
       if (cxc) {
-        const totalOtrosUSD = await sumarPagosCxcUSD(otrosPagos, factura, empresaRefId);
-        const pendienteUSD = new Decimal(cxc.montoOriginal.toString()).sub(totalOtrosUSD);
+        await lockCuenta(tx, cxc.id);
+        const cobradoUSD = await sumarPagosCxcUSD(pagosActivos, factura, empresaRefId);
+        const pendienteUSD = new Decimal(cxc.montoOriginal.toString()).sub(cobradoUSD);
 
         let estadoCxc;
         if (pendienteUSD.lte(0)) estadoCxc = 'PAID';
-        else if (totalOtrosUSD.gt(0)) estadoCxc = 'PARTIALLY_PAID';
+        else if (cobradoUSD.gt(0)) estadoCxc = 'PARTIALLY_PAID';
         else estadoCxc = 'PENDING';
 
-        await tx.cuentaPorCobrar.update({
+        cuentaActualizada = await tx.cuentaPorCobrar.update({
           where: { id: cxc.id },
           data: {
-            montoCobrado: totalOtrosUSD.toFixed(2),
+            montoCobrado: cobradoUSD.toFixed(2),
             montoPendiente: pendienteUSD.gt(0) ? pendienteUSD.toFixed(2) : '0.00',
             estado: estadoCxc,
-            ultimaGestion: new Date().toISOString()
-          }
+            ultimaGestion: new Date().toISOString(),
+          },
+        });
+      } else if (nuevoEstadoFactura !== 'PAID') {
+        const cobradoUSD = await sumarPagosCxcUSD(pagosActivos, factura, empresaRefId);
+        const tasaUsada = await tasaCambioEfectiva(factura, empresaRefId);
+        const totalFacturaUSD = convertirMontoMoneda(factura.total, factura.moneda || 'USD', 'USD', tasaUsada);
+        const pendienteUSD = totalFacturaUSD.sub(cobradoUSD);
+
+        cuentaActualizada = await tx.cuentaPorCobrar.create({
+          data: {
+            empresaId: factura.empresaId || empresaRefId,
+            facturaId: factura.id,
+            clienteId: factura.clienteId,
+            usuarioId: req.user?.id || factura.usuarioId || null,
+            montoOriginal: totalFacturaUSD.toFixed(2),
+            montoCobrado: cobradoUSD.toFixed(2),
+            montoPendiente: pendienteUSD.gt(0) ? pendienteUSD.toFixed(2) : '0.00',
+            fechaEmision: new Date(),
+            fechaVencimiento: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            estado: nuevoEstadoFactura,
+            notas: `Generada automáticamente tras anulación de pago (${motivo}: ${descripcion.slice(0, 80)})`,
+            diasVencido: 0,
+          },
         });
       }
+
+      return {
+        pago: pagoAnulado,
+        factura: facturaActualizada,
+        cuenta: cuentaActualizada,
+        totalPagado,
+        yaAnulado: false,
+      };
     });
 
-    res.status(204).send();
+    if (!resultado.yaAnulado) {
+      invalidarCacheVentas();
+      cxcRouter.invalidarCacheCxcResumen?.();
+    }
+
+    const totalFactura = new Decimal(resultado.factura.total.toString());
+    const balancePendiente = totalFactura.sub(resultado.totalPagado);
+    res.json({
+      pago: resultado.pago,
+      factura: {
+        ...resultado.factura,
+        totalPagado: resultado.totalPagado.toFixed(2),
+        balancePendiente: balancePendiente.gt(0) ? balancePendiente.toFixed(2) : '0.00',
+      },
+      cuenta: resultado.cuenta
+        ? {
+            ...resultado.cuenta,
+            montoOriginal: new Decimal(resultado.cuenta.montoOriginal.toString()).toFixed(2),
+            montoCobrado: new Decimal(resultado.cuenta.montoCobrado.toString()).toFixed(2),
+            montoPendiente: new Decimal(resultado.cuenta.montoPendiente.toString()).toFixed(2),
+          }
+        : null,
+      yaAnulado: resultado.yaAnulado,
+    });
   } catch (err) { next(err); }
+});
+
+// La eliminación física quedó prohibida: rompía la trazabilidad contable.
+// Se responde 405 para que un cliente antiguo no borre un pago por accidente.
+router.delete('/:id', (req, res) => {
+  res.set('Allow', 'PATCH');
+  res.status(405).json({
+    error: 'Método no permitido',
+    message: 'Los pagos no se eliminan. Usa PATCH /api/pagos/:id/anular con motivo y descripción.',
+  });
 });
 
 // POST /api/pagos/backfill-tasa-bcv — Asignar tasa BCV a pagos históricos

@@ -10,12 +10,12 @@ export function ProtectedRoute({ children, allowedRoles }) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (isExpired && location.pathname !== '/suscripcion-expirada') {
+  if (isExpired && user?.rol !== 'SUPER_ADMIN' && location.pathname !== '/suscripcion-expirada') {
     return <Navigate to="/suscripcion-expirada" replace />;
   }
 
   if (allowedRoles && allowedRoles.length > 0 && !allowedRoles.includes(user.rol || 'EMPRESA')) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={user.rol === 'SUPER_ADMIN' ? '/admin' : '/dashboard'} replace />;
   }
 
   return children;

@@ -103,6 +103,16 @@ export type Noticia = $Result.DefaultSelection<Prisma.$NoticiaPayload>
  * 
  */
 export type Promocion = $Result.DefaultSelection<Prisma.$PromocionPayload>
+/**
+ * Model CuentaPorCobrar
+ * 
+ */
+export type CuentaPorCobrar = $Result.DefaultSelection<Prisma.$CuentaPorCobrarPayload>
+/**
+ * Model GestionCobranza
+ * 
+ */
+export type GestionCobranza = $Result.DefaultSelection<Prisma.$GestionCobranzaPayload>
 
 /**
  * ##  Prisma Client ʲˢ
@@ -406,6 +416,26 @@ export class PrismaClient<
     * ```
     */
   get promocion(): Prisma.PromocionDelegate<ExtArgs>;
+
+  /**
+   * `prisma.cuentaPorCobrar`: Exposes CRUD operations for the **CuentaPorCobrar** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more CuentaPorCobrars
+    * const cuentaPorCobrars = await prisma.cuentaPorCobrar.findMany()
+    * ```
+    */
+  get cuentaPorCobrar(): Prisma.CuentaPorCobrarDelegate<ExtArgs>;
+
+  /**
+   * `prisma.gestionCobranza`: Exposes CRUD operations for the **GestionCobranza** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more GestionCobranzas
+    * const gestionCobranzas = await prisma.gestionCobranza.findMany()
+    * ```
+    */
+  get gestionCobranza(): Prisma.GestionCobranzaDelegate<ExtArgs>;
 }
 
 export namespace Prisma {
@@ -864,7 +894,9 @@ export namespace Prisma {
     Usuario: 'Usuario',
     SolicitudActivacion: 'SolicitudActivacion',
     Noticia: 'Noticia',
-    Promocion: 'Promocion'
+    Promocion: 'Promocion',
+    CuentaPorCobrar: 'CuentaPorCobrar',
+    GestionCobranza: 'GestionCobranza'
   };
 
   export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -880,7 +912,7 @@ export namespace Prisma {
 
   export type TypeMap<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, ClientOptions = {}> = {
     meta: {
-      modelProps: "empresa" | "rol" | "permiso" | "rolPermiso" | "auditLog" | "cliente" | "producto" | "factura" | "itemFactura" | "pago" | "correlativo" | "cierreCaja" | "cotizacion" | "itemCotizacion" | "usuario" | "solicitudActivacion" | "noticia" | "promocion"
+      modelProps: "empresa" | "rol" | "permiso" | "rolPermiso" | "auditLog" | "cliente" | "producto" | "factura" | "itemFactura" | "pago" | "correlativo" | "cierreCaja" | "cotizacion" | "itemCotizacion" | "usuario" | "solicitudActivacion" | "noticia" | "promocion" | "cuentaPorCobrar" | "gestionCobranza"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -2144,6 +2176,146 @@ export namespace Prisma {
           }
         }
       }
+      CuentaPorCobrar: {
+        payload: Prisma.$CuentaPorCobrarPayload<ExtArgs>
+        fields: Prisma.CuentaPorCobrarFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.CuentaPorCobrarFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CuentaPorCobrarPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.CuentaPorCobrarFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CuentaPorCobrarPayload>
+          }
+          findFirst: {
+            args: Prisma.CuentaPorCobrarFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CuentaPorCobrarPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.CuentaPorCobrarFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CuentaPorCobrarPayload>
+          }
+          findMany: {
+            args: Prisma.CuentaPorCobrarFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CuentaPorCobrarPayload>[]
+          }
+          create: {
+            args: Prisma.CuentaPorCobrarCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CuentaPorCobrarPayload>
+          }
+          createMany: {
+            args: Prisma.CuentaPorCobrarCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.CuentaPorCobrarCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CuentaPorCobrarPayload>[]
+          }
+          delete: {
+            args: Prisma.CuentaPorCobrarDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CuentaPorCobrarPayload>
+          }
+          update: {
+            args: Prisma.CuentaPorCobrarUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CuentaPorCobrarPayload>
+          }
+          deleteMany: {
+            args: Prisma.CuentaPorCobrarDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.CuentaPorCobrarUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.CuentaPorCobrarUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$CuentaPorCobrarPayload>
+          }
+          aggregate: {
+            args: Prisma.CuentaPorCobrarAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateCuentaPorCobrar>
+          }
+          groupBy: {
+            args: Prisma.CuentaPorCobrarGroupByArgs<ExtArgs>
+            result: $Utils.Optional<CuentaPorCobrarGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.CuentaPorCobrarCountArgs<ExtArgs>
+            result: $Utils.Optional<CuentaPorCobrarCountAggregateOutputType> | number
+          }
+        }
+      }
+      GestionCobranza: {
+        payload: Prisma.$GestionCobranzaPayload<ExtArgs>
+        fields: Prisma.GestionCobranzaFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.GestionCobranzaFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GestionCobranzaPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.GestionCobranzaFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GestionCobranzaPayload>
+          }
+          findFirst: {
+            args: Prisma.GestionCobranzaFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GestionCobranzaPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.GestionCobranzaFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GestionCobranzaPayload>
+          }
+          findMany: {
+            args: Prisma.GestionCobranzaFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GestionCobranzaPayload>[]
+          }
+          create: {
+            args: Prisma.GestionCobranzaCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GestionCobranzaPayload>
+          }
+          createMany: {
+            args: Prisma.GestionCobranzaCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.GestionCobranzaCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GestionCobranzaPayload>[]
+          }
+          delete: {
+            args: Prisma.GestionCobranzaDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GestionCobranzaPayload>
+          }
+          update: {
+            args: Prisma.GestionCobranzaUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GestionCobranzaPayload>
+          }
+          deleteMany: {
+            args: Prisma.GestionCobranzaDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.GestionCobranzaUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.GestionCobranzaUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$GestionCobranzaPayload>
+          }
+          aggregate: {
+            args: Prisma.GestionCobranzaAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateGestionCobranza>
+          }
+          groupBy: {
+            args: Prisma.GestionCobranzaGroupByArgs<ExtArgs>
+            result: $Utils.Optional<GestionCobranzaGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.GestionCobranzaCountArgs<ExtArgs>
+            result: $Utils.Optional<GestionCobranzaCountAggregateOutputType> | number
+          }
+        }
+      }
     }
   } & {
     other: {
@@ -2311,6 +2483,7 @@ export namespace Prisma {
     cierresCaja: number
     cotizaciones: number
     auditLogs: number
+    cuentasPorCobrar: number
   }
 
   export type EmpresaCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -2320,6 +2493,7 @@ export namespace Prisma {
     cierresCaja?: boolean | EmpresaCountOutputTypeCountCierresCajaArgs
     cotizaciones?: boolean | EmpresaCountOutputTypeCountCotizacionesArgs
     auditLogs?: boolean | EmpresaCountOutputTypeCountAuditLogsArgs
+    cuentasPorCobrar?: boolean | EmpresaCountOutputTypeCountCuentasPorCobrarArgs
   }
 
   // Custom InputTypes
@@ -2373,6 +2547,13 @@ export namespace Prisma {
    */
   export type EmpresaCountOutputTypeCountAuditLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: AuditLogWhereInput
+  }
+
+  /**
+   * EmpresaCountOutputType without action
+   */
+  export type EmpresaCountOutputTypeCountCuentasPorCobrarArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CuentaPorCobrarWhereInput
   }
 
 
@@ -2454,11 +2635,13 @@ export namespace Prisma {
   export type ClienteCountOutputType = {
     facturas: number
     cotizaciones: number
+    cuentasPorCobrar: number
   }
 
   export type ClienteCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     facturas?: boolean | ClienteCountOutputTypeCountFacturasArgs
     cotizaciones?: boolean | ClienteCountOutputTypeCountCotizacionesArgs
+    cuentasPorCobrar?: boolean | ClienteCountOutputTypeCountCuentasPorCobrarArgs
   }
 
   // Custom InputTypes
@@ -2486,6 +2669,13 @@ export namespace Prisma {
     where?: CotizacionWhereInput
   }
 
+  /**
+   * ClienteCountOutputType without action
+   */
+  export type ClienteCountOutputTypeCountCuentasPorCobrarArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CuentaPorCobrarWhereInput
+  }
+
 
   /**
    * Count Type ProductoCountOutputType
@@ -2493,10 +2683,12 @@ export namespace Prisma {
 
   export type ProductoCountOutputType = {
     itemsFactura: number
+    itemsCotizacion: number
   }
 
   export type ProductoCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     itemsFactura?: boolean | ProductoCountOutputTypeCountItemsFacturaArgs
+    itemsCotizacion?: boolean | ProductoCountOutputTypeCountItemsCotizacionArgs
   }
 
   // Custom InputTypes
@@ -2515,6 +2707,13 @@ export namespace Prisma {
    */
   export type ProductoCountOutputTypeCountItemsFacturaArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: ItemFacturaWhereInput
+  }
+
+  /**
+   * ProductoCountOutputType without action
+   */
+  export type ProductoCountOutputTypeCountItemsCotizacionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ItemCotizacionWhereInput
   }
 
 
@@ -2602,6 +2801,8 @@ export namespace Prisma {
     cotizaciones: number
     solicitudesActivacion: number
     auditLogs: number
+    cuentasPorCobrar: number
+    gestionesCobranza: number
   }
 
   export type UsuarioCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -2613,6 +2814,8 @@ export namespace Prisma {
     cotizaciones?: boolean | UsuarioCountOutputTypeCountCotizacionesArgs
     solicitudesActivacion?: boolean | UsuarioCountOutputTypeCountSolicitudesActivacionArgs
     auditLogs?: boolean | UsuarioCountOutputTypeCountAuditLogsArgs
+    cuentasPorCobrar?: boolean | UsuarioCountOutputTypeCountCuentasPorCobrarArgs
+    gestionesCobranza?: boolean | UsuarioCountOutputTypeCountGestionesCobranzaArgs
   }
 
   // Custom InputTypes
@@ -2682,6 +2885,51 @@ export namespace Prisma {
     where?: AuditLogWhereInput
   }
 
+  /**
+   * UsuarioCountOutputType without action
+   */
+  export type UsuarioCountOutputTypeCountCuentasPorCobrarArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CuentaPorCobrarWhereInput
+  }
+
+  /**
+   * UsuarioCountOutputType without action
+   */
+  export type UsuarioCountOutputTypeCountGestionesCobranzaArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: GestionCobranzaWhereInput
+  }
+
+
+  /**
+   * Count Type CuentaPorCobrarCountOutputType
+   */
+
+  export type CuentaPorCobrarCountOutputType = {
+    gestions: number
+  }
+
+  export type CuentaPorCobrarCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    gestions?: boolean | CuentaPorCobrarCountOutputTypeCountGestionsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * CuentaPorCobrarCountOutputType without action
+   */
+  export type CuentaPorCobrarCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrarCountOutputType
+     */
+    select?: CuentaPorCobrarCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * CuentaPorCobrarCountOutputType without action
+   */
+  export type CuentaPorCobrarCountOutputTypeCountGestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: GestionCobranzaWhereInput
+  }
+
 
   /**
    * Models
@@ -2693,8 +2941,18 @@ export namespace Prisma {
 
   export type AggregateEmpresa = {
     _count: EmpresaCountAggregateOutputType | null
+    _avg: EmpresaAvgAggregateOutputType | null
+    _sum: EmpresaSumAggregateOutputType | null
     _min: EmpresaMinAggregateOutputType | null
     _max: EmpresaMaxAggregateOutputType | null
+  }
+
+  export type EmpresaAvgAggregateOutputType = {
+    tasaDolar: number | null
+  }
+
+  export type EmpresaSumAggregateOutputType = {
+    tasaDolar: number | null
   }
 
   export type EmpresaMinAggregateOutputType = {
@@ -2703,12 +2961,20 @@ export namespace Prisma {
     rif: string | null
     direccion: string | null
     telefono: string | null
+    email: string | null
+    monedaSimbolo: string | null
+    monedaCodigo: string | null
+    tasaDolar: number | null
+    tasaDolarModo: string | null
+    tasaDolarActualizadaEn: Date | null
     activo: boolean | null
     subscriptionStatus: string | null
     planType: string | null
     trialStartsAt: Date | null
     trialEndsAt: Date | null
     currentPeriodEnd: Date | null
+    archivedAt: Date | null
+    scheduledDeletionAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -2719,12 +2985,20 @@ export namespace Prisma {
     rif: string | null
     direccion: string | null
     telefono: string | null
+    email: string | null
+    monedaSimbolo: string | null
+    monedaCodigo: string | null
+    tasaDolar: number | null
+    tasaDolarModo: string | null
+    tasaDolarActualizadaEn: Date | null
     activo: boolean | null
     subscriptionStatus: string | null
     planType: string | null
     trialStartsAt: Date | null
     trialEndsAt: Date | null
     currentPeriodEnd: Date | null
+    archivedAt: Date | null
+    scheduledDeletionAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -2735,17 +3009,33 @@ export namespace Prisma {
     rif: number
     direccion: number
     telefono: number
+    email: number
+    monedaSimbolo: number
+    monedaCodigo: number
+    tasaDolar: number
+    tasaDolarModo: number
+    tasaDolarActualizadaEn: number
     activo: number
     subscriptionStatus: number
     planType: number
     trialStartsAt: number
     trialEndsAt: number
     currentPeriodEnd: number
+    archivedAt: number
+    scheduledDeletionAt: number
     createdAt: number
     updatedAt: number
     _all: number
   }
 
+
+  export type EmpresaAvgAggregateInputType = {
+    tasaDolar?: true
+  }
+
+  export type EmpresaSumAggregateInputType = {
+    tasaDolar?: true
+  }
 
   export type EmpresaMinAggregateInputType = {
     id?: true
@@ -2753,12 +3043,20 @@ export namespace Prisma {
     rif?: true
     direccion?: true
     telefono?: true
+    email?: true
+    monedaSimbolo?: true
+    monedaCodigo?: true
+    tasaDolar?: true
+    tasaDolarModo?: true
+    tasaDolarActualizadaEn?: true
     activo?: true
     subscriptionStatus?: true
     planType?: true
     trialStartsAt?: true
     trialEndsAt?: true
     currentPeriodEnd?: true
+    archivedAt?: true
+    scheduledDeletionAt?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -2769,12 +3067,20 @@ export namespace Prisma {
     rif?: true
     direccion?: true
     telefono?: true
+    email?: true
+    monedaSimbolo?: true
+    monedaCodigo?: true
+    tasaDolar?: true
+    tasaDolarModo?: true
+    tasaDolarActualizadaEn?: true
     activo?: true
     subscriptionStatus?: true
     planType?: true
     trialStartsAt?: true
     trialEndsAt?: true
     currentPeriodEnd?: true
+    archivedAt?: true
+    scheduledDeletionAt?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -2785,12 +3091,20 @@ export namespace Prisma {
     rif?: true
     direccion?: true
     telefono?: true
+    email?: true
+    monedaSimbolo?: true
+    monedaCodigo?: true
+    tasaDolar?: true
+    tasaDolarModo?: true
+    tasaDolarActualizadaEn?: true
     activo?: true
     subscriptionStatus?: true
     planType?: true
     trialStartsAt?: true
     trialEndsAt?: true
     currentPeriodEnd?: true
+    archivedAt?: true
+    scheduledDeletionAt?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -2834,6 +3148,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: EmpresaAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: EmpresaSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: EmpresaMinAggregateInputType
@@ -2864,6 +3190,8 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: EmpresaCountAggregateInputType | true
+    _avg?: EmpresaAvgAggregateInputType
+    _sum?: EmpresaSumAggregateInputType
     _min?: EmpresaMinAggregateInputType
     _max?: EmpresaMaxAggregateInputType
   }
@@ -2874,15 +3202,25 @@ export namespace Prisma {
     rif: string
     direccion: string | null
     telefono: string | null
+    email: string | null
+    monedaSimbolo: string | null
+    monedaCodigo: string | null
+    tasaDolar: number | null
+    tasaDolarModo: string
+    tasaDolarActualizadaEn: Date | null
     activo: boolean
     subscriptionStatus: string
     planType: string | null
     trialStartsAt: Date | null
     trialEndsAt: Date | null
     currentPeriodEnd: Date | null
+    archivedAt: Date | null
+    scheduledDeletionAt: Date | null
     createdAt: Date
     updatedAt: Date
     _count: EmpresaCountAggregateOutputType | null
+    _avg: EmpresaAvgAggregateOutputType | null
+    _sum: EmpresaSumAggregateOutputType | null
     _min: EmpresaMinAggregateOutputType | null
     _max: EmpresaMaxAggregateOutputType | null
   }
@@ -2907,12 +3245,20 @@ export namespace Prisma {
     rif?: boolean
     direccion?: boolean
     telefono?: boolean
+    email?: boolean
+    monedaSimbolo?: boolean
+    monedaCodigo?: boolean
+    tasaDolar?: boolean
+    tasaDolarModo?: boolean
+    tasaDolarActualizadaEn?: boolean
     activo?: boolean
     subscriptionStatus?: boolean
     planType?: boolean
     trialStartsAt?: boolean
     trialEndsAt?: boolean
     currentPeriodEnd?: boolean
+    archivedAt?: boolean
+    scheduledDeletionAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     usuarios?: boolean | Empresa$usuariosArgs<ExtArgs>
@@ -2921,6 +3267,7 @@ export namespace Prisma {
     cierresCaja?: boolean | Empresa$cierresCajaArgs<ExtArgs>
     cotizaciones?: boolean | Empresa$cotizacionesArgs<ExtArgs>
     auditLogs?: boolean | Empresa$auditLogsArgs<ExtArgs>
+    cuentasPorCobrar?: boolean | Empresa$cuentasPorCobrarArgs<ExtArgs>
     _count?: boolean | EmpresaCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["empresa"]>
 
@@ -2930,12 +3277,20 @@ export namespace Prisma {
     rif?: boolean
     direccion?: boolean
     telefono?: boolean
+    email?: boolean
+    monedaSimbolo?: boolean
+    monedaCodigo?: boolean
+    tasaDolar?: boolean
+    tasaDolarModo?: boolean
+    tasaDolarActualizadaEn?: boolean
     activo?: boolean
     subscriptionStatus?: boolean
     planType?: boolean
     trialStartsAt?: boolean
     trialEndsAt?: boolean
     currentPeriodEnd?: boolean
+    archivedAt?: boolean
+    scheduledDeletionAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["empresa"]>
@@ -2946,12 +3301,20 @@ export namespace Prisma {
     rif?: boolean
     direccion?: boolean
     telefono?: boolean
+    email?: boolean
+    monedaSimbolo?: boolean
+    monedaCodigo?: boolean
+    tasaDolar?: boolean
+    tasaDolarModo?: boolean
+    tasaDolarActualizadaEn?: boolean
     activo?: boolean
     subscriptionStatus?: boolean
     planType?: boolean
     trialStartsAt?: boolean
     trialEndsAt?: boolean
     currentPeriodEnd?: boolean
+    archivedAt?: boolean
+    scheduledDeletionAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
@@ -2963,6 +3326,7 @@ export namespace Prisma {
     cierresCaja?: boolean | Empresa$cierresCajaArgs<ExtArgs>
     cotizaciones?: boolean | Empresa$cotizacionesArgs<ExtArgs>
     auditLogs?: boolean | Empresa$auditLogsArgs<ExtArgs>
+    cuentasPorCobrar?: boolean | Empresa$cuentasPorCobrarArgs<ExtArgs>
     _count?: boolean | EmpresaCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type EmpresaIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -2976,6 +3340,7 @@ export namespace Prisma {
       cierresCaja: Prisma.$CierreCajaPayload<ExtArgs>[]
       cotizaciones: Prisma.$CotizacionPayload<ExtArgs>[]
       auditLogs: Prisma.$AuditLogPayload<ExtArgs>[]
+      cuentasPorCobrar: Prisma.$CuentaPorCobrarPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -2983,12 +3348,20 @@ export namespace Prisma {
       rif: string
       direccion: string | null
       telefono: string | null
+      email: string | null
+      monedaSimbolo: string | null
+      monedaCodigo: string | null
+      tasaDolar: number | null
+      tasaDolarModo: string
+      tasaDolarActualizadaEn: Date | null
       activo: boolean
       subscriptionStatus: string
       planType: string | null
       trialStartsAt: Date | null
       trialEndsAt: Date | null
       currentPeriodEnd: Date | null
+      archivedAt: Date | null
+      scheduledDeletionAt: Date | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["empresa"]>
@@ -3361,6 +3734,7 @@ export namespace Prisma {
     cierresCaja<T extends Empresa$cierresCajaArgs<ExtArgs> = {}>(args?: Subset<T, Empresa$cierresCajaArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CierreCajaPayload<ExtArgs>, T, "findMany"> | Null>
     cotizaciones<T extends Empresa$cotizacionesArgs<ExtArgs> = {}>(args?: Subset<T, Empresa$cotizacionesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CotizacionPayload<ExtArgs>, T, "findMany"> | Null>
     auditLogs<T extends Empresa$auditLogsArgs<ExtArgs> = {}>(args?: Subset<T, Empresa$auditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany"> | Null>
+    cuentasPorCobrar<T extends Empresa$cuentasPorCobrarArgs<ExtArgs> = {}>(args?: Subset<T, Empresa$cuentasPorCobrarArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "findMany"> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3395,12 +3769,20 @@ export namespace Prisma {
     readonly rif: FieldRef<"Empresa", 'String'>
     readonly direccion: FieldRef<"Empresa", 'String'>
     readonly telefono: FieldRef<"Empresa", 'String'>
+    readonly email: FieldRef<"Empresa", 'String'>
+    readonly monedaSimbolo: FieldRef<"Empresa", 'String'>
+    readonly monedaCodigo: FieldRef<"Empresa", 'String'>
+    readonly tasaDolar: FieldRef<"Empresa", 'Float'>
+    readonly tasaDolarModo: FieldRef<"Empresa", 'String'>
+    readonly tasaDolarActualizadaEn: FieldRef<"Empresa", 'DateTime'>
     readonly activo: FieldRef<"Empresa", 'Boolean'>
     readonly subscriptionStatus: FieldRef<"Empresa", 'String'>
     readonly planType: FieldRef<"Empresa", 'String'>
     readonly trialStartsAt: FieldRef<"Empresa", 'DateTime'>
     readonly trialEndsAt: FieldRef<"Empresa", 'DateTime'>
     readonly currentPeriodEnd: FieldRef<"Empresa", 'DateTime'>
+    readonly archivedAt: FieldRef<"Empresa", 'DateTime'>
+    readonly scheduledDeletionAt: FieldRef<"Empresa", 'DateTime'>
     readonly createdAt: FieldRef<"Empresa", 'DateTime'>
     readonly updatedAt: FieldRef<"Empresa", 'DateTime'>
   }
@@ -3832,6 +4214,26 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: AuditLogScalarFieldEnum | AuditLogScalarFieldEnum[]
+  }
+
+  /**
+   * Empresa.cuentasPorCobrar
+   */
+  export type Empresa$cuentasPorCobrarArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    where?: CuentaPorCobrarWhereInput
+    orderBy?: CuentaPorCobrarOrderByWithRelationInput | CuentaPorCobrarOrderByWithRelationInput[]
+    cursor?: CuentaPorCobrarWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CuentaPorCobrarScalarFieldEnum | CuentaPorCobrarScalarFieldEnum[]
   }
 
   /**
@@ -7918,6 +8320,7 @@ export namespace Prisma {
     empresa?: boolean | Cliente$empresaArgs<ExtArgs>
     facturas?: boolean | Cliente$facturasArgs<ExtArgs>
     cotizaciones?: boolean | Cliente$cotizacionesArgs<ExtArgs>
+    cuentasPorCobrar?: boolean | Cliente$cuentasPorCobrarArgs<ExtArgs>
     _count?: boolean | ClienteCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["cliente"]>
 
@@ -7950,6 +8353,7 @@ export namespace Prisma {
     empresa?: boolean | Cliente$empresaArgs<ExtArgs>
     facturas?: boolean | Cliente$facturasArgs<ExtArgs>
     cotizaciones?: boolean | Cliente$cotizacionesArgs<ExtArgs>
+    cuentasPorCobrar?: boolean | Cliente$cuentasPorCobrarArgs<ExtArgs>
     _count?: boolean | ClienteCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type ClienteIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -7962,6 +8366,7 @@ export namespace Prisma {
       empresa: Prisma.$UsuarioPayload<ExtArgs> | null
       facturas: Prisma.$FacturaPayload<ExtArgs>[]
       cotizaciones: Prisma.$CotizacionPayload<ExtArgs>[]
+      cuentasPorCobrar: Prisma.$CuentaPorCobrarPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -8340,6 +8745,7 @@ export namespace Prisma {
     empresa<T extends Cliente$empresaArgs<ExtArgs> = {}>(args?: Subset<T, Cliente$empresaArgs<ExtArgs>>): Prisma__UsuarioClient<$Result.GetResult<Prisma.$UsuarioPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
     facturas<T extends Cliente$facturasArgs<ExtArgs> = {}>(args?: Subset<T, Cliente$facturasArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FacturaPayload<ExtArgs>, T, "findMany"> | Null>
     cotizaciones<T extends Cliente$cotizacionesArgs<ExtArgs> = {}>(args?: Subset<T, Cliente$cotizacionesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CotizacionPayload<ExtArgs>, T, "findMany"> | Null>
+    cuentasPorCobrar<T extends Cliente$cuentasPorCobrarArgs<ExtArgs> = {}>(args?: Subset<T, Cliente$cuentasPorCobrarArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "findMany"> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -8749,6 +9155,26 @@ export namespace Prisma {
   }
 
   /**
+   * Cliente.cuentasPorCobrar
+   */
+  export type Cliente$cuentasPorCobrarArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    where?: CuentaPorCobrarWhereInput
+    orderBy?: CuentaPorCobrarOrderByWithRelationInput | CuentaPorCobrarOrderByWithRelationInput[]
+    cursor?: CuentaPorCobrarWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CuentaPorCobrarScalarFieldEnum | CuentaPorCobrarScalarFieldEnum[]
+  }
+
+  /**
    * Cliente without action
    */
   export type ClienteDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -9099,6 +9525,7 @@ export namespace Prisma {
     updatedAt?: boolean
     empresa?: boolean | UsuarioDefaultArgs<ExtArgs>
     itemsFactura?: boolean | Producto$itemsFacturaArgs<ExtArgs>
+    itemsCotizacion?: boolean | Producto$itemsCotizacionArgs<ExtArgs>
     _count?: boolean | ProductoCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["producto"]>
 
@@ -9150,6 +9577,7 @@ export namespace Prisma {
   export type ProductoInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     empresa?: boolean | UsuarioDefaultArgs<ExtArgs>
     itemsFactura?: boolean | Producto$itemsFacturaArgs<ExtArgs>
+    itemsCotizacion?: boolean | Producto$itemsCotizacionArgs<ExtArgs>
     _count?: boolean | ProductoCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type ProductoIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -9161,6 +9589,7 @@ export namespace Prisma {
     objects: {
       empresa: Prisma.$UsuarioPayload<ExtArgs>
       itemsFactura: Prisma.$ItemFacturaPayload<ExtArgs>[]
+      itemsCotizacion: Prisma.$ItemCotizacionPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -9548,6 +9977,7 @@ export namespace Prisma {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     empresa<T extends UsuarioDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UsuarioDefaultArgs<ExtArgs>>): Prisma__UsuarioClient<$Result.GetResult<Prisma.$UsuarioPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
     itemsFactura<T extends Producto$itemsFacturaArgs<ExtArgs> = {}>(args?: Subset<T, Producto$itemsFacturaArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ItemFacturaPayload<ExtArgs>, T, "findMany"> | Null>
+    itemsCotizacion<T extends Producto$itemsCotizacionArgs<ExtArgs> = {}>(args?: Subset<T, Producto$itemsCotizacionArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ItemCotizacionPayload<ExtArgs>, T, "findMany"> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -9932,6 +10362,26 @@ export namespace Prisma {
   }
 
   /**
+   * Producto.itemsCotizacion
+   */
+  export type Producto$itemsCotizacionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ItemCotizacion
+     */
+    select?: ItemCotizacionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ItemCotizacionInclude<ExtArgs> | null
+    where?: ItemCotizacionWhereInput
+    orderBy?: ItemCotizacionOrderByWithRelationInput | ItemCotizacionOrderByWithRelationInput[]
+    cursor?: ItemCotizacionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ItemCotizacionScalarFieldEnum | ItemCotizacionScalarFieldEnum[]
+  }
+
+  /**
    * Producto without action
    */
   export type ProductoDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -9965,6 +10415,7 @@ export namespace Prisma {
     total: number | null
     tasaCambio: number | null
     cuotasTotales: number | null
+    tasaAnulacion: number | null
   }
 
   export type FacturaSumAggregateOutputType = {
@@ -9974,6 +10425,7 @@ export namespace Prisma {
     total: number | null
     tasaCambio: number | null
     cuotasTotales: number | null
+    tasaAnulacion: number | null
   }
 
   export type FacturaMinAggregateOutputType = {
@@ -9994,6 +10446,10 @@ export namespace Prisma {
     observaciones: string | null
     anuladoPor: string | null
     motivoAnulacion: string | null
+    descripcionAnulacion: string | null
+    fechaAnulacion: Date | null
+    tasaAnulacion: number | null
+    requestId: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -10016,6 +10472,10 @@ export namespace Prisma {
     observaciones: string | null
     anuladoPor: string | null
     motivoAnulacion: string | null
+    descripcionAnulacion: string | null
+    fechaAnulacion: Date | null
+    tasaAnulacion: number | null
+    requestId: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -10038,6 +10498,10 @@ export namespace Prisma {
     observaciones: number
     anuladoPor: number
     motivoAnulacion: number
+    descripcionAnulacion: number
+    fechaAnulacion: number
+    tasaAnulacion: number
+    requestId: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -10051,6 +10515,7 @@ export namespace Prisma {
     total?: true
     tasaCambio?: true
     cuotasTotales?: true
+    tasaAnulacion?: true
   }
 
   export type FacturaSumAggregateInputType = {
@@ -10060,6 +10525,7 @@ export namespace Prisma {
     total?: true
     tasaCambio?: true
     cuotasTotales?: true
+    tasaAnulacion?: true
   }
 
   export type FacturaMinAggregateInputType = {
@@ -10080,6 +10546,10 @@ export namespace Prisma {
     observaciones?: true
     anuladoPor?: true
     motivoAnulacion?: true
+    descripcionAnulacion?: true
+    fechaAnulacion?: true
+    tasaAnulacion?: true
+    requestId?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -10102,6 +10572,10 @@ export namespace Prisma {
     observaciones?: true
     anuladoPor?: true
     motivoAnulacion?: true
+    descripcionAnulacion?: true
+    fechaAnulacion?: true
+    tasaAnulacion?: true
+    requestId?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -10124,6 +10598,10 @@ export namespace Prisma {
     observaciones?: true
     anuladoPor?: true
     motivoAnulacion?: true
+    descripcionAnulacion?: true
+    fechaAnulacion?: true
+    tasaAnulacion?: true
+    requestId?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -10233,6 +10711,10 @@ export namespace Prisma {
     observaciones: string | null
     anuladoPor: string | null
     motivoAnulacion: string | null
+    descripcionAnulacion: string | null
+    fechaAnulacion: Date | null
+    tasaAnulacion: number | null
+    requestId: string | null
     createdAt: Date
     updatedAt: Date
     _count: FacturaCountAggregateOutputType | null
@@ -10274,6 +10756,10 @@ export namespace Prisma {
     observaciones?: boolean
     anuladoPor?: boolean
     motivoAnulacion?: boolean
+    descripcionAnulacion?: boolean
+    fechaAnulacion?: boolean
+    tasaAnulacion?: boolean
+    requestId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     cliente?: boolean | ClienteDefaultArgs<ExtArgs>
@@ -10281,6 +10767,8 @@ export namespace Prisma {
     empresa?: boolean | Factura$empresaArgs<ExtArgs>
     items?: boolean | Factura$itemsArgs<ExtArgs>
     pagos?: boolean | Factura$pagosArgs<ExtArgs>
+    cotizacionOrigen?: boolean | Factura$cotizacionOrigenArgs<ExtArgs>
+    cuentaPorCobrar?: boolean | Factura$cuentaPorCobrarArgs<ExtArgs>
     _count?: boolean | FacturaCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["factura"]>
 
@@ -10302,6 +10790,10 @@ export namespace Prisma {
     observaciones?: boolean
     anuladoPor?: boolean
     motivoAnulacion?: boolean
+    descripcionAnulacion?: boolean
+    fechaAnulacion?: boolean
+    tasaAnulacion?: boolean
+    requestId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     cliente?: boolean | ClienteDefaultArgs<ExtArgs>
@@ -10327,6 +10819,10 @@ export namespace Prisma {
     observaciones?: boolean
     anuladoPor?: boolean
     motivoAnulacion?: boolean
+    descripcionAnulacion?: boolean
+    fechaAnulacion?: boolean
+    tasaAnulacion?: boolean
+    requestId?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
@@ -10337,6 +10833,8 @@ export namespace Prisma {
     empresa?: boolean | Factura$empresaArgs<ExtArgs>
     items?: boolean | Factura$itemsArgs<ExtArgs>
     pagos?: boolean | Factura$pagosArgs<ExtArgs>
+    cotizacionOrigen?: boolean | Factura$cotizacionOrigenArgs<ExtArgs>
+    cuentaPorCobrar?: boolean | Factura$cuentaPorCobrarArgs<ExtArgs>
     _count?: boolean | FacturaCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type FacturaIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -10353,6 +10851,8 @@ export namespace Prisma {
       empresa: Prisma.$EmpresaPayload<ExtArgs> | null
       items: Prisma.$ItemFacturaPayload<ExtArgs>[]
       pagos: Prisma.$PagoPayload<ExtArgs>[]
+      cotizacionOrigen: Prisma.$CotizacionPayload<ExtArgs> | null
+      cuentaPorCobrar: Prisma.$CuentaPorCobrarPayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -10372,6 +10872,10 @@ export namespace Prisma {
       observaciones: string | null
       anuladoPor: string | null
       motivoAnulacion: string | null
+      descripcionAnulacion: string | null
+      fechaAnulacion: Date | null
+      tasaAnulacion: number | null
+      requestId: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["factura"]>
@@ -10743,6 +11247,8 @@ export namespace Prisma {
     empresa<T extends Factura$empresaArgs<ExtArgs> = {}>(args?: Subset<T, Factura$empresaArgs<ExtArgs>>): Prisma__EmpresaClient<$Result.GetResult<Prisma.$EmpresaPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
     items<T extends Factura$itemsArgs<ExtArgs> = {}>(args?: Subset<T, Factura$itemsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ItemFacturaPayload<ExtArgs>, T, "findMany"> | Null>
     pagos<T extends Factura$pagosArgs<ExtArgs> = {}>(args?: Subset<T, Factura$pagosArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PagoPayload<ExtArgs>, T, "findMany"> | Null>
+    cotizacionOrigen<T extends Factura$cotizacionOrigenArgs<ExtArgs> = {}>(args?: Subset<T, Factura$cotizacionOrigenArgs<ExtArgs>>): Prisma__CotizacionClient<$Result.GetResult<Prisma.$CotizacionPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
+    cuentaPorCobrar<T extends Factura$cuentaPorCobrarArgs<ExtArgs> = {}>(args?: Subset<T, Factura$cuentaPorCobrarArgs<ExtArgs>>): Prisma__CuentaPorCobrarClient<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -10789,6 +11295,10 @@ export namespace Prisma {
     readonly observaciones: FieldRef<"Factura", 'String'>
     readonly anuladoPor: FieldRef<"Factura", 'String'>
     readonly motivoAnulacion: FieldRef<"Factura", 'String'>
+    readonly descripcionAnulacion: FieldRef<"Factura", 'String'>
+    readonly fechaAnulacion: FieldRef<"Factura", 'DateTime'>
+    readonly tasaAnulacion: FieldRef<"Factura", 'Float'>
+    readonly requestId: FieldRef<"Factura", 'String'>
     readonly createdAt: FieldRef<"Factura", 'DateTime'>
     readonly updatedAt: FieldRef<"Factura", 'DateTime'>
   }
@@ -11174,6 +11684,36 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: PagoScalarFieldEnum | PagoScalarFieldEnum[]
+  }
+
+  /**
+   * Factura.cotizacionOrigen
+   */
+  export type Factura$cotizacionOrigenArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Cotizacion
+     */
+    select?: CotizacionSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CotizacionInclude<ExtArgs> | null
+    where?: CotizacionWhereInput
+  }
+
+  /**
+   * Factura.cuentaPorCobrar
+   */
+  export type Factura$cuentaPorCobrarArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    where?: CuentaPorCobrarWhereInput
   }
 
   /**
@@ -12327,10 +12867,12 @@ export namespace Prisma {
 
   export type PagoAvgAggregateOutputType = {
     monto: number | null
+    tasaBCV: number | null
   }
 
   export type PagoSumAggregateOutputType = {
     monto: number | null
+    tasaBCV: number | null
   }
 
   export type PagoMinAggregateOutputType = {
@@ -12342,6 +12884,12 @@ export namespace Prisma {
     referenciaTransaccion: string | null
     fechaPago: Date | null
     notas: string | null
+    tasaBCV: number | null
+    estado: string | null
+    motivoAnulacion: string | null
+    descripcionAnulacion: string | null
+    anuladoPor: string | null
+    fechaAnulacion: Date | null
     createdAt: Date | null
   }
 
@@ -12354,6 +12902,12 @@ export namespace Prisma {
     referenciaTransaccion: string | null
     fechaPago: Date | null
     notas: string | null
+    tasaBCV: number | null
+    estado: string | null
+    motivoAnulacion: string | null
+    descripcionAnulacion: string | null
+    anuladoPor: string | null
+    fechaAnulacion: Date | null
     createdAt: Date | null
   }
 
@@ -12366,6 +12920,12 @@ export namespace Prisma {
     referenciaTransaccion: number
     fechaPago: number
     notas: number
+    tasaBCV: number
+    estado: number
+    motivoAnulacion: number
+    descripcionAnulacion: number
+    anuladoPor: number
+    fechaAnulacion: number
     createdAt: number
     _all: number
   }
@@ -12373,10 +12933,12 @@ export namespace Prisma {
 
   export type PagoAvgAggregateInputType = {
     monto?: true
+    tasaBCV?: true
   }
 
   export type PagoSumAggregateInputType = {
     monto?: true
+    tasaBCV?: true
   }
 
   export type PagoMinAggregateInputType = {
@@ -12388,6 +12950,12 @@ export namespace Prisma {
     referenciaTransaccion?: true
     fechaPago?: true
     notas?: true
+    tasaBCV?: true
+    estado?: true
+    motivoAnulacion?: true
+    descripcionAnulacion?: true
+    anuladoPor?: true
+    fechaAnulacion?: true
     createdAt?: true
   }
 
@@ -12400,6 +12968,12 @@ export namespace Prisma {
     referenciaTransaccion?: true
     fechaPago?: true
     notas?: true
+    tasaBCV?: true
+    estado?: true
+    motivoAnulacion?: true
+    descripcionAnulacion?: true
+    anuladoPor?: true
+    fechaAnulacion?: true
     createdAt?: true
   }
 
@@ -12412,6 +12986,12 @@ export namespace Prisma {
     referenciaTransaccion?: true
     fechaPago?: true
     notas?: true
+    tasaBCV?: true
+    estado?: true
+    motivoAnulacion?: true
+    descripcionAnulacion?: true
+    anuladoPor?: true
+    fechaAnulacion?: true
     createdAt?: true
     _all?: true
   }
@@ -12511,6 +13091,12 @@ export namespace Prisma {
     referenciaTransaccion: string | null
     fechaPago: Date
     notas: string | null
+    tasaBCV: number | null
+    estado: string
+    motivoAnulacion: string | null
+    descripcionAnulacion: string | null
+    anuladoPor: string | null
+    fechaAnulacion: Date | null
     createdAt: Date
     _count: PagoCountAggregateOutputType | null
     _avg: PagoAvgAggregateOutputType | null
@@ -12542,6 +13128,12 @@ export namespace Prisma {
     referenciaTransaccion?: boolean
     fechaPago?: boolean
     notas?: boolean
+    tasaBCV?: boolean
+    estado?: boolean
+    motivoAnulacion?: boolean
+    descripcionAnulacion?: boolean
+    anuladoPor?: boolean
+    fechaAnulacion?: boolean
     createdAt?: boolean
     factura?: boolean | FacturaDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["pago"]>
@@ -12555,6 +13147,12 @@ export namespace Prisma {
     referenciaTransaccion?: boolean
     fechaPago?: boolean
     notas?: boolean
+    tasaBCV?: boolean
+    estado?: boolean
+    motivoAnulacion?: boolean
+    descripcionAnulacion?: boolean
+    anuladoPor?: boolean
+    fechaAnulacion?: boolean
     createdAt?: boolean
     factura?: boolean | FacturaDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["pago"]>
@@ -12568,6 +13166,12 @@ export namespace Prisma {
     referenciaTransaccion?: boolean
     fechaPago?: boolean
     notas?: boolean
+    tasaBCV?: boolean
+    estado?: boolean
+    motivoAnulacion?: boolean
+    descripcionAnulacion?: boolean
+    anuladoPor?: boolean
+    fechaAnulacion?: boolean
     createdAt?: boolean
   }
 
@@ -12592,6 +13196,12 @@ export namespace Prisma {
       referenciaTransaccion: string | null
       fechaPago: Date
       notas: string | null
+      tasaBCV: number | null
+      estado: string
+      motivoAnulacion: string | null
+      descripcionAnulacion: string | null
+      anuladoPor: string | null
+      fechaAnulacion: Date | null
       createdAt: Date
     }, ExtArgs["result"]["pago"]>
     composites: {}
@@ -12995,6 +13605,12 @@ export namespace Prisma {
     readonly referenciaTransaccion: FieldRef<"Pago", 'String'>
     readonly fechaPago: FieldRef<"Pago", 'DateTime'>
     readonly notas: FieldRef<"Pago", 'String'>
+    readonly tasaBCV: FieldRef<"Pago", 'Float'>
+    readonly estado: FieldRef<"Pago", 'String'>
+    readonly motivoAnulacion: FieldRef<"Pago", 'String'>
+    readonly descripcionAnulacion: FieldRef<"Pago", 'String'>
+    readonly anuladoPor: FieldRef<"Pago", 'String'>
+    readonly fechaAnulacion: FieldRef<"Pago", 'DateTime'>
     readonly createdAt: FieldRef<"Pago", 'DateTime'>
   }
     
@@ -14233,6 +14849,8 @@ export namespace Prisma {
     montoFinal: number | null
     ingresosEfectivo: number | null
     ingresosBanco: number | null
+    ingresosEfectivoVES: number | null
+    ingresosBancoVES: number | null
   }
 
   export type CierreCajaSumAggregateOutputType = {
@@ -14240,6 +14858,8 @@ export namespace Prisma {
     montoFinal: number | null
     ingresosEfectivo: number | null
     ingresosBanco: number | null
+    ingresosEfectivoVES: number | null
+    ingresosBancoVES: number | null
   }
 
   export type CierreCajaMinAggregateOutputType = {
@@ -14252,6 +14872,8 @@ export namespace Prisma {
     montoFinal: number | null
     ingresosEfectivo: number | null
     ingresosBanco: number | null
+    ingresosEfectivoVES: number | null
+    ingresosBancoVES: number | null
     estado: string | null
     observaciones: string | null
     arqueoDetalle: string | null
@@ -14269,6 +14891,8 @@ export namespace Prisma {
     montoFinal: number | null
     ingresosEfectivo: number | null
     ingresosBanco: number | null
+    ingresosEfectivoVES: number | null
+    ingresosBancoVES: number | null
     estado: string | null
     observaciones: string | null
     arqueoDetalle: string | null
@@ -14286,6 +14910,8 @@ export namespace Prisma {
     montoFinal: number
     ingresosEfectivo: number
     ingresosBanco: number
+    ingresosEfectivoVES: number
+    ingresosBancoVES: number
     estado: number
     observaciones: number
     arqueoDetalle: number
@@ -14300,6 +14926,8 @@ export namespace Prisma {
     montoFinal?: true
     ingresosEfectivo?: true
     ingresosBanco?: true
+    ingresosEfectivoVES?: true
+    ingresosBancoVES?: true
   }
 
   export type CierreCajaSumAggregateInputType = {
@@ -14307,6 +14935,8 @@ export namespace Prisma {
     montoFinal?: true
     ingresosEfectivo?: true
     ingresosBanco?: true
+    ingresosEfectivoVES?: true
+    ingresosBancoVES?: true
   }
 
   export type CierreCajaMinAggregateInputType = {
@@ -14319,6 +14949,8 @@ export namespace Prisma {
     montoFinal?: true
     ingresosEfectivo?: true
     ingresosBanco?: true
+    ingresosEfectivoVES?: true
+    ingresosBancoVES?: true
     estado?: true
     observaciones?: true
     arqueoDetalle?: true
@@ -14336,6 +14968,8 @@ export namespace Prisma {
     montoFinal?: true
     ingresosEfectivo?: true
     ingresosBanco?: true
+    ingresosEfectivoVES?: true
+    ingresosBancoVES?: true
     estado?: true
     observaciones?: true
     arqueoDetalle?: true
@@ -14353,6 +14987,8 @@ export namespace Prisma {
     montoFinal?: true
     ingresosEfectivo?: true
     ingresosBanco?: true
+    ingresosEfectivoVES?: true
+    ingresosBancoVES?: true
     estado?: true
     observaciones?: true
     arqueoDetalle?: true
@@ -14457,6 +15093,8 @@ export namespace Prisma {
     montoFinal: number | null
     ingresosEfectivo: number
     ingresosBanco: number
+    ingresosEfectivoVES: number | null
+    ingresosBancoVES: number | null
     estado: string
     observaciones: string | null
     arqueoDetalle: string | null
@@ -14493,6 +15131,8 @@ export namespace Prisma {
     montoFinal?: boolean
     ingresosEfectivo?: boolean
     ingresosBanco?: boolean
+    ingresosEfectivoVES?: boolean
+    ingresosBancoVES?: boolean
     estado?: boolean
     observaciones?: boolean
     arqueoDetalle?: boolean
@@ -14512,6 +15152,8 @@ export namespace Prisma {
     montoFinal?: boolean
     ingresosEfectivo?: boolean
     ingresosBanco?: boolean
+    ingresosEfectivoVES?: boolean
+    ingresosBancoVES?: boolean
     estado?: boolean
     observaciones?: boolean
     arqueoDetalle?: boolean
@@ -14531,6 +15173,8 @@ export namespace Prisma {
     montoFinal?: boolean
     ingresosEfectivo?: boolean
     ingresosBanco?: boolean
+    ingresosEfectivoVES?: boolean
+    ingresosBancoVES?: boolean
     estado?: boolean
     observaciones?: boolean
     arqueoDetalle?: boolean
@@ -14563,6 +15207,8 @@ export namespace Prisma {
       montoFinal: number | null
       ingresosEfectivo: number
       ingresosBanco: number
+      ingresosEfectivoVES: number | null
+      ingresosBancoVES: number | null
       estado: string
       observaciones: string | null
       arqueoDetalle: string | null
@@ -14972,6 +15618,8 @@ export namespace Prisma {
     readonly montoFinal: FieldRef<"CierreCaja", 'Float'>
     readonly ingresosEfectivo: FieldRef<"CierreCaja", 'Float'>
     readonly ingresosBanco: FieldRef<"CierreCaja", 'Float'>
+    readonly ingresosEfectivoVES: FieldRef<"CierreCaja", 'Float'>
+    readonly ingresosBancoVES: FieldRef<"CierreCaja", 'Float'>
     readonly estado: FieldRef<"CierreCaja", 'String'>
     readonly observaciones: FieldRef<"CierreCaja", 'String'>
     readonly arqueoDetalle: FieldRef<"CierreCaja", 'String'>
@@ -15376,6 +16024,7 @@ export namespace Prisma {
     total: number | null
     moneda: string | null
     estado: string | null
+    facturaId: string | null
   }
 
   export type CotizacionMaxAggregateOutputType = {
@@ -15391,6 +16040,7 @@ export namespace Prisma {
     total: number | null
     moneda: string | null
     estado: string | null
+    facturaId: string | null
   }
 
   export type CotizacionCountAggregateOutputType = {
@@ -15406,6 +16056,7 @@ export namespace Prisma {
     total: number
     moneda: number
     estado: number
+    facturaId: number
     _all: number
   }
 
@@ -15437,6 +16088,7 @@ export namespace Prisma {
     total?: true
     moneda?: true
     estado?: true
+    facturaId?: true
   }
 
   export type CotizacionMaxAggregateInputType = {
@@ -15452,6 +16104,7 @@ export namespace Prisma {
     total?: true
     moneda?: true
     estado?: true
+    facturaId?: true
   }
 
   export type CotizacionCountAggregateInputType = {
@@ -15467,6 +16120,7 @@ export namespace Prisma {
     total?: true
     moneda?: true
     estado?: true
+    facturaId?: true
     _all?: true
   }
 
@@ -15569,6 +16223,7 @@ export namespace Prisma {
     total: number
     moneda: string
     estado: string
+    facturaId: string | null
     _count: CotizacionCountAggregateOutputType | null
     _avg: CotizacionAvgAggregateOutputType | null
     _sum: CotizacionSumAggregateOutputType | null
@@ -15603,9 +16258,11 @@ export namespace Prisma {
     total?: boolean
     moneda?: boolean
     estado?: boolean
+    facturaId?: boolean
     cliente?: boolean | ClienteDefaultArgs<ExtArgs>
     usuario?: boolean | Cotizacion$usuarioArgs<ExtArgs>
     empresa?: boolean | Cotizacion$empresaArgs<ExtArgs>
+    factura?: boolean | Cotizacion$facturaArgs<ExtArgs>
     items?: boolean | Cotizacion$itemsArgs<ExtArgs>
     _count?: boolean | CotizacionCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["cotizacion"]>
@@ -15623,9 +16280,11 @@ export namespace Prisma {
     total?: boolean
     moneda?: boolean
     estado?: boolean
+    facturaId?: boolean
     cliente?: boolean | ClienteDefaultArgs<ExtArgs>
     usuario?: boolean | Cotizacion$usuarioArgs<ExtArgs>
     empresa?: boolean | Cotizacion$empresaArgs<ExtArgs>
+    factura?: boolean | Cotizacion$facturaArgs<ExtArgs>
   }, ExtArgs["result"]["cotizacion"]>
 
   export type CotizacionSelectScalar = {
@@ -15641,12 +16300,14 @@ export namespace Prisma {
     total?: boolean
     moneda?: boolean
     estado?: boolean
+    facturaId?: boolean
   }
 
   export type CotizacionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     cliente?: boolean | ClienteDefaultArgs<ExtArgs>
     usuario?: boolean | Cotizacion$usuarioArgs<ExtArgs>
     empresa?: boolean | Cotizacion$empresaArgs<ExtArgs>
+    factura?: boolean | Cotizacion$facturaArgs<ExtArgs>
     items?: boolean | Cotizacion$itemsArgs<ExtArgs>
     _count?: boolean | CotizacionCountOutputTypeDefaultArgs<ExtArgs>
   }
@@ -15654,6 +16315,7 @@ export namespace Prisma {
     cliente?: boolean | ClienteDefaultArgs<ExtArgs>
     usuario?: boolean | Cotizacion$usuarioArgs<ExtArgs>
     empresa?: boolean | Cotizacion$empresaArgs<ExtArgs>
+    factura?: boolean | Cotizacion$facturaArgs<ExtArgs>
   }
 
   export type $CotizacionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -15662,6 +16324,7 @@ export namespace Prisma {
       cliente: Prisma.$ClientePayload<ExtArgs>
       usuario: Prisma.$UsuarioPayload<ExtArgs> | null
       empresa: Prisma.$EmpresaPayload<ExtArgs> | null
+      factura: Prisma.$FacturaPayload<ExtArgs> | null
       items: Prisma.$ItemCotizacionPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
@@ -15677,6 +16340,7 @@ export namespace Prisma {
       total: number
       moneda: string
       estado: string
+      facturaId: string | null
     }, ExtArgs["result"]["cotizacion"]>
     composites: {}
   }
@@ -16044,6 +16708,7 @@ export namespace Prisma {
     cliente<T extends ClienteDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ClienteDefaultArgs<ExtArgs>>): Prisma__ClienteClient<$Result.GetResult<Prisma.$ClientePayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
     usuario<T extends Cotizacion$usuarioArgs<ExtArgs> = {}>(args?: Subset<T, Cotizacion$usuarioArgs<ExtArgs>>): Prisma__UsuarioClient<$Result.GetResult<Prisma.$UsuarioPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
     empresa<T extends Cotizacion$empresaArgs<ExtArgs> = {}>(args?: Subset<T, Cotizacion$empresaArgs<ExtArgs>>): Prisma__EmpresaClient<$Result.GetResult<Prisma.$EmpresaPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
+    factura<T extends Cotizacion$facturaArgs<ExtArgs> = {}>(args?: Subset<T, Cotizacion$facturaArgs<ExtArgs>>): Prisma__FacturaClient<$Result.GetResult<Prisma.$FacturaPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
     items<T extends Cotizacion$itemsArgs<ExtArgs> = {}>(args?: Subset<T, Cotizacion$itemsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ItemCotizacionPayload<ExtArgs>, T, "findMany"> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
@@ -16086,6 +16751,7 @@ export namespace Prisma {
     readonly total: FieldRef<"Cotizacion", 'Float'>
     readonly moneda: FieldRef<"Cotizacion", 'String'>
     readonly estado: FieldRef<"Cotizacion", 'String'>
+    readonly facturaId: FieldRef<"Cotizacion", 'String'>
   }
     
 
@@ -16432,6 +17098,21 @@ export namespace Prisma {
   }
 
   /**
+   * Cotizacion.factura
+   */
+  export type Cotizacion$facturaArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Factura
+     */
+    select?: FacturaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: FacturaInclude<ExtArgs> | null
+    where?: FacturaWhereInput
+  }
+
+  /**
    * Cotizacion.items
    */
   export type Cotizacion$itemsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -16689,6 +17370,7 @@ export namespace Prisma {
     precioUnitario?: boolean
     totalLinea?: boolean
     cotizacion?: boolean | CotizacionDefaultArgs<ExtArgs>
+    producto?: boolean | ItemCotizacion$productoArgs<ExtArgs>
   }, ExtArgs["result"]["itemCotizacion"]>
 
   export type ItemCotizacionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -16700,6 +17382,7 @@ export namespace Prisma {
     precioUnitario?: boolean
     totalLinea?: boolean
     cotizacion?: boolean | CotizacionDefaultArgs<ExtArgs>
+    producto?: boolean | ItemCotizacion$productoArgs<ExtArgs>
   }, ExtArgs["result"]["itemCotizacion"]>
 
   export type ItemCotizacionSelectScalar = {
@@ -16714,15 +17397,18 @@ export namespace Prisma {
 
   export type ItemCotizacionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     cotizacion?: boolean | CotizacionDefaultArgs<ExtArgs>
+    producto?: boolean | ItemCotizacion$productoArgs<ExtArgs>
   }
   export type ItemCotizacionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     cotizacion?: boolean | CotizacionDefaultArgs<ExtArgs>
+    producto?: boolean | ItemCotizacion$productoArgs<ExtArgs>
   }
 
   export type $ItemCotizacionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "ItemCotizacion"
     objects: {
       cotizacion: Prisma.$CotizacionPayload<ExtArgs>
+      producto: Prisma.$ProductoPayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -17097,6 +17783,7 @@ export namespace Prisma {
   export interface Prisma__ItemCotizacionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     cotizacion<T extends CotizacionDefaultArgs<ExtArgs> = {}>(args?: Subset<T, CotizacionDefaultArgs<ExtArgs>>): Prisma__CotizacionClient<$Result.GetResult<Prisma.$CotizacionPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    producto<T extends ItemCotizacion$productoArgs<ExtArgs> = {}>(args?: Subset<T, ItemCotizacion$productoArgs<ExtArgs>>): Prisma__ProductoClient<$Result.GetResult<Prisma.$ProductoPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -17449,6 +18136,21 @@ export namespace Prisma {
   }
 
   /**
+   * ItemCotizacion.producto
+   */
+  export type ItemCotizacion$productoArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Producto
+     */
+    select?: ProductoSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProductoInclude<ExtArgs> | null
+    where?: ProductoWhereInput
+  }
+
+  /**
    * ItemCotizacion without action
    */
   export type ItemCotizacionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -17506,6 +18208,7 @@ export namespace Prisma {
     mfaEnabled: boolean | null
     mfaSecret: string | null
     sessionVersion: number | null
+    refreshTokenId: string | null
     sudoModeExpiresAt: Date | null
     registrationIp: string | null
     registrationLatitude: number | null
@@ -17513,6 +18216,7 @@ export namespace Prisma {
     lastLoginIp: string | null
     lastLoginAt: Date | null
     deletedAt: Date | null
+    scheduledDeletionAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -17536,6 +18240,7 @@ export namespace Prisma {
     mfaEnabled: boolean | null
     mfaSecret: string | null
     sessionVersion: number | null
+    refreshTokenId: string | null
     sudoModeExpiresAt: Date | null
     registrationIp: string | null
     registrationLatitude: number | null
@@ -17543,6 +18248,7 @@ export namespace Prisma {
     lastLoginIp: string | null
     lastLoginAt: Date | null
     deletedAt: Date | null
+    scheduledDeletionAt: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -17566,6 +18272,7 @@ export namespace Prisma {
     mfaEnabled: number
     mfaSecret: number
     sessionVersion: number
+    refreshTokenId: number
     sudoModeExpiresAt: number
     registrationIp: number
     registrationLatitude: number
@@ -17573,6 +18280,7 @@ export namespace Prisma {
     lastLoginIp: number
     lastLoginAt: number
     deletedAt: number
+    scheduledDeletionAt: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -17610,6 +18318,7 @@ export namespace Prisma {
     mfaEnabled?: true
     mfaSecret?: true
     sessionVersion?: true
+    refreshTokenId?: true
     sudoModeExpiresAt?: true
     registrationIp?: true
     registrationLatitude?: true
@@ -17617,6 +18326,7 @@ export namespace Prisma {
     lastLoginIp?: true
     lastLoginAt?: true
     deletedAt?: true
+    scheduledDeletionAt?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -17640,6 +18350,7 @@ export namespace Prisma {
     mfaEnabled?: true
     mfaSecret?: true
     sessionVersion?: true
+    refreshTokenId?: true
     sudoModeExpiresAt?: true
     registrationIp?: true
     registrationLatitude?: true
@@ -17647,6 +18358,7 @@ export namespace Prisma {
     lastLoginIp?: true
     lastLoginAt?: true
     deletedAt?: true
+    scheduledDeletionAt?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -17670,6 +18382,7 @@ export namespace Prisma {
     mfaEnabled?: true
     mfaSecret?: true
     sessionVersion?: true
+    refreshTokenId?: true
     sudoModeExpiresAt?: true
     registrationIp?: true
     registrationLatitude?: true
@@ -17677,6 +18390,7 @@ export namespace Prisma {
     lastLoginIp?: true
     lastLoginAt?: true
     deletedAt?: true
+    scheduledDeletionAt?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -17787,6 +18501,7 @@ export namespace Prisma {
     mfaEnabled: boolean
     mfaSecret: string | null
     sessionVersion: number
+    refreshTokenId: string | null
     sudoModeExpiresAt: Date | null
     registrationIp: string | null
     registrationLatitude: number | null
@@ -17794,6 +18509,7 @@ export namespace Prisma {
     lastLoginIp: string | null
     lastLoginAt: Date | null
     deletedAt: Date | null
+    scheduledDeletionAt: Date | null
     createdAt: Date
     updatedAt: Date
     _count: UsuarioCountAggregateOutputType | null
@@ -17836,6 +18552,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: boolean
     sessionVersion?: boolean
+    refreshTokenId?: boolean
     sudoModeExpiresAt?: boolean
     registrationIp?: boolean
     registrationLatitude?: boolean
@@ -17843,6 +18560,7 @@ export namespace Prisma {
     lastLoginIp?: boolean
     lastLoginAt?: boolean
     deletedAt?: boolean
+    scheduledDeletionAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     rolDinamico?: boolean | Usuario$rolDinamicoArgs<ExtArgs>
@@ -17856,6 +18574,8 @@ export namespace Prisma {
     cotizaciones?: boolean | Usuario$cotizacionesArgs<ExtArgs>
     solicitudesActivacion?: boolean | Usuario$solicitudesActivacionArgs<ExtArgs>
     auditLogs?: boolean | Usuario$auditLogsArgs<ExtArgs>
+    cuentasPorCobrar?: boolean | Usuario$cuentasPorCobrarArgs<ExtArgs>
+    gestionesCobranza?: boolean | Usuario$gestionesCobranzaArgs<ExtArgs>
     _count?: boolean | UsuarioCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["usuario"]>
 
@@ -17878,6 +18598,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: boolean
     sessionVersion?: boolean
+    refreshTokenId?: boolean
     sudoModeExpiresAt?: boolean
     registrationIp?: boolean
     registrationLatitude?: boolean
@@ -17885,6 +18606,7 @@ export namespace Prisma {
     lastLoginIp?: boolean
     lastLoginAt?: boolean
     deletedAt?: boolean
+    scheduledDeletionAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     rolDinamico?: boolean | Usuario$rolDinamicoArgs<ExtArgs>
@@ -17911,6 +18633,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: boolean
     sessionVersion?: boolean
+    refreshTokenId?: boolean
     sudoModeExpiresAt?: boolean
     registrationIp?: boolean
     registrationLatitude?: boolean
@@ -17918,6 +18641,7 @@ export namespace Prisma {
     lastLoginIp?: boolean
     lastLoginAt?: boolean
     deletedAt?: boolean
+    scheduledDeletionAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
@@ -17934,6 +18658,8 @@ export namespace Prisma {
     cotizaciones?: boolean | Usuario$cotizacionesArgs<ExtArgs>
     solicitudesActivacion?: boolean | Usuario$solicitudesActivacionArgs<ExtArgs>
     auditLogs?: boolean | Usuario$auditLogsArgs<ExtArgs>
+    cuentasPorCobrar?: boolean | Usuario$cuentasPorCobrarArgs<ExtArgs>
+    gestionesCobranza?: boolean | Usuario$gestionesCobranzaArgs<ExtArgs>
     _count?: boolean | UsuarioCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UsuarioIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -17956,6 +18682,8 @@ export namespace Prisma {
       cotizaciones: Prisma.$CotizacionPayload<ExtArgs>[]
       solicitudesActivacion: Prisma.$SolicitudActivacionPayload<ExtArgs>[]
       auditLogs: Prisma.$AuditLogPayload<ExtArgs>[]
+      cuentasPorCobrar: Prisma.$CuentaPorCobrarPayload<ExtArgs>[]
+      gestionesCobranza: Prisma.$GestionCobranzaPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -17976,6 +18704,7 @@ export namespace Prisma {
       mfaEnabled: boolean
       mfaSecret: string | null
       sessionVersion: number
+      refreshTokenId: string | null
       sudoModeExpiresAt: Date | null
       registrationIp: string | null
       registrationLatitude: number | null
@@ -17983,6 +18712,7 @@ export namespace Prisma {
       lastLoginIp: string | null
       lastLoginAt: Date | null
       deletedAt: Date | null
+      scheduledDeletionAt: Date | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["usuario"]>
@@ -18360,6 +19090,8 @@ export namespace Prisma {
     cotizaciones<T extends Usuario$cotizacionesArgs<ExtArgs> = {}>(args?: Subset<T, Usuario$cotizacionesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CotizacionPayload<ExtArgs>, T, "findMany"> | Null>
     solicitudesActivacion<T extends Usuario$solicitudesActivacionArgs<ExtArgs> = {}>(args?: Subset<T, Usuario$solicitudesActivacionArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SolicitudActivacionPayload<ExtArgs>, T, "findMany"> | Null>
     auditLogs<T extends Usuario$auditLogsArgs<ExtArgs> = {}>(args?: Subset<T, Usuario$auditLogsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "findMany"> | Null>
+    cuentasPorCobrar<T extends Usuario$cuentasPorCobrarArgs<ExtArgs> = {}>(args?: Subset<T, Usuario$cuentasPorCobrarArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "findMany"> | Null>
+    gestionesCobranza<T extends Usuario$gestionesCobranzaArgs<ExtArgs> = {}>(args?: Subset<T, Usuario$gestionesCobranzaArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GestionCobranzaPayload<ExtArgs>, T, "findMany"> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -18407,6 +19139,7 @@ export namespace Prisma {
     readonly mfaEnabled: FieldRef<"Usuario", 'Boolean'>
     readonly mfaSecret: FieldRef<"Usuario", 'String'>
     readonly sessionVersion: FieldRef<"Usuario", 'Int'>
+    readonly refreshTokenId: FieldRef<"Usuario", 'String'>
     readonly sudoModeExpiresAt: FieldRef<"Usuario", 'DateTime'>
     readonly registrationIp: FieldRef<"Usuario", 'String'>
     readonly registrationLatitude: FieldRef<"Usuario", 'Float'>
@@ -18414,6 +19147,7 @@ export namespace Prisma {
     readonly lastLoginIp: FieldRef<"Usuario", 'String'>
     readonly lastLoginAt: FieldRef<"Usuario", 'DateTime'>
     readonly deletedAt: FieldRef<"Usuario", 'DateTime'>
+    readonly scheduledDeletionAt: FieldRef<"Usuario", 'DateTime'>
     readonly createdAt: FieldRef<"Usuario", 'DateTime'>
     readonly updatedAt: FieldRef<"Usuario", 'DateTime'>
   }
@@ -18937,6 +19671,46 @@ export namespace Prisma {
   }
 
   /**
+   * Usuario.cuentasPorCobrar
+   */
+  export type Usuario$cuentasPorCobrarArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    where?: CuentaPorCobrarWhereInput
+    orderBy?: CuentaPorCobrarOrderByWithRelationInput | CuentaPorCobrarOrderByWithRelationInput[]
+    cursor?: CuentaPorCobrarWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: CuentaPorCobrarScalarFieldEnum | CuentaPorCobrarScalarFieldEnum[]
+  }
+
+  /**
+   * Usuario.gestionesCobranza
+   */
+  export type Usuario$gestionesCobranzaArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaInclude<ExtArgs> | null
+    where?: GestionCobranzaWhereInput
+    orderBy?: GestionCobranzaOrderByWithRelationInput | GestionCobranzaOrderByWithRelationInput[]
+    cursor?: GestionCobranzaWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: GestionCobranzaScalarFieldEnum | GestionCobranzaScalarFieldEnum[]
+  }
+
+  /**
    * Usuario without action
    */
   export type UsuarioDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -18968,6 +19742,9 @@ export namespace Prisma {
     metodoPago: string | null
     referencia: string | null
     estado: string | null
+    notas: string | null
+    revisadoPor: string | null
+    revisadoEn: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -18979,6 +19756,9 @@ export namespace Prisma {
     metodoPago: string | null
     referencia: string | null
     estado: string | null
+    notas: string | null
+    revisadoPor: string | null
+    revisadoEn: Date | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -18990,6 +19770,9 @@ export namespace Prisma {
     metodoPago: number
     referencia: number
     estado: number
+    notas: number
+    revisadoPor: number
+    revisadoEn: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -19003,6 +19786,9 @@ export namespace Prisma {
     metodoPago?: true
     referencia?: true
     estado?: true
+    notas?: true
+    revisadoPor?: true
+    revisadoEn?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -19014,6 +19800,9 @@ export namespace Prisma {
     metodoPago?: true
     referencia?: true
     estado?: true
+    notas?: true
+    revisadoPor?: true
+    revisadoEn?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -19025,6 +19814,9 @@ export namespace Prisma {
     metodoPago?: true
     referencia?: true
     estado?: true
+    notas?: true
+    revisadoPor?: true
+    revisadoEn?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -19109,6 +19901,9 @@ export namespace Prisma {
     metodoPago: string
     referencia: string
     estado: string
+    notas: string | null
+    revisadoPor: string | null
+    revisadoEn: Date | null
     createdAt: Date
     updatedAt: Date
     _count: SolicitudActivacionCountAggregateOutputType | null
@@ -19137,6 +19932,9 @@ export namespace Prisma {
     metodoPago?: boolean
     referencia?: boolean
     estado?: boolean
+    notas?: boolean
+    revisadoPor?: boolean
+    revisadoEn?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     usuario?: boolean | UsuarioDefaultArgs<ExtArgs>
@@ -19149,6 +19947,9 @@ export namespace Prisma {
     metodoPago?: boolean
     referencia?: boolean
     estado?: boolean
+    notas?: boolean
+    revisadoPor?: boolean
+    revisadoEn?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     usuario?: boolean | UsuarioDefaultArgs<ExtArgs>
@@ -19161,6 +19962,9 @@ export namespace Prisma {
     metodoPago?: boolean
     referencia?: boolean
     estado?: boolean
+    notas?: boolean
+    revisadoPor?: boolean
+    revisadoEn?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
@@ -19184,6 +19988,9 @@ export namespace Prisma {
       metodoPago: string
       referencia: string
       estado: string
+      notas: string | null
+      revisadoPor: string | null
+      revisadoEn: Date | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["solicitudActivacion"]>
@@ -19586,6 +20393,9 @@ export namespace Prisma {
     readonly metodoPago: FieldRef<"SolicitudActivacion", 'String'>
     readonly referencia: FieldRef<"SolicitudActivacion", 'String'>
     readonly estado: FieldRef<"SolicitudActivacion", 'String'>
+    readonly notas: FieldRef<"SolicitudActivacion", 'String'>
+    readonly revisadoPor: FieldRef<"SolicitudActivacion", 'String'>
+    readonly revisadoEn: FieldRef<"SolicitudActivacion", 'DateTime'>
     readonly createdAt: FieldRef<"SolicitudActivacion", 'DateTime'>
     readonly updatedAt: FieldRef<"SolicitudActivacion", 'DateTime'>
   }
@@ -19934,6 +20744,7 @@ export namespace Prisma {
     subtitulo: string | null
     contenido: string | null
     imagenUrl: string | null
+    videoUrl: string | null
     categoria: string | null
     destacado: boolean | null
     publicado: boolean | null
@@ -19947,6 +20758,7 @@ export namespace Prisma {
     subtitulo: string | null
     contenido: string | null
     imagenUrl: string | null
+    videoUrl: string | null
     categoria: string | null
     destacado: boolean | null
     publicado: boolean | null
@@ -19960,6 +20772,7 @@ export namespace Prisma {
     subtitulo: number
     contenido: number
     imagenUrl: number
+    videoUrl: number
     categoria: number
     destacado: number
     publicado: number
@@ -19975,6 +20788,7 @@ export namespace Prisma {
     subtitulo?: true
     contenido?: true
     imagenUrl?: true
+    videoUrl?: true
     categoria?: true
     destacado?: true
     publicado?: true
@@ -19988,6 +20802,7 @@ export namespace Prisma {
     subtitulo?: true
     contenido?: true
     imagenUrl?: true
+    videoUrl?: true
     categoria?: true
     destacado?: true
     publicado?: true
@@ -20001,6 +20816,7 @@ export namespace Prisma {
     subtitulo?: true
     contenido?: true
     imagenUrl?: true
+    videoUrl?: true
     categoria?: true
     destacado?: true
     publicado?: true
@@ -20087,6 +20903,7 @@ export namespace Prisma {
     subtitulo: string | null
     contenido: string
     imagenUrl: string | null
+    videoUrl: string | null
     categoria: string
     destacado: boolean
     publicado: boolean
@@ -20117,6 +20934,7 @@ export namespace Prisma {
     subtitulo?: boolean
     contenido?: boolean
     imagenUrl?: boolean
+    videoUrl?: boolean
     categoria?: boolean
     destacado?: boolean
     publicado?: boolean
@@ -20130,6 +20948,7 @@ export namespace Prisma {
     subtitulo?: boolean
     contenido?: boolean
     imagenUrl?: boolean
+    videoUrl?: boolean
     categoria?: boolean
     destacado?: boolean
     publicado?: boolean
@@ -20143,6 +20962,7 @@ export namespace Prisma {
     subtitulo?: boolean
     contenido?: boolean
     imagenUrl?: boolean
+    videoUrl?: boolean
     categoria?: boolean
     destacado?: boolean
     publicado?: boolean
@@ -20160,6 +20980,7 @@ export namespace Prisma {
       subtitulo: string | null
       contenido: string
       imagenUrl: string | null
+      videoUrl: string | null
       categoria: string
       destacado: boolean
       publicado: boolean
@@ -20563,6 +21384,7 @@ export namespace Prisma {
     readonly subtitulo: FieldRef<"Noticia", 'String'>
     readonly contenido: FieldRef<"Noticia", 'String'>
     readonly imagenUrl: FieldRef<"Noticia", 'String'>
+    readonly videoUrl: FieldRef<"Noticia", 'String'>
     readonly categoria: FieldRef<"Noticia", 'String'>
     readonly destacado: FieldRef<"Noticia", 'Boolean'>
     readonly publicado: FieldRef<"Noticia", 'Boolean'>
@@ -21873,6 +22695,2177 @@ export namespace Prisma {
 
 
   /**
+   * Model CuentaPorCobrar
+   */
+
+  export type AggregateCuentaPorCobrar = {
+    _count: CuentaPorCobrarCountAggregateOutputType | null
+    _avg: CuentaPorCobrarAvgAggregateOutputType | null
+    _sum: CuentaPorCobrarSumAggregateOutputType | null
+    _min: CuentaPorCobrarMinAggregateOutputType | null
+    _max: CuentaPorCobrarMaxAggregateOutputType | null
+  }
+
+  export type CuentaPorCobrarAvgAggregateOutputType = {
+    montoOriginal: number | null
+    montoCobrado: number | null
+    montoPendiente: number | null
+    diasVencido: number | null
+  }
+
+  export type CuentaPorCobrarSumAggregateOutputType = {
+    montoOriginal: number | null
+    montoCobrado: number | null
+    montoPendiente: number | null
+    diasVencido: number | null
+  }
+
+  export type CuentaPorCobrarMinAggregateOutputType = {
+    id: string | null
+    empresaId: string | null
+    facturaId: string | null
+    clienteId: string | null
+    usuarioId: string | null
+    montoOriginal: number | null
+    montoCobrado: number | null
+    montoPendiente: number | null
+    fechaEmision: Date | null
+    fechaVencimiento: Date | null
+    estado: string | null
+    diasVencido: number | null
+    ultimaGestion: Date | null
+    notas: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CuentaPorCobrarMaxAggregateOutputType = {
+    id: string | null
+    empresaId: string | null
+    facturaId: string | null
+    clienteId: string | null
+    usuarioId: string | null
+    montoOriginal: number | null
+    montoCobrado: number | null
+    montoPendiente: number | null
+    fechaEmision: Date | null
+    fechaVencimiento: Date | null
+    estado: string | null
+    diasVencido: number | null
+    ultimaGestion: Date | null
+    notas: string | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type CuentaPorCobrarCountAggregateOutputType = {
+    id: number
+    empresaId: number
+    facturaId: number
+    clienteId: number
+    usuarioId: number
+    montoOriginal: number
+    montoCobrado: number
+    montoPendiente: number
+    fechaEmision: number
+    fechaVencimiento: number
+    estado: number
+    diasVencido: number
+    ultimaGestion: number
+    notas: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type CuentaPorCobrarAvgAggregateInputType = {
+    montoOriginal?: true
+    montoCobrado?: true
+    montoPendiente?: true
+    diasVencido?: true
+  }
+
+  export type CuentaPorCobrarSumAggregateInputType = {
+    montoOriginal?: true
+    montoCobrado?: true
+    montoPendiente?: true
+    diasVencido?: true
+  }
+
+  export type CuentaPorCobrarMinAggregateInputType = {
+    id?: true
+    empresaId?: true
+    facturaId?: true
+    clienteId?: true
+    usuarioId?: true
+    montoOriginal?: true
+    montoCobrado?: true
+    montoPendiente?: true
+    fechaEmision?: true
+    fechaVencimiento?: true
+    estado?: true
+    diasVencido?: true
+    ultimaGestion?: true
+    notas?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CuentaPorCobrarMaxAggregateInputType = {
+    id?: true
+    empresaId?: true
+    facturaId?: true
+    clienteId?: true
+    usuarioId?: true
+    montoOriginal?: true
+    montoCobrado?: true
+    montoPendiente?: true
+    fechaEmision?: true
+    fechaVencimiento?: true
+    estado?: true
+    diasVencido?: true
+    ultimaGestion?: true
+    notas?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type CuentaPorCobrarCountAggregateInputType = {
+    id?: true
+    empresaId?: true
+    facturaId?: true
+    clienteId?: true
+    usuarioId?: true
+    montoOriginal?: true
+    montoCobrado?: true
+    montoPendiente?: true
+    fechaEmision?: true
+    fechaVencimiento?: true
+    estado?: true
+    diasVencido?: true
+    ultimaGestion?: true
+    notas?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type CuentaPorCobrarAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CuentaPorCobrar to aggregate.
+     */
+    where?: CuentaPorCobrarWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CuentaPorCobrars to fetch.
+     */
+    orderBy?: CuentaPorCobrarOrderByWithRelationInput | CuentaPorCobrarOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: CuentaPorCobrarWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CuentaPorCobrars from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CuentaPorCobrars.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned CuentaPorCobrars
+    **/
+    _count?: true | CuentaPorCobrarCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: CuentaPorCobrarAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: CuentaPorCobrarSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: CuentaPorCobrarMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: CuentaPorCobrarMaxAggregateInputType
+  }
+
+  export type GetCuentaPorCobrarAggregateType<T extends CuentaPorCobrarAggregateArgs> = {
+        [P in keyof T & keyof AggregateCuentaPorCobrar]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateCuentaPorCobrar[P]>
+      : GetScalarType<T[P], AggregateCuentaPorCobrar[P]>
+  }
+
+
+
+
+  export type CuentaPorCobrarGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: CuentaPorCobrarWhereInput
+    orderBy?: CuentaPorCobrarOrderByWithAggregationInput | CuentaPorCobrarOrderByWithAggregationInput[]
+    by: CuentaPorCobrarScalarFieldEnum[] | CuentaPorCobrarScalarFieldEnum
+    having?: CuentaPorCobrarScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: CuentaPorCobrarCountAggregateInputType | true
+    _avg?: CuentaPorCobrarAvgAggregateInputType
+    _sum?: CuentaPorCobrarSumAggregateInputType
+    _min?: CuentaPorCobrarMinAggregateInputType
+    _max?: CuentaPorCobrarMaxAggregateInputType
+  }
+
+  export type CuentaPorCobrarGroupByOutputType = {
+    id: string
+    empresaId: string
+    facturaId: string
+    clienteId: string
+    usuarioId: string | null
+    montoOriginal: number
+    montoCobrado: number
+    montoPendiente: number
+    fechaEmision: Date
+    fechaVencimiento: Date
+    estado: string
+    diasVencido: number
+    ultimaGestion: Date | null
+    notas: string | null
+    createdAt: Date
+    updatedAt: Date
+    _count: CuentaPorCobrarCountAggregateOutputType | null
+    _avg: CuentaPorCobrarAvgAggregateOutputType | null
+    _sum: CuentaPorCobrarSumAggregateOutputType | null
+    _min: CuentaPorCobrarMinAggregateOutputType | null
+    _max: CuentaPorCobrarMaxAggregateOutputType | null
+  }
+
+  type GetCuentaPorCobrarGroupByPayload<T extends CuentaPorCobrarGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<CuentaPorCobrarGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof CuentaPorCobrarGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], CuentaPorCobrarGroupByOutputType[P]>
+            : GetScalarType<T[P], CuentaPorCobrarGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type CuentaPorCobrarSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    empresaId?: boolean
+    facturaId?: boolean
+    clienteId?: boolean
+    usuarioId?: boolean
+    montoOriginal?: boolean
+    montoCobrado?: boolean
+    montoPendiente?: boolean
+    fechaEmision?: boolean
+    fechaVencimiento?: boolean
+    estado?: boolean
+    diasVencido?: boolean
+    ultimaGestion?: boolean
+    notas?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    empresa?: boolean | CuentaPorCobrar$empresaArgs<ExtArgs>
+    factura?: boolean | FacturaDefaultArgs<ExtArgs>
+    cliente?: boolean | ClienteDefaultArgs<ExtArgs>
+    usuario?: boolean | CuentaPorCobrar$usuarioArgs<ExtArgs>
+    gestions?: boolean | CuentaPorCobrar$gestionsArgs<ExtArgs>
+    _count?: boolean | CuentaPorCobrarCountOutputTypeDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["cuentaPorCobrar"]>
+
+  export type CuentaPorCobrarSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    empresaId?: boolean
+    facturaId?: boolean
+    clienteId?: boolean
+    usuarioId?: boolean
+    montoOriginal?: boolean
+    montoCobrado?: boolean
+    montoPendiente?: boolean
+    fechaEmision?: boolean
+    fechaVencimiento?: boolean
+    estado?: boolean
+    diasVencido?: boolean
+    ultimaGestion?: boolean
+    notas?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    empresa?: boolean | CuentaPorCobrar$empresaArgs<ExtArgs>
+    factura?: boolean | FacturaDefaultArgs<ExtArgs>
+    cliente?: boolean | ClienteDefaultArgs<ExtArgs>
+    usuario?: boolean | CuentaPorCobrar$usuarioArgs<ExtArgs>
+  }, ExtArgs["result"]["cuentaPorCobrar"]>
+
+  export type CuentaPorCobrarSelectScalar = {
+    id?: boolean
+    empresaId?: boolean
+    facturaId?: boolean
+    clienteId?: boolean
+    usuarioId?: boolean
+    montoOriginal?: boolean
+    montoCobrado?: boolean
+    montoPendiente?: boolean
+    fechaEmision?: boolean
+    fechaVencimiento?: boolean
+    estado?: boolean
+    diasVencido?: boolean
+    ultimaGestion?: boolean
+    notas?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type CuentaPorCobrarInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    empresa?: boolean | CuentaPorCobrar$empresaArgs<ExtArgs>
+    factura?: boolean | FacturaDefaultArgs<ExtArgs>
+    cliente?: boolean | ClienteDefaultArgs<ExtArgs>
+    usuario?: boolean | CuentaPorCobrar$usuarioArgs<ExtArgs>
+    gestions?: boolean | CuentaPorCobrar$gestionsArgs<ExtArgs>
+    _count?: boolean | CuentaPorCobrarCountOutputTypeDefaultArgs<ExtArgs>
+  }
+  export type CuentaPorCobrarIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    empresa?: boolean | CuentaPorCobrar$empresaArgs<ExtArgs>
+    factura?: boolean | FacturaDefaultArgs<ExtArgs>
+    cliente?: boolean | ClienteDefaultArgs<ExtArgs>
+    usuario?: boolean | CuentaPorCobrar$usuarioArgs<ExtArgs>
+  }
+
+  export type $CuentaPorCobrarPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "CuentaPorCobrar"
+    objects: {
+      empresa: Prisma.$EmpresaPayload<ExtArgs> | null
+      factura: Prisma.$FacturaPayload<ExtArgs>
+      cliente: Prisma.$ClientePayload<ExtArgs>
+      usuario: Prisma.$UsuarioPayload<ExtArgs> | null
+      gestions: Prisma.$GestionCobranzaPayload<ExtArgs>[]
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      empresaId: string
+      facturaId: string
+      clienteId: string
+      usuarioId: string | null
+      montoOriginal: number
+      montoCobrado: number
+      montoPendiente: number
+      fechaEmision: Date
+      fechaVencimiento: Date
+      estado: string
+      diasVencido: number
+      ultimaGestion: Date | null
+      notas: string | null
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["cuentaPorCobrar"]>
+    composites: {}
+  }
+
+  type CuentaPorCobrarGetPayload<S extends boolean | null | undefined | CuentaPorCobrarDefaultArgs> = $Result.GetResult<Prisma.$CuentaPorCobrarPayload, S>
+
+  type CuentaPorCobrarCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<CuentaPorCobrarFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: CuentaPorCobrarCountAggregateInputType | true
+    }
+
+  export interface CuentaPorCobrarDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['CuentaPorCobrar'], meta: { name: 'CuentaPorCobrar' } }
+    /**
+     * Find zero or one CuentaPorCobrar that matches the filter.
+     * @param {CuentaPorCobrarFindUniqueArgs} args - Arguments to find a CuentaPorCobrar
+     * @example
+     * // Get one CuentaPorCobrar
+     * const cuentaPorCobrar = await prisma.cuentaPorCobrar.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends CuentaPorCobrarFindUniqueArgs>(args: SelectSubset<T, CuentaPorCobrarFindUniqueArgs<ExtArgs>>): Prisma__CuentaPorCobrarClient<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one CuentaPorCobrar that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {CuentaPorCobrarFindUniqueOrThrowArgs} args - Arguments to find a CuentaPorCobrar
+     * @example
+     * // Get one CuentaPorCobrar
+     * const cuentaPorCobrar = await prisma.cuentaPorCobrar.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends CuentaPorCobrarFindUniqueOrThrowArgs>(args: SelectSubset<T, CuentaPorCobrarFindUniqueOrThrowArgs<ExtArgs>>): Prisma__CuentaPorCobrarClient<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first CuentaPorCobrar that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CuentaPorCobrarFindFirstArgs} args - Arguments to find a CuentaPorCobrar
+     * @example
+     * // Get one CuentaPorCobrar
+     * const cuentaPorCobrar = await prisma.cuentaPorCobrar.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends CuentaPorCobrarFindFirstArgs>(args?: SelectSubset<T, CuentaPorCobrarFindFirstArgs<ExtArgs>>): Prisma__CuentaPorCobrarClient<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first CuentaPorCobrar that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CuentaPorCobrarFindFirstOrThrowArgs} args - Arguments to find a CuentaPorCobrar
+     * @example
+     * // Get one CuentaPorCobrar
+     * const cuentaPorCobrar = await prisma.cuentaPorCobrar.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends CuentaPorCobrarFindFirstOrThrowArgs>(args?: SelectSubset<T, CuentaPorCobrarFindFirstOrThrowArgs<ExtArgs>>): Prisma__CuentaPorCobrarClient<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more CuentaPorCobrars that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CuentaPorCobrarFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all CuentaPorCobrars
+     * const cuentaPorCobrars = await prisma.cuentaPorCobrar.findMany()
+     * 
+     * // Get first 10 CuentaPorCobrars
+     * const cuentaPorCobrars = await prisma.cuentaPorCobrar.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const cuentaPorCobrarWithIdOnly = await prisma.cuentaPorCobrar.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends CuentaPorCobrarFindManyArgs>(args?: SelectSubset<T, CuentaPorCobrarFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a CuentaPorCobrar.
+     * @param {CuentaPorCobrarCreateArgs} args - Arguments to create a CuentaPorCobrar.
+     * @example
+     * // Create one CuentaPorCobrar
+     * const CuentaPorCobrar = await prisma.cuentaPorCobrar.create({
+     *   data: {
+     *     // ... data to create a CuentaPorCobrar
+     *   }
+     * })
+     * 
+     */
+    create<T extends CuentaPorCobrarCreateArgs>(args: SelectSubset<T, CuentaPorCobrarCreateArgs<ExtArgs>>): Prisma__CuentaPorCobrarClient<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many CuentaPorCobrars.
+     * @param {CuentaPorCobrarCreateManyArgs} args - Arguments to create many CuentaPorCobrars.
+     * @example
+     * // Create many CuentaPorCobrars
+     * const cuentaPorCobrar = await prisma.cuentaPorCobrar.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends CuentaPorCobrarCreateManyArgs>(args?: SelectSubset<T, CuentaPorCobrarCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many CuentaPorCobrars and returns the data saved in the database.
+     * @param {CuentaPorCobrarCreateManyAndReturnArgs} args - Arguments to create many CuentaPorCobrars.
+     * @example
+     * // Create many CuentaPorCobrars
+     * const cuentaPorCobrar = await prisma.cuentaPorCobrar.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many CuentaPorCobrars and only return the `id`
+     * const cuentaPorCobrarWithIdOnly = await prisma.cuentaPorCobrar.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends CuentaPorCobrarCreateManyAndReturnArgs>(args?: SelectSubset<T, CuentaPorCobrarCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a CuentaPorCobrar.
+     * @param {CuentaPorCobrarDeleteArgs} args - Arguments to delete one CuentaPorCobrar.
+     * @example
+     * // Delete one CuentaPorCobrar
+     * const CuentaPorCobrar = await prisma.cuentaPorCobrar.delete({
+     *   where: {
+     *     // ... filter to delete one CuentaPorCobrar
+     *   }
+     * })
+     * 
+     */
+    delete<T extends CuentaPorCobrarDeleteArgs>(args: SelectSubset<T, CuentaPorCobrarDeleteArgs<ExtArgs>>): Prisma__CuentaPorCobrarClient<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one CuentaPorCobrar.
+     * @param {CuentaPorCobrarUpdateArgs} args - Arguments to update one CuentaPorCobrar.
+     * @example
+     * // Update one CuentaPorCobrar
+     * const cuentaPorCobrar = await prisma.cuentaPorCobrar.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends CuentaPorCobrarUpdateArgs>(args: SelectSubset<T, CuentaPorCobrarUpdateArgs<ExtArgs>>): Prisma__CuentaPorCobrarClient<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more CuentaPorCobrars.
+     * @param {CuentaPorCobrarDeleteManyArgs} args - Arguments to filter CuentaPorCobrars to delete.
+     * @example
+     * // Delete a few CuentaPorCobrars
+     * const { count } = await prisma.cuentaPorCobrar.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends CuentaPorCobrarDeleteManyArgs>(args?: SelectSubset<T, CuentaPorCobrarDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more CuentaPorCobrars.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CuentaPorCobrarUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many CuentaPorCobrars
+     * const cuentaPorCobrar = await prisma.cuentaPorCobrar.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends CuentaPorCobrarUpdateManyArgs>(args: SelectSubset<T, CuentaPorCobrarUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one CuentaPorCobrar.
+     * @param {CuentaPorCobrarUpsertArgs} args - Arguments to update or create a CuentaPorCobrar.
+     * @example
+     * // Update or create a CuentaPorCobrar
+     * const cuentaPorCobrar = await prisma.cuentaPorCobrar.upsert({
+     *   create: {
+     *     // ... data to create a CuentaPorCobrar
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the CuentaPorCobrar we want to update
+     *   }
+     * })
+     */
+    upsert<T extends CuentaPorCobrarUpsertArgs>(args: SelectSubset<T, CuentaPorCobrarUpsertArgs<ExtArgs>>): Prisma__CuentaPorCobrarClient<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of CuentaPorCobrars.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CuentaPorCobrarCountArgs} args - Arguments to filter CuentaPorCobrars to count.
+     * @example
+     * // Count the number of CuentaPorCobrars
+     * const count = await prisma.cuentaPorCobrar.count({
+     *   where: {
+     *     // ... the filter for the CuentaPorCobrars we want to count
+     *   }
+     * })
+    **/
+    count<T extends CuentaPorCobrarCountArgs>(
+      args?: Subset<T, CuentaPorCobrarCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], CuentaPorCobrarCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a CuentaPorCobrar.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CuentaPorCobrarAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends CuentaPorCobrarAggregateArgs>(args: Subset<T, CuentaPorCobrarAggregateArgs>): Prisma.PrismaPromise<GetCuentaPorCobrarAggregateType<T>>
+
+    /**
+     * Group by CuentaPorCobrar.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {CuentaPorCobrarGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends CuentaPorCobrarGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: CuentaPorCobrarGroupByArgs['orderBy'] }
+        : { orderBy?: CuentaPorCobrarGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, CuentaPorCobrarGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetCuentaPorCobrarGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the CuentaPorCobrar model
+   */
+  readonly fields: CuentaPorCobrarFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for CuentaPorCobrar.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__CuentaPorCobrarClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    empresa<T extends CuentaPorCobrar$empresaArgs<ExtArgs> = {}>(args?: Subset<T, CuentaPorCobrar$empresaArgs<ExtArgs>>): Prisma__EmpresaClient<$Result.GetResult<Prisma.$EmpresaPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
+    factura<T extends FacturaDefaultArgs<ExtArgs> = {}>(args?: Subset<T, FacturaDefaultArgs<ExtArgs>>): Prisma__FacturaClient<$Result.GetResult<Prisma.$FacturaPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    cliente<T extends ClienteDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ClienteDefaultArgs<ExtArgs>>): Prisma__ClienteClient<$Result.GetResult<Prisma.$ClientePayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    usuario<T extends CuentaPorCobrar$usuarioArgs<ExtArgs> = {}>(args?: Subset<T, CuentaPorCobrar$usuarioArgs<ExtArgs>>): Prisma__UsuarioClient<$Result.GetResult<Prisma.$UsuarioPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
+    gestions<T extends CuentaPorCobrar$gestionsArgs<ExtArgs> = {}>(args?: Subset<T, CuentaPorCobrar$gestionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GestionCobranzaPayload<ExtArgs>, T, "findMany"> | Null>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the CuentaPorCobrar model
+   */ 
+  interface CuentaPorCobrarFieldRefs {
+    readonly id: FieldRef<"CuentaPorCobrar", 'String'>
+    readonly empresaId: FieldRef<"CuentaPorCobrar", 'String'>
+    readonly facturaId: FieldRef<"CuentaPorCobrar", 'String'>
+    readonly clienteId: FieldRef<"CuentaPorCobrar", 'String'>
+    readonly usuarioId: FieldRef<"CuentaPorCobrar", 'String'>
+    readonly montoOriginal: FieldRef<"CuentaPorCobrar", 'Float'>
+    readonly montoCobrado: FieldRef<"CuentaPorCobrar", 'Float'>
+    readonly montoPendiente: FieldRef<"CuentaPorCobrar", 'Float'>
+    readonly fechaEmision: FieldRef<"CuentaPorCobrar", 'DateTime'>
+    readonly fechaVencimiento: FieldRef<"CuentaPorCobrar", 'DateTime'>
+    readonly estado: FieldRef<"CuentaPorCobrar", 'String'>
+    readonly diasVencido: FieldRef<"CuentaPorCobrar", 'Int'>
+    readonly ultimaGestion: FieldRef<"CuentaPorCobrar", 'DateTime'>
+    readonly notas: FieldRef<"CuentaPorCobrar", 'String'>
+    readonly createdAt: FieldRef<"CuentaPorCobrar", 'DateTime'>
+    readonly updatedAt: FieldRef<"CuentaPorCobrar", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * CuentaPorCobrar findUnique
+   */
+  export type CuentaPorCobrarFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    /**
+     * Filter, which CuentaPorCobrar to fetch.
+     */
+    where: CuentaPorCobrarWhereUniqueInput
+  }
+
+  /**
+   * CuentaPorCobrar findUniqueOrThrow
+   */
+  export type CuentaPorCobrarFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    /**
+     * Filter, which CuentaPorCobrar to fetch.
+     */
+    where: CuentaPorCobrarWhereUniqueInput
+  }
+
+  /**
+   * CuentaPorCobrar findFirst
+   */
+  export type CuentaPorCobrarFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    /**
+     * Filter, which CuentaPorCobrar to fetch.
+     */
+    where?: CuentaPorCobrarWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CuentaPorCobrars to fetch.
+     */
+    orderBy?: CuentaPorCobrarOrderByWithRelationInput | CuentaPorCobrarOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CuentaPorCobrars.
+     */
+    cursor?: CuentaPorCobrarWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CuentaPorCobrars from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CuentaPorCobrars.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CuentaPorCobrars.
+     */
+    distinct?: CuentaPorCobrarScalarFieldEnum | CuentaPorCobrarScalarFieldEnum[]
+  }
+
+  /**
+   * CuentaPorCobrar findFirstOrThrow
+   */
+  export type CuentaPorCobrarFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    /**
+     * Filter, which CuentaPorCobrar to fetch.
+     */
+    where?: CuentaPorCobrarWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CuentaPorCobrars to fetch.
+     */
+    orderBy?: CuentaPorCobrarOrderByWithRelationInput | CuentaPorCobrarOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for CuentaPorCobrars.
+     */
+    cursor?: CuentaPorCobrarWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CuentaPorCobrars from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CuentaPorCobrars.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of CuentaPorCobrars.
+     */
+    distinct?: CuentaPorCobrarScalarFieldEnum | CuentaPorCobrarScalarFieldEnum[]
+  }
+
+  /**
+   * CuentaPorCobrar findMany
+   */
+  export type CuentaPorCobrarFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    /**
+     * Filter, which CuentaPorCobrars to fetch.
+     */
+    where?: CuentaPorCobrarWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of CuentaPorCobrars to fetch.
+     */
+    orderBy?: CuentaPorCobrarOrderByWithRelationInput | CuentaPorCobrarOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing CuentaPorCobrars.
+     */
+    cursor?: CuentaPorCobrarWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` CuentaPorCobrars from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` CuentaPorCobrars.
+     */
+    skip?: number
+    distinct?: CuentaPorCobrarScalarFieldEnum | CuentaPorCobrarScalarFieldEnum[]
+  }
+
+  /**
+   * CuentaPorCobrar create
+   */
+  export type CuentaPorCobrarCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    /**
+     * The data needed to create a CuentaPorCobrar.
+     */
+    data: XOR<CuentaPorCobrarCreateInput, CuentaPorCobrarUncheckedCreateInput>
+  }
+
+  /**
+   * CuentaPorCobrar createMany
+   */
+  export type CuentaPorCobrarCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many CuentaPorCobrars.
+     */
+    data: CuentaPorCobrarCreateManyInput | CuentaPorCobrarCreateManyInput[]
+  }
+
+  /**
+   * CuentaPorCobrar createManyAndReturn
+   */
+  export type CuentaPorCobrarCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many CuentaPorCobrars.
+     */
+    data: CuentaPorCobrarCreateManyInput | CuentaPorCobrarCreateManyInput[]
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * CuentaPorCobrar update
+   */
+  export type CuentaPorCobrarUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    /**
+     * The data needed to update a CuentaPorCobrar.
+     */
+    data: XOR<CuentaPorCobrarUpdateInput, CuentaPorCobrarUncheckedUpdateInput>
+    /**
+     * Choose, which CuentaPorCobrar to update.
+     */
+    where: CuentaPorCobrarWhereUniqueInput
+  }
+
+  /**
+   * CuentaPorCobrar updateMany
+   */
+  export type CuentaPorCobrarUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update CuentaPorCobrars.
+     */
+    data: XOR<CuentaPorCobrarUpdateManyMutationInput, CuentaPorCobrarUncheckedUpdateManyInput>
+    /**
+     * Filter which CuentaPorCobrars to update
+     */
+    where?: CuentaPorCobrarWhereInput
+  }
+
+  /**
+   * CuentaPorCobrar upsert
+   */
+  export type CuentaPorCobrarUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    /**
+     * The filter to search for the CuentaPorCobrar to update in case it exists.
+     */
+    where: CuentaPorCobrarWhereUniqueInput
+    /**
+     * In case the CuentaPorCobrar found by the `where` argument doesn't exist, create a new CuentaPorCobrar with this data.
+     */
+    create: XOR<CuentaPorCobrarCreateInput, CuentaPorCobrarUncheckedCreateInput>
+    /**
+     * In case the CuentaPorCobrar was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<CuentaPorCobrarUpdateInput, CuentaPorCobrarUncheckedUpdateInput>
+  }
+
+  /**
+   * CuentaPorCobrar delete
+   */
+  export type CuentaPorCobrarDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+    /**
+     * Filter which CuentaPorCobrar to delete.
+     */
+    where: CuentaPorCobrarWhereUniqueInput
+  }
+
+  /**
+   * CuentaPorCobrar deleteMany
+   */
+  export type CuentaPorCobrarDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which CuentaPorCobrars to delete
+     */
+    where?: CuentaPorCobrarWhereInput
+  }
+
+  /**
+   * CuentaPorCobrar.empresa
+   */
+  export type CuentaPorCobrar$empresaArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Empresa
+     */
+    select?: EmpresaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: EmpresaInclude<ExtArgs> | null
+    where?: EmpresaWhereInput
+  }
+
+  /**
+   * CuentaPorCobrar.usuario
+   */
+  export type CuentaPorCobrar$usuarioArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Usuario
+     */
+    select?: UsuarioSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsuarioInclude<ExtArgs> | null
+    where?: UsuarioWhereInput
+  }
+
+  /**
+   * CuentaPorCobrar.gestions
+   */
+  export type CuentaPorCobrar$gestionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaInclude<ExtArgs> | null
+    where?: GestionCobranzaWhereInput
+    orderBy?: GestionCobranzaOrderByWithRelationInput | GestionCobranzaOrderByWithRelationInput[]
+    cursor?: GestionCobranzaWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: GestionCobranzaScalarFieldEnum | GestionCobranzaScalarFieldEnum[]
+  }
+
+  /**
+   * CuentaPorCobrar without action
+   */
+  export type CuentaPorCobrarDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the CuentaPorCobrar
+     */
+    select?: CuentaPorCobrarSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: CuentaPorCobrarInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model GestionCobranza
+   */
+
+  export type AggregateGestionCobranza = {
+    _count: GestionCobranzaCountAggregateOutputType | null
+    _min: GestionCobranzaMinAggregateOutputType | null
+    _max: GestionCobranzaMaxAggregateOutputType | null
+  }
+
+  export type GestionCobranzaMinAggregateOutputType = {
+    id: string | null
+    cuentaPorCobrarId: string | null
+    empresaId: string | null
+    usuarioId: string | null
+    accion: string | null
+    notas: string | null
+    fecha: Date | null
+    createdAt: Date | null
+  }
+
+  export type GestionCobranzaMaxAggregateOutputType = {
+    id: string | null
+    cuentaPorCobrarId: string | null
+    empresaId: string | null
+    usuarioId: string | null
+    accion: string | null
+    notas: string | null
+    fecha: Date | null
+    createdAt: Date | null
+  }
+
+  export type GestionCobranzaCountAggregateOutputType = {
+    id: number
+    cuentaPorCobrarId: number
+    empresaId: number
+    usuarioId: number
+    accion: number
+    notas: number
+    fecha: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type GestionCobranzaMinAggregateInputType = {
+    id?: true
+    cuentaPorCobrarId?: true
+    empresaId?: true
+    usuarioId?: true
+    accion?: true
+    notas?: true
+    fecha?: true
+    createdAt?: true
+  }
+
+  export type GestionCobranzaMaxAggregateInputType = {
+    id?: true
+    cuentaPorCobrarId?: true
+    empresaId?: true
+    usuarioId?: true
+    accion?: true
+    notas?: true
+    fecha?: true
+    createdAt?: true
+  }
+
+  export type GestionCobranzaCountAggregateInputType = {
+    id?: true
+    cuentaPorCobrarId?: true
+    empresaId?: true
+    usuarioId?: true
+    accion?: true
+    notas?: true
+    fecha?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type GestionCobranzaAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which GestionCobranza to aggregate.
+     */
+    where?: GestionCobranzaWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of GestionCobranzas to fetch.
+     */
+    orderBy?: GestionCobranzaOrderByWithRelationInput | GestionCobranzaOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: GestionCobranzaWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` GestionCobranzas from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` GestionCobranzas.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned GestionCobranzas
+    **/
+    _count?: true | GestionCobranzaCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: GestionCobranzaMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: GestionCobranzaMaxAggregateInputType
+  }
+
+  export type GetGestionCobranzaAggregateType<T extends GestionCobranzaAggregateArgs> = {
+        [P in keyof T & keyof AggregateGestionCobranza]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateGestionCobranza[P]>
+      : GetScalarType<T[P], AggregateGestionCobranza[P]>
+  }
+
+
+
+
+  export type GestionCobranzaGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: GestionCobranzaWhereInput
+    orderBy?: GestionCobranzaOrderByWithAggregationInput | GestionCobranzaOrderByWithAggregationInput[]
+    by: GestionCobranzaScalarFieldEnum[] | GestionCobranzaScalarFieldEnum
+    having?: GestionCobranzaScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: GestionCobranzaCountAggregateInputType | true
+    _min?: GestionCobranzaMinAggregateInputType
+    _max?: GestionCobranzaMaxAggregateInputType
+  }
+
+  export type GestionCobranzaGroupByOutputType = {
+    id: string
+    cuentaPorCobrarId: string
+    empresaId: string
+    usuarioId: string
+    accion: string
+    notas: string | null
+    fecha: Date
+    createdAt: Date
+    _count: GestionCobranzaCountAggregateOutputType | null
+    _min: GestionCobranzaMinAggregateOutputType | null
+    _max: GestionCobranzaMaxAggregateOutputType | null
+  }
+
+  type GetGestionCobranzaGroupByPayload<T extends GestionCobranzaGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<GestionCobranzaGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof GestionCobranzaGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], GestionCobranzaGroupByOutputType[P]>
+            : GetScalarType<T[P], GestionCobranzaGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type GestionCobranzaSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    cuentaPorCobrarId?: boolean
+    empresaId?: boolean
+    usuarioId?: boolean
+    accion?: boolean
+    notas?: boolean
+    fecha?: boolean
+    createdAt?: boolean
+    cuentaPorCobrar?: boolean | CuentaPorCobrarDefaultArgs<ExtArgs>
+    usuario?: boolean | GestionCobranza$usuarioArgs<ExtArgs>
+  }, ExtArgs["result"]["gestionCobranza"]>
+
+  export type GestionCobranzaSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    cuentaPorCobrarId?: boolean
+    empresaId?: boolean
+    usuarioId?: boolean
+    accion?: boolean
+    notas?: boolean
+    fecha?: boolean
+    createdAt?: boolean
+    cuentaPorCobrar?: boolean | CuentaPorCobrarDefaultArgs<ExtArgs>
+    usuario?: boolean | GestionCobranza$usuarioArgs<ExtArgs>
+  }, ExtArgs["result"]["gestionCobranza"]>
+
+  export type GestionCobranzaSelectScalar = {
+    id?: boolean
+    cuentaPorCobrarId?: boolean
+    empresaId?: boolean
+    usuarioId?: boolean
+    accion?: boolean
+    notas?: boolean
+    fecha?: boolean
+    createdAt?: boolean
+  }
+
+  export type GestionCobranzaInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    cuentaPorCobrar?: boolean | CuentaPorCobrarDefaultArgs<ExtArgs>
+    usuario?: boolean | GestionCobranza$usuarioArgs<ExtArgs>
+  }
+  export type GestionCobranzaIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    cuentaPorCobrar?: boolean | CuentaPorCobrarDefaultArgs<ExtArgs>
+    usuario?: boolean | GestionCobranza$usuarioArgs<ExtArgs>
+  }
+
+  export type $GestionCobranzaPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "GestionCobranza"
+    objects: {
+      cuentaPorCobrar: Prisma.$CuentaPorCobrarPayload<ExtArgs>
+      usuario: Prisma.$UsuarioPayload<ExtArgs> | null
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      cuentaPorCobrarId: string
+      empresaId: string
+      usuarioId: string
+      accion: string
+      notas: string | null
+      fecha: Date
+      createdAt: Date
+    }, ExtArgs["result"]["gestionCobranza"]>
+    composites: {}
+  }
+
+  type GestionCobranzaGetPayload<S extends boolean | null | undefined | GestionCobranzaDefaultArgs> = $Result.GetResult<Prisma.$GestionCobranzaPayload, S>
+
+  type GestionCobranzaCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = 
+    Omit<GestionCobranzaFindManyArgs, 'select' | 'include' | 'distinct'> & {
+      select?: GestionCobranzaCountAggregateInputType | true
+    }
+
+  export interface GestionCobranzaDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['GestionCobranza'], meta: { name: 'GestionCobranza' } }
+    /**
+     * Find zero or one GestionCobranza that matches the filter.
+     * @param {GestionCobranzaFindUniqueArgs} args - Arguments to find a GestionCobranza
+     * @example
+     * // Get one GestionCobranza
+     * const gestionCobranza = await prisma.gestionCobranza.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends GestionCobranzaFindUniqueArgs>(args: SelectSubset<T, GestionCobranzaFindUniqueArgs<ExtArgs>>): Prisma__GestionCobranzaClient<$Result.GetResult<Prisma.$GestionCobranzaPayload<ExtArgs>, T, "findUnique"> | null, null, ExtArgs>
+
+    /**
+     * Find one GestionCobranza that matches the filter or throw an error with `error.code='P2025'` 
+     * if no matches were found.
+     * @param {GestionCobranzaFindUniqueOrThrowArgs} args - Arguments to find a GestionCobranza
+     * @example
+     * // Get one GestionCobranza
+     * const gestionCobranza = await prisma.gestionCobranza.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends GestionCobranzaFindUniqueOrThrowArgs>(args: SelectSubset<T, GestionCobranzaFindUniqueOrThrowArgs<ExtArgs>>): Prisma__GestionCobranzaClient<$Result.GetResult<Prisma.$GestionCobranzaPayload<ExtArgs>, T, "findUniqueOrThrow">, never, ExtArgs>
+
+    /**
+     * Find the first GestionCobranza that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GestionCobranzaFindFirstArgs} args - Arguments to find a GestionCobranza
+     * @example
+     * // Get one GestionCobranza
+     * const gestionCobranza = await prisma.gestionCobranza.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends GestionCobranzaFindFirstArgs>(args?: SelectSubset<T, GestionCobranzaFindFirstArgs<ExtArgs>>): Prisma__GestionCobranzaClient<$Result.GetResult<Prisma.$GestionCobranzaPayload<ExtArgs>, T, "findFirst"> | null, null, ExtArgs>
+
+    /**
+     * Find the first GestionCobranza that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GestionCobranzaFindFirstOrThrowArgs} args - Arguments to find a GestionCobranza
+     * @example
+     * // Get one GestionCobranza
+     * const gestionCobranza = await prisma.gestionCobranza.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends GestionCobranzaFindFirstOrThrowArgs>(args?: SelectSubset<T, GestionCobranzaFindFirstOrThrowArgs<ExtArgs>>): Prisma__GestionCobranzaClient<$Result.GetResult<Prisma.$GestionCobranzaPayload<ExtArgs>, T, "findFirstOrThrow">, never, ExtArgs>
+
+    /**
+     * Find zero or more GestionCobranzas that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GestionCobranzaFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all GestionCobranzas
+     * const gestionCobranzas = await prisma.gestionCobranza.findMany()
+     * 
+     * // Get first 10 GestionCobranzas
+     * const gestionCobranzas = await prisma.gestionCobranza.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const gestionCobranzaWithIdOnly = await prisma.gestionCobranza.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends GestionCobranzaFindManyArgs>(args?: SelectSubset<T, GestionCobranzaFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GestionCobranzaPayload<ExtArgs>, T, "findMany">>
+
+    /**
+     * Create a GestionCobranza.
+     * @param {GestionCobranzaCreateArgs} args - Arguments to create a GestionCobranza.
+     * @example
+     * // Create one GestionCobranza
+     * const GestionCobranza = await prisma.gestionCobranza.create({
+     *   data: {
+     *     // ... data to create a GestionCobranza
+     *   }
+     * })
+     * 
+     */
+    create<T extends GestionCobranzaCreateArgs>(args: SelectSubset<T, GestionCobranzaCreateArgs<ExtArgs>>): Prisma__GestionCobranzaClient<$Result.GetResult<Prisma.$GestionCobranzaPayload<ExtArgs>, T, "create">, never, ExtArgs>
+
+    /**
+     * Create many GestionCobranzas.
+     * @param {GestionCobranzaCreateManyArgs} args - Arguments to create many GestionCobranzas.
+     * @example
+     * // Create many GestionCobranzas
+     * const gestionCobranza = await prisma.gestionCobranza.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends GestionCobranzaCreateManyArgs>(args?: SelectSubset<T, GestionCobranzaCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many GestionCobranzas and returns the data saved in the database.
+     * @param {GestionCobranzaCreateManyAndReturnArgs} args - Arguments to create many GestionCobranzas.
+     * @example
+     * // Create many GestionCobranzas
+     * const gestionCobranza = await prisma.gestionCobranza.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many GestionCobranzas and only return the `id`
+     * const gestionCobranzaWithIdOnly = await prisma.gestionCobranza.createManyAndReturn({ 
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends GestionCobranzaCreateManyAndReturnArgs>(args?: SelectSubset<T, GestionCobranzaCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$GestionCobranzaPayload<ExtArgs>, T, "createManyAndReturn">>
+
+    /**
+     * Delete a GestionCobranza.
+     * @param {GestionCobranzaDeleteArgs} args - Arguments to delete one GestionCobranza.
+     * @example
+     * // Delete one GestionCobranza
+     * const GestionCobranza = await prisma.gestionCobranza.delete({
+     *   where: {
+     *     // ... filter to delete one GestionCobranza
+     *   }
+     * })
+     * 
+     */
+    delete<T extends GestionCobranzaDeleteArgs>(args: SelectSubset<T, GestionCobranzaDeleteArgs<ExtArgs>>): Prisma__GestionCobranzaClient<$Result.GetResult<Prisma.$GestionCobranzaPayload<ExtArgs>, T, "delete">, never, ExtArgs>
+
+    /**
+     * Update one GestionCobranza.
+     * @param {GestionCobranzaUpdateArgs} args - Arguments to update one GestionCobranza.
+     * @example
+     * // Update one GestionCobranza
+     * const gestionCobranza = await prisma.gestionCobranza.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends GestionCobranzaUpdateArgs>(args: SelectSubset<T, GestionCobranzaUpdateArgs<ExtArgs>>): Prisma__GestionCobranzaClient<$Result.GetResult<Prisma.$GestionCobranzaPayload<ExtArgs>, T, "update">, never, ExtArgs>
+
+    /**
+     * Delete zero or more GestionCobranzas.
+     * @param {GestionCobranzaDeleteManyArgs} args - Arguments to filter GestionCobranzas to delete.
+     * @example
+     * // Delete a few GestionCobranzas
+     * const { count } = await prisma.gestionCobranza.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends GestionCobranzaDeleteManyArgs>(args?: SelectSubset<T, GestionCobranzaDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more GestionCobranzas.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GestionCobranzaUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many GestionCobranzas
+     * const gestionCobranza = await prisma.gestionCobranza.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends GestionCobranzaUpdateManyArgs>(args: SelectSubset<T, GestionCobranzaUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one GestionCobranza.
+     * @param {GestionCobranzaUpsertArgs} args - Arguments to update or create a GestionCobranza.
+     * @example
+     * // Update or create a GestionCobranza
+     * const gestionCobranza = await prisma.gestionCobranza.upsert({
+     *   create: {
+     *     // ... data to create a GestionCobranza
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the GestionCobranza we want to update
+     *   }
+     * })
+     */
+    upsert<T extends GestionCobranzaUpsertArgs>(args: SelectSubset<T, GestionCobranzaUpsertArgs<ExtArgs>>): Prisma__GestionCobranzaClient<$Result.GetResult<Prisma.$GestionCobranzaPayload<ExtArgs>, T, "upsert">, never, ExtArgs>
+
+
+    /**
+     * Count the number of GestionCobranzas.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GestionCobranzaCountArgs} args - Arguments to filter GestionCobranzas to count.
+     * @example
+     * // Count the number of GestionCobranzas
+     * const count = await prisma.gestionCobranza.count({
+     *   where: {
+     *     // ... the filter for the GestionCobranzas we want to count
+     *   }
+     * })
+    **/
+    count<T extends GestionCobranzaCountArgs>(
+      args?: Subset<T, GestionCobranzaCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], GestionCobranzaCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a GestionCobranza.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GestionCobranzaAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends GestionCobranzaAggregateArgs>(args: Subset<T, GestionCobranzaAggregateArgs>): Prisma.PrismaPromise<GetGestionCobranzaAggregateType<T>>
+
+    /**
+     * Group by GestionCobranza.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {GestionCobranzaGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends GestionCobranzaGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: GestionCobranzaGroupByArgs['orderBy'] }
+        : { orderBy?: GestionCobranzaGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, GestionCobranzaGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetGestionCobranzaGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the GestionCobranza model
+   */
+  readonly fields: GestionCobranzaFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for GestionCobranza.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__GestionCobranzaClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    cuentaPorCobrar<T extends CuentaPorCobrarDefaultArgs<ExtArgs> = {}>(args?: Subset<T, CuentaPorCobrarDefaultArgs<ExtArgs>>): Prisma__CuentaPorCobrarClient<$Result.GetResult<Prisma.$CuentaPorCobrarPayload<ExtArgs>, T, "findUniqueOrThrow"> | Null, Null, ExtArgs>
+    usuario<T extends GestionCobranza$usuarioArgs<ExtArgs> = {}>(args?: Subset<T, GestionCobranza$usuarioArgs<ExtArgs>>): Prisma__UsuarioClient<$Result.GetResult<Prisma.$UsuarioPayload<ExtArgs>, T, "findUniqueOrThrow"> | null, null, ExtArgs>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the GestionCobranza model
+   */ 
+  interface GestionCobranzaFieldRefs {
+    readonly id: FieldRef<"GestionCobranza", 'String'>
+    readonly cuentaPorCobrarId: FieldRef<"GestionCobranza", 'String'>
+    readonly empresaId: FieldRef<"GestionCobranza", 'String'>
+    readonly usuarioId: FieldRef<"GestionCobranza", 'String'>
+    readonly accion: FieldRef<"GestionCobranza", 'String'>
+    readonly notas: FieldRef<"GestionCobranza", 'String'>
+    readonly fecha: FieldRef<"GestionCobranza", 'DateTime'>
+    readonly createdAt: FieldRef<"GestionCobranza", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * GestionCobranza findUnique
+   */
+  export type GestionCobranzaFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaInclude<ExtArgs> | null
+    /**
+     * Filter, which GestionCobranza to fetch.
+     */
+    where: GestionCobranzaWhereUniqueInput
+  }
+
+  /**
+   * GestionCobranza findUniqueOrThrow
+   */
+  export type GestionCobranzaFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaInclude<ExtArgs> | null
+    /**
+     * Filter, which GestionCobranza to fetch.
+     */
+    where: GestionCobranzaWhereUniqueInput
+  }
+
+  /**
+   * GestionCobranza findFirst
+   */
+  export type GestionCobranzaFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaInclude<ExtArgs> | null
+    /**
+     * Filter, which GestionCobranza to fetch.
+     */
+    where?: GestionCobranzaWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of GestionCobranzas to fetch.
+     */
+    orderBy?: GestionCobranzaOrderByWithRelationInput | GestionCobranzaOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for GestionCobranzas.
+     */
+    cursor?: GestionCobranzaWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` GestionCobranzas from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` GestionCobranzas.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of GestionCobranzas.
+     */
+    distinct?: GestionCobranzaScalarFieldEnum | GestionCobranzaScalarFieldEnum[]
+  }
+
+  /**
+   * GestionCobranza findFirstOrThrow
+   */
+  export type GestionCobranzaFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaInclude<ExtArgs> | null
+    /**
+     * Filter, which GestionCobranza to fetch.
+     */
+    where?: GestionCobranzaWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of GestionCobranzas to fetch.
+     */
+    orderBy?: GestionCobranzaOrderByWithRelationInput | GestionCobranzaOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for GestionCobranzas.
+     */
+    cursor?: GestionCobranzaWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` GestionCobranzas from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` GestionCobranzas.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of GestionCobranzas.
+     */
+    distinct?: GestionCobranzaScalarFieldEnum | GestionCobranzaScalarFieldEnum[]
+  }
+
+  /**
+   * GestionCobranza findMany
+   */
+  export type GestionCobranzaFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaInclude<ExtArgs> | null
+    /**
+     * Filter, which GestionCobranzas to fetch.
+     */
+    where?: GestionCobranzaWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of GestionCobranzas to fetch.
+     */
+    orderBy?: GestionCobranzaOrderByWithRelationInput | GestionCobranzaOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing GestionCobranzas.
+     */
+    cursor?: GestionCobranzaWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` GestionCobranzas from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` GestionCobranzas.
+     */
+    skip?: number
+    distinct?: GestionCobranzaScalarFieldEnum | GestionCobranzaScalarFieldEnum[]
+  }
+
+  /**
+   * GestionCobranza create
+   */
+  export type GestionCobranzaCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaInclude<ExtArgs> | null
+    /**
+     * The data needed to create a GestionCobranza.
+     */
+    data: XOR<GestionCobranzaCreateInput, GestionCobranzaUncheckedCreateInput>
+  }
+
+  /**
+   * GestionCobranza createMany
+   */
+  export type GestionCobranzaCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many GestionCobranzas.
+     */
+    data: GestionCobranzaCreateManyInput | GestionCobranzaCreateManyInput[]
+  }
+
+  /**
+   * GestionCobranza createManyAndReturn
+   */
+  export type GestionCobranzaCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * The data used to create many GestionCobranzas.
+     */
+    data: GestionCobranzaCreateManyInput | GestionCobranzaCreateManyInput[]
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * GestionCobranza update
+   */
+  export type GestionCobranzaUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaInclude<ExtArgs> | null
+    /**
+     * The data needed to update a GestionCobranza.
+     */
+    data: XOR<GestionCobranzaUpdateInput, GestionCobranzaUncheckedUpdateInput>
+    /**
+     * Choose, which GestionCobranza to update.
+     */
+    where: GestionCobranzaWhereUniqueInput
+  }
+
+  /**
+   * GestionCobranza updateMany
+   */
+  export type GestionCobranzaUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update GestionCobranzas.
+     */
+    data: XOR<GestionCobranzaUpdateManyMutationInput, GestionCobranzaUncheckedUpdateManyInput>
+    /**
+     * Filter which GestionCobranzas to update
+     */
+    where?: GestionCobranzaWhereInput
+  }
+
+  /**
+   * GestionCobranza upsert
+   */
+  export type GestionCobranzaUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaInclude<ExtArgs> | null
+    /**
+     * The filter to search for the GestionCobranza to update in case it exists.
+     */
+    where: GestionCobranzaWhereUniqueInput
+    /**
+     * In case the GestionCobranza found by the `where` argument doesn't exist, create a new GestionCobranza with this data.
+     */
+    create: XOR<GestionCobranzaCreateInput, GestionCobranzaUncheckedCreateInput>
+    /**
+     * In case the GestionCobranza was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<GestionCobranzaUpdateInput, GestionCobranzaUncheckedUpdateInput>
+  }
+
+  /**
+   * GestionCobranza delete
+   */
+  export type GestionCobranzaDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaInclude<ExtArgs> | null
+    /**
+     * Filter which GestionCobranza to delete.
+     */
+    where: GestionCobranzaWhereUniqueInput
+  }
+
+  /**
+   * GestionCobranza deleteMany
+   */
+  export type GestionCobranzaDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which GestionCobranzas to delete
+     */
+    where?: GestionCobranzaWhereInput
+  }
+
+  /**
+   * GestionCobranza.usuario
+   */
+  export type GestionCobranza$usuarioArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the Usuario
+     */
+    select?: UsuarioSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsuarioInclude<ExtArgs> | null
+    where?: UsuarioWhereInput
+  }
+
+  /**
+   * GestionCobranza without action
+   */
+  export type GestionCobranzaDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the GestionCobranza
+     */
+    select?: GestionCobranzaSelect<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: GestionCobranzaInclude<ExtArgs> | null
+  }
+
+
+  /**
    * Enums
    */
 
@@ -21889,12 +24882,20 @@ export namespace Prisma {
     rif: 'rif',
     direccion: 'direccion',
     telefono: 'telefono',
+    email: 'email',
+    monedaSimbolo: 'monedaSimbolo',
+    monedaCodigo: 'monedaCodigo',
+    tasaDolar: 'tasaDolar',
+    tasaDolarModo: 'tasaDolarModo',
+    tasaDolarActualizadaEn: 'tasaDolarActualizadaEn',
     activo: 'activo',
     subscriptionStatus: 'subscriptionStatus',
     planType: 'planType',
     trialStartsAt: 'trialStartsAt',
     trialEndsAt: 'trialEndsAt',
     currentPeriodEnd: 'currentPeriodEnd',
+    archivedAt: 'archivedAt',
+    scheduledDeletionAt: 'scheduledDeletionAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -22006,6 +25007,10 @@ export namespace Prisma {
     observaciones: 'observaciones',
     anuladoPor: 'anuladoPor',
     motivoAnulacion: 'motivoAnulacion',
+    descripcionAnulacion: 'descripcionAnulacion',
+    fechaAnulacion: 'fechaAnulacion',
+    tasaAnulacion: 'tasaAnulacion',
+    requestId: 'requestId',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -22042,6 +25047,12 @@ export namespace Prisma {
     referenciaTransaccion: 'referenciaTransaccion',
     fechaPago: 'fechaPago',
     notas: 'notas',
+    tasaBCV: 'tasaBCV',
+    estado: 'estado',
+    motivoAnulacion: 'motivoAnulacion',
+    descripcionAnulacion: 'descripcionAnulacion',
+    anuladoPor: 'anuladoPor',
+    fechaAnulacion: 'fechaAnulacion',
     createdAt: 'createdAt'
   };
 
@@ -22067,6 +25078,8 @@ export namespace Prisma {
     montoFinal: 'montoFinal',
     ingresosEfectivo: 'ingresosEfectivo',
     ingresosBanco: 'ingresosBanco',
+    ingresosEfectivoVES: 'ingresosEfectivoVES',
+    ingresosBancoVES: 'ingresosBancoVES',
     estado: 'estado',
     observaciones: 'observaciones',
     arqueoDetalle: 'arqueoDetalle',
@@ -22089,7 +25102,8 @@ export namespace Prisma {
     impuestoTotal: 'impuestoTotal',
     total: 'total',
     moneda: 'moneda',
-    estado: 'estado'
+    estado: 'estado',
+    facturaId: 'facturaId'
   };
 
   export type CotizacionScalarFieldEnum = (typeof CotizacionScalarFieldEnum)[keyof typeof CotizacionScalarFieldEnum]
@@ -22127,6 +25141,7 @@ export namespace Prisma {
     mfaEnabled: 'mfaEnabled',
     mfaSecret: 'mfaSecret',
     sessionVersion: 'sessionVersion',
+    refreshTokenId: 'refreshTokenId',
     sudoModeExpiresAt: 'sudoModeExpiresAt',
     registrationIp: 'registrationIp',
     registrationLatitude: 'registrationLatitude',
@@ -22134,6 +25149,7 @@ export namespace Prisma {
     lastLoginIp: 'lastLoginIp',
     lastLoginAt: 'lastLoginAt',
     deletedAt: 'deletedAt',
+    scheduledDeletionAt: 'scheduledDeletionAt',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -22148,6 +25164,9 @@ export namespace Prisma {
     metodoPago: 'metodoPago',
     referencia: 'referencia',
     estado: 'estado',
+    notas: 'notas',
+    revisadoPor: 'revisadoPor',
+    revisadoEn: 'revisadoEn',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -22161,6 +25180,7 @@ export namespace Prisma {
     subtitulo: 'subtitulo',
     contenido: 'contenido',
     imagenUrl: 'imagenUrl',
+    videoUrl: 'videoUrl',
     categoria: 'categoria',
     destacado: 'destacado',
     publicado: 'publicado',
@@ -22188,6 +25208,42 @@ export namespace Prisma {
   };
 
   export type PromocionScalarFieldEnum = (typeof PromocionScalarFieldEnum)[keyof typeof PromocionScalarFieldEnum]
+
+
+  export const CuentaPorCobrarScalarFieldEnum: {
+    id: 'id',
+    empresaId: 'empresaId',
+    facturaId: 'facturaId',
+    clienteId: 'clienteId',
+    usuarioId: 'usuarioId',
+    montoOriginal: 'montoOriginal',
+    montoCobrado: 'montoCobrado',
+    montoPendiente: 'montoPendiente',
+    fechaEmision: 'fechaEmision',
+    fechaVencimiento: 'fechaVencimiento',
+    estado: 'estado',
+    diasVencido: 'diasVencido',
+    ultimaGestion: 'ultimaGestion',
+    notas: 'notas',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type CuentaPorCobrarScalarFieldEnum = (typeof CuentaPorCobrarScalarFieldEnum)[keyof typeof CuentaPorCobrarScalarFieldEnum]
+
+
+  export const GestionCobranzaScalarFieldEnum: {
+    id: 'id',
+    cuentaPorCobrarId: 'cuentaPorCobrarId',
+    empresaId: 'empresaId',
+    usuarioId: 'usuarioId',
+    accion: 'accion',
+    notas: 'notas',
+    fecha: 'fecha',
+    createdAt: 'createdAt'
+  };
+
+  export type GestionCobranzaScalarFieldEnum = (typeof GestionCobranzaScalarFieldEnum)[keyof typeof GestionCobranzaScalarFieldEnum]
 
 
   export const SortOrder: {
@@ -22219,9 +25275,9 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'Boolean'
+   * Reference to a field of type 'Float'
    */
-  export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
+  export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
     
 
 
@@ -22233,9 +25289,9 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'Float'
+   * Reference to a field of type 'Boolean'
    */
-  export type FloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float'>
+  export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
     
 
 
@@ -22258,12 +25314,20 @@ export namespace Prisma {
     rif?: StringFilter<"Empresa"> | string
     direccion?: StringNullableFilter<"Empresa"> | string | null
     telefono?: StringNullableFilter<"Empresa"> | string | null
+    email?: StringNullableFilter<"Empresa"> | string | null
+    monedaSimbolo?: StringNullableFilter<"Empresa"> | string | null
+    monedaCodigo?: StringNullableFilter<"Empresa"> | string | null
+    tasaDolar?: FloatNullableFilter<"Empresa"> | number | null
+    tasaDolarModo?: StringFilter<"Empresa"> | string
+    tasaDolarActualizadaEn?: DateTimeNullableFilter<"Empresa"> | Date | string | null
     activo?: BoolFilter<"Empresa"> | boolean
     subscriptionStatus?: StringFilter<"Empresa"> | string
     planType?: StringNullableFilter<"Empresa"> | string | null
     trialStartsAt?: DateTimeNullableFilter<"Empresa"> | Date | string | null
     trialEndsAt?: DateTimeNullableFilter<"Empresa"> | Date | string | null
     currentPeriodEnd?: DateTimeNullableFilter<"Empresa"> | Date | string | null
+    archivedAt?: DateTimeNullableFilter<"Empresa"> | Date | string | null
+    scheduledDeletionAt?: DateTimeNullableFilter<"Empresa"> | Date | string | null
     createdAt?: DateTimeFilter<"Empresa"> | Date | string
     updatedAt?: DateTimeFilter<"Empresa"> | Date | string
     usuarios?: UsuarioListRelationFilter
@@ -22272,6 +25336,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaListRelationFilter
     cotizaciones?: CotizacionListRelationFilter
     auditLogs?: AuditLogListRelationFilter
+    cuentasPorCobrar?: CuentaPorCobrarListRelationFilter
   }
 
   export type EmpresaOrderByWithRelationInput = {
@@ -22280,12 +25345,20 @@ export namespace Prisma {
     rif?: SortOrder
     direccion?: SortOrderInput | SortOrder
     telefono?: SortOrderInput | SortOrder
+    email?: SortOrderInput | SortOrder
+    monedaSimbolo?: SortOrderInput | SortOrder
+    monedaCodigo?: SortOrderInput | SortOrder
+    tasaDolar?: SortOrderInput | SortOrder
+    tasaDolarModo?: SortOrder
+    tasaDolarActualizadaEn?: SortOrderInput | SortOrder
     activo?: SortOrder
     subscriptionStatus?: SortOrder
     planType?: SortOrderInput | SortOrder
     trialStartsAt?: SortOrderInput | SortOrder
     trialEndsAt?: SortOrderInput | SortOrder
     currentPeriodEnd?: SortOrderInput | SortOrder
+    archivedAt?: SortOrderInput | SortOrder
+    scheduledDeletionAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     usuarios?: UsuarioOrderByRelationAggregateInput
@@ -22294,6 +25367,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaOrderByRelationAggregateInput
     cotizaciones?: CotizacionOrderByRelationAggregateInput
     auditLogs?: AuditLogOrderByRelationAggregateInput
+    cuentasPorCobrar?: CuentaPorCobrarOrderByRelationAggregateInput
   }
 
   export type EmpresaWhereUniqueInput = Prisma.AtLeast<{
@@ -22305,12 +25379,20 @@ export namespace Prisma {
     nombre?: StringFilter<"Empresa"> | string
     direccion?: StringNullableFilter<"Empresa"> | string | null
     telefono?: StringNullableFilter<"Empresa"> | string | null
+    email?: StringNullableFilter<"Empresa"> | string | null
+    monedaSimbolo?: StringNullableFilter<"Empresa"> | string | null
+    monedaCodigo?: StringNullableFilter<"Empresa"> | string | null
+    tasaDolar?: FloatNullableFilter<"Empresa"> | number | null
+    tasaDolarModo?: StringFilter<"Empresa"> | string
+    tasaDolarActualizadaEn?: DateTimeNullableFilter<"Empresa"> | Date | string | null
     activo?: BoolFilter<"Empresa"> | boolean
     subscriptionStatus?: StringFilter<"Empresa"> | string
     planType?: StringNullableFilter<"Empresa"> | string | null
     trialStartsAt?: DateTimeNullableFilter<"Empresa"> | Date | string | null
     trialEndsAt?: DateTimeNullableFilter<"Empresa"> | Date | string | null
     currentPeriodEnd?: DateTimeNullableFilter<"Empresa"> | Date | string | null
+    archivedAt?: DateTimeNullableFilter<"Empresa"> | Date | string | null
+    scheduledDeletionAt?: DateTimeNullableFilter<"Empresa"> | Date | string | null
     createdAt?: DateTimeFilter<"Empresa"> | Date | string
     updatedAt?: DateTimeFilter<"Empresa"> | Date | string
     usuarios?: UsuarioListRelationFilter
@@ -22319,6 +25401,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaListRelationFilter
     cotizaciones?: CotizacionListRelationFilter
     auditLogs?: AuditLogListRelationFilter
+    cuentasPorCobrar?: CuentaPorCobrarListRelationFilter
   }, "id" | "rif">
 
   export type EmpresaOrderByWithAggregationInput = {
@@ -22327,17 +25410,27 @@ export namespace Prisma {
     rif?: SortOrder
     direccion?: SortOrderInput | SortOrder
     telefono?: SortOrderInput | SortOrder
+    email?: SortOrderInput | SortOrder
+    monedaSimbolo?: SortOrderInput | SortOrder
+    monedaCodigo?: SortOrderInput | SortOrder
+    tasaDolar?: SortOrderInput | SortOrder
+    tasaDolarModo?: SortOrder
+    tasaDolarActualizadaEn?: SortOrderInput | SortOrder
     activo?: SortOrder
     subscriptionStatus?: SortOrder
     planType?: SortOrderInput | SortOrder
     trialStartsAt?: SortOrderInput | SortOrder
     trialEndsAt?: SortOrderInput | SortOrder
     currentPeriodEnd?: SortOrderInput | SortOrder
+    archivedAt?: SortOrderInput | SortOrder
+    scheduledDeletionAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: EmpresaCountOrderByAggregateInput
+    _avg?: EmpresaAvgOrderByAggregateInput
     _max?: EmpresaMaxOrderByAggregateInput
     _min?: EmpresaMinOrderByAggregateInput
+    _sum?: EmpresaSumOrderByAggregateInput
   }
 
   export type EmpresaScalarWhereWithAggregatesInput = {
@@ -22349,12 +25442,20 @@ export namespace Prisma {
     rif?: StringWithAggregatesFilter<"Empresa"> | string
     direccion?: StringNullableWithAggregatesFilter<"Empresa"> | string | null
     telefono?: StringNullableWithAggregatesFilter<"Empresa"> | string | null
+    email?: StringNullableWithAggregatesFilter<"Empresa"> | string | null
+    monedaSimbolo?: StringNullableWithAggregatesFilter<"Empresa"> | string | null
+    monedaCodigo?: StringNullableWithAggregatesFilter<"Empresa"> | string | null
+    tasaDolar?: FloatNullableWithAggregatesFilter<"Empresa"> | number | null
+    tasaDolarModo?: StringWithAggregatesFilter<"Empresa"> | string
+    tasaDolarActualizadaEn?: DateTimeNullableWithAggregatesFilter<"Empresa"> | Date | string | null
     activo?: BoolWithAggregatesFilter<"Empresa"> | boolean
     subscriptionStatus?: StringWithAggregatesFilter<"Empresa"> | string
     planType?: StringNullableWithAggregatesFilter<"Empresa"> | string | null
     trialStartsAt?: DateTimeNullableWithAggregatesFilter<"Empresa"> | Date | string | null
     trialEndsAt?: DateTimeNullableWithAggregatesFilter<"Empresa"> | Date | string | null
     currentPeriodEnd?: DateTimeNullableWithAggregatesFilter<"Empresa"> | Date | string | null
+    archivedAt?: DateTimeNullableWithAggregatesFilter<"Empresa"> | Date | string | null
+    scheduledDeletionAt?: DateTimeNullableWithAggregatesFilter<"Empresa"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Empresa"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Empresa"> | Date | string
   }
@@ -22619,6 +25720,7 @@ export namespace Prisma {
     empresa?: XOR<UsuarioNullableRelationFilter, UsuarioWhereInput> | null
     facturas?: FacturaListRelationFilter
     cotizaciones?: CotizacionListRelationFilter
+    cuentasPorCobrar?: CuentaPorCobrarListRelationFilter
   }
 
   export type ClienteOrderByWithRelationInput = {
@@ -22634,6 +25736,7 @@ export namespace Prisma {
     empresa?: UsuarioOrderByWithRelationInput
     facturas?: FacturaOrderByRelationAggregateInput
     cotizaciones?: CotizacionOrderByRelationAggregateInput
+    cuentasPorCobrar?: CuentaPorCobrarOrderByRelationAggregateInput
   }
 
   export type ClienteWhereUniqueInput = Prisma.AtLeast<{
@@ -22653,6 +25756,7 @@ export namespace Prisma {
     empresa?: XOR<UsuarioNullableRelationFilter, UsuarioWhereInput> | null
     facturas?: FacturaListRelationFilter
     cotizaciones?: CotizacionListRelationFilter
+    cuentasPorCobrar?: CuentaPorCobrarListRelationFilter
   }, "id" | "empresaId_rifCedula">
 
   export type ClienteOrderByWithAggregationInput = {
@@ -22710,6 +25814,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"Producto"> | Date | string
     empresa?: XOR<UsuarioRelationFilter, UsuarioWhereInput>
     itemsFactura?: ItemFacturaListRelationFilter
+    itemsCotizacion?: ItemCotizacionListRelationFilter
   }
 
   export type ProductoOrderByWithRelationInput = {
@@ -22734,6 +25839,7 @@ export namespace Prisma {
     updatedAt?: SortOrder
     empresa?: UsuarioOrderByWithRelationInput
     itemsFactura?: ItemFacturaOrderByRelationAggregateInput
+    itemsCotizacion?: ItemCotizacionOrderByRelationAggregateInput
   }
 
   export type ProductoWhereUniqueInput = Prisma.AtLeast<{
@@ -22762,6 +25868,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFilter<"Producto"> | Date | string
     empresa?: XOR<UsuarioRelationFilter, UsuarioWhereInput>
     itemsFactura?: ItemFacturaListRelationFilter
+    itemsCotizacion?: ItemCotizacionListRelationFilter
   }, "id" | "empresaId_sku">
 
   export type ProductoOrderByWithAggregationInput = {
@@ -22837,6 +25944,10 @@ export namespace Prisma {
     observaciones?: StringNullableFilter<"Factura"> | string | null
     anuladoPor?: StringNullableFilter<"Factura"> | string | null
     motivoAnulacion?: StringNullableFilter<"Factura"> | string | null
+    descripcionAnulacion?: StringNullableFilter<"Factura"> | string | null
+    fechaAnulacion?: DateTimeNullableFilter<"Factura"> | Date | string | null
+    tasaAnulacion?: FloatNullableFilter<"Factura"> | number | null
+    requestId?: StringNullableFilter<"Factura"> | string | null
     createdAt?: DateTimeFilter<"Factura"> | Date | string
     updatedAt?: DateTimeFilter<"Factura"> | Date | string
     cliente?: XOR<ClienteRelationFilter, ClienteWhereInput>
@@ -22844,6 +25955,8 @@ export namespace Prisma {
     empresa?: XOR<EmpresaNullableRelationFilter, EmpresaWhereInput> | null
     items?: ItemFacturaListRelationFilter
     pagos?: PagoListRelationFilter
+    cotizacionOrigen?: XOR<CotizacionNullableRelationFilter, CotizacionWhereInput> | null
+    cuentaPorCobrar?: XOR<CuentaPorCobrarNullableRelationFilter, CuentaPorCobrarWhereInput> | null
   }
 
   export type FacturaOrderByWithRelationInput = {
@@ -22864,6 +25977,10 @@ export namespace Prisma {
     observaciones?: SortOrderInput | SortOrder
     anuladoPor?: SortOrderInput | SortOrder
     motivoAnulacion?: SortOrderInput | SortOrder
+    descripcionAnulacion?: SortOrderInput | SortOrder
+    fechaAnulacion?: SortOrderInput | SortOrder
+    tasaAnulacion?: SortOrderInput | SortOrder
+    requestId?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     cliente?: ClienteOrderByWithRelationInput
@@ -22871,11 +25988,14 @@ export namespace Prisma {
     empresa?: EmpresaOrderByWithRelationInput
     items?: ItemFacturaOrderByRelationAggregateInput
     pagos?: PagoOrderByRelationAggregateInput
+    cotizacionOrigen?: CotizacionOrderByWithRelationInput
+    cuentaPorCobrar?: CuentaPorCobrarOrderByWithRelationInput
   }
 
   export type FacturaWhereUniqueInput = Prisma.AtLeast<{
     id?: string
     numeroFactura?: number
+    requestId?: string
     AND?: FacturaWhereInput | FacturaWhereInput[]
     OR?: FacturaWhereInput[]
     NOT?: FacturaWhereInput | FacturaWhereInput[]
@@ -22894,6 +26014,9 @@ export namespace Prisma {
     observaciones?: StringNullableFilter<"Factura"> | string | null
     anuladoPor?: StringNullableFilter<"Factura"> | string | null
     motivoAnulacion?: StringNullableFilter<"Factura"> | string | null
+    descripcionAnulacion?: StringNullableFilter<"Factura"> | string | null
+    fechaAnulacion?: DateTimeNullableFilter<"Factura"> | Date | string | null
+    tasaAnulacion?: FloatNullableFilter<"Factura"> | number | null
     createdAt?: DateTimeFilter<"Factura"> | Date | string
     updatedAt?: DateTimeFilter<"Factura"> | Date | string
     cliente?: XOR<ClienteRelationFilter, ClienteWhereInput>
@@ -22901,7 +26024,9 @@ export namespace Prisma {
     empresa?: XOR<EmpresaNullableRelationFilter, EmpresaWhereInput> | null
     items?: ItemFacturaListRelationFilter
     pagos?: PagoListRelationFilter
-  }, "id" | "numeroFactura">
+    cotizacionOrigen?: XOR<CotizacionNullableRelationFilter, CotizacionWhereInput> | null
+    cuentaPorCobrar?: XOR<CuentaPorCobrarNullableRelationFilter, CuentaPorCobrarWhereInput> | null
+  }, "id" | "numeroFactura" | "requestId">
 
   export type FacturaOrderByWithAggregationInput = {
     id?: SortOrder
@@ -22921,6 +26046,10 @@ export namespace Prisma {
     observaciones?: SortOrderInput | SortOrder
     anuladoPor?: SortOrderInput | SortOrder
     motivoAnulacion?: SortOrderInput | SortOrder
+    descripcionAnulacion?: SortOrderInput | SortOrder
+    fechaAnulacion?: SortOrderInput | SortOrder
+    tasaAnulacion?: SortOrderInput | SortOrder
+    requestId?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: FacturaCountOrderByAggregateInput
@@ -22951,6 +26080,10 @@ export namespace Prisma {
     observaciones?: StringNullableWithAggregatesFilter<"Factura"> | string | null
     anuladoPor?: StringNullableWithAggregatesFilter<"Factura"> | string | null
     motivoAnulacion?: StringNullableWithAggregatesFilter<"Factura"> | string | null
+    descripcionAnulacion?: StringNullableWithAggregatesFilter<"Factura"> | string | null
+    fechaAnulacion?: DateTimeNullableWithAggregatesFilter<"Factura"> | Date | string | null
+    tasaAnulacion?: FloatNullableWithAggregatesFilter<"Factura"> | number | null
+    requestId?: StringNullableWithAggregatesFilter<"Factura"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Factura"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Factura"> | Date | string
   }
@@ -23072,6 +26205,12 @@ export namespace Prisma {
     referenciaTransaccion?: StringNullableFilter<"Pago"> | string | null
     fechaPago?: DateTimeFilter<"Pago"> | Date | string
     notas?: StringNullableFilter<"Pago"> | string | null
+    tasaBCV?: FloatNullableFilter<"Pago"> | number | null
+    estado?: StringFilter<"Pago"> | string
+    motivoAnulacion?: StringNullableFilter<"Pago"> | string | null
+    descripcionAnulacion?: StringNullableFilter<"Pago"> | string | null
+    anuladoPor?: StringNullableFilter<"Pago"> | string | null
+    fechaAnulacion?: DateTimeNullableFilter<"Pago"> | Date | string | null
     createdAt?: DateTimeFilter<"Pago"> | Date | string
     factura?: XOR<FacturaRelationFilter, FacturaWhereInput>
   }
@@ -23085,6 +26224,12 @@ export namespace Prisma {
     referenciaTransaccion?: SortOrderInput | SortOrder
     fechaPago?: SortOrder
     notas?: SortOrderInput | SortOrder
+    tasaBCV?: SortOrderInput | SortOrder
+    estado?: SortOrder
+    motivoAnulacion?: SortOrderInput | SortOrder
+    descripcionAnulacion?: SortOrderInput | SortOrder
+    anuladoPor?: SortOrderInput | SortOrder
+    fechaAnulacion?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     factura?: FacturaOrderByWithRelationInput
   }
@@ -23101,6 +26246,12 @@ export namespace Prisma {
     referenciaTransaccion?: StringNullableFilter<"Pago"> | string | null
     fechaPago?: DateTimeFilter<"Pago"> | Date | string
     notas?: StringNullableFilter<"Pago"> | string | null
+    tasaBCV?: FloatNullableFilter<"Pago"> | number | null
+    estado?: StringFilter<"Pago"> | string
+    motivoAnulacion?: StringNullableFilter<"Pago"> | string | null
+    descripcionAnulacion?: StringNullableFilter<"Pago"> | string | null
+    anuladoPor?: StringNullableFilter<"Pago"> | string | null
+    fechaAnulacion?: DateTimeNullableFilter<"Pago"> | Date | string | null
     createdAt?: DateTimeFilter<"Pago"> | Date | string
     factura?: XOR<FacturaRelationFilter, FacturaWhereInput>
   }, "id">
@@ -23114,6 +26265,12 @@ export namespace Prisma {
     referenciaTransaccion?: SortOrderInput | SortOrder
     fechaPago?: SortOrder
     notas?: SortOrderInput | SortOrder
+    tasaBCV?: SortOrderInput | SortOrder
+    estado?: SortOrder
+    motivoAnulacion?: SortOrderInput | SortOrder
+    descripcionAnulacion?: SortOrderInput | SortOrder
+    anuladoPor?: SortOrderInput | SortOrder
+    fechaAnulacion?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     _count?: PagoCountOrderByAggregateInput
     _avg?: PagoAvgOrderByAggregateInput
@@ -23134,6 +26291,12 @@ export namespace Prisma {
     referenciaTransaccion?: StringNullableWithAggregatesFilter<"Pago"> | string | null
     fechaPago?: DateTimeWithAggregatesFilter<"Pago"> | Date | string
     notas?: StringNullableWithAggregatesFilter<"Pago"> | string | null
+    tasaBCV?: FloatNullableWithAggregatesFilter<"Pago"> | number | null
+    estado?: StringWithAggregatesFilter<"Pago"> | string
+    motivoAnulacion?: StringNullableWithAggregatesFilter<"Pago"> | string | null
+    descripcionAnulacion?: StringNullableWithAggregatesFilter<"Pago"> | string | null
+    anuladoPor?: StringNullableWithAggregatesFilter<"Pago"> | string | null
+    fechaAnulacion?: DateTimeNullableWithAggregatesFilter<"Pago"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Pago"> | Date | string
   }
 
@@ -23194,6 +26357,8 @@ export namespace Prisma {
     montoFinal?: FloatNullableFilter<"CierreCaja"> | number | null
     ingresosEfectivo?: FloatFilter<"CierreCaja"> | number
     ingresosBanco?: FloatFilter<"CierreCaja"> | number
+    ingresosEfectivoVES?: FloatNullableFilter<"CierreCaja"> | number | null
+    ingresosBancoVES?: FloatNullableFilter<"CierreCaja"> | number | null
     estado?: StringFilter<"CierreCaja"> | string
     observaciones?: StringNullableFilter<"CierreCaja"> | string | null
     arqueoDetalle?: StringNullableFilter<"CierreCaja"> | string | null
@@ -23213,6 +26378,8 @@ export namespace Prisma {
     montoFinal?: SortOrderInput | SortOrder
     ingresosEfectivo?: SortOrder
     ingresosBanco?: SortOrder
+    ingresosEfectivoVES?: SortOrderInput | SortOrder
+    ingresosBancoVES?: SortOrderInput | SortOrder
     estado?: SortOrder
     observaciones?: SortOrderInput | SortOrder
     arqueoDetalle?: SortOrderInput | SortOrder
@@ -23235,6 +26402,8 @@ export namespace Prisma {
     montoFinal?: FloatNullableFilter<"CierreCaja"> | number | null
     ingresosEfectivo?: FloatFilter<"CierreCaja"> | number
     ingresosBanco?: FloatFilter<"CierreCaja"> | number
+    ingresosEfectivoVES?: FloatNullableFilter<"CierreCaja"> | number | null
+    ingresosBancoVES?: FloatNullableFilter<"CierreCaja"> | number | null
     estado?: StringFilter<"CierreCaja"> | string
     observaciones?: StringNullableFilter<"CierreCaja"> | string | null
     arqueoDetalle?: StringNullableFilter<"CierreCaja"> | string | null
@@ -23254,6 +26423,8 @@ export namespace Prisma {
     montoFinal?: SortOrderInput | SortOrder
     ingresosEfectivo?: SortOrder
     ingresosBanco?: SortOrder
+    ingresosEfectivoVES?: SortOrderInput | SortOrder
+    ingresosBancoVES?: SortOrderInput | SortOrder
     estado?: SortOrder
     observaciones?: SortOrderInput | SortOrder
     arqueoDetalle?: SortOrderInput | SortOrder
@@ -23279,6 +26450,8 @@ export namespace Prisma {
     montoFinal?: FloatNullableWithAggregatesFilter<"CierreCaja"> | number | null
     ingresosEfectivo?: FloatWithAggregatesFilter<"CierreCaja"> | number
     ingresosBanco?: FloatWithAggregatesFilter<"CierreCaja"> | number
+    ingresosEfectivoVES?: FloatNullableWithAggregatesFilter<"CierreCaja"> | number | null
+    ingresosBancoVES?: FloatNullableWithAggregatesFilter<"CierreCaja"> | number | null
     estado?: StringWithAggregatesFilter<"CierreCaja"> | string
     observaciones?: StringNullableWithAggregatesFilter<"CierreCaja"> | string | null
     arqueoDetalle?: StringNullableWithAggregatesFilter<"CierreCaja"> | string | null
@@ -23302,9 +26475,11 @@ export namespace Prisma {
     total?: FloatFilter<"Cotizacion"> | number
     moneda?: StringFilter<"Cotizacion"> | string
     estado?: StringFilter<"Cotizacion"> | string
+    facturaId?: StringNullableFilter<"Cotizacion"> | string | null
     cliente?: XOR<ClienteRelationFilter, ClienteWhereInput>
     usuario?: XOR<UsuarioNullableRelationFilter, UsuarioWhereInput> | null
     empresa?: XOR<EmpresaNullableRelationFilter, EmpresaWhereInput> | null
+    factura?: XOR<FacturaNullableRelationFilter, FacturaWhereInput> | null
     items?: ItemCotizacionListRelationFilter
   }
 
@@ -23321,15 +26496,18 @@ export namespace Prisma {
     total?: SortOrder
     moneda?: SortOrder
     estado?: SortOrder
+    facturaId?: SortOrderInput | SortOrder
     cliente?: ClienteOrderByWithRelationInput
     usuario?: UsuarioOrderByWithRelationInput
     empresa?: EmpresaOrderByWithRelationInput
+    factura?: FacturaOrderByWithRelationInput
     items?: ItemCotizacionOrderByRelationAggregateInput
   }
 
   export type CotizacionWhereUniqueInput = Prisma.AtLeast<{
     id?: string
     numero?: number
+    facturaId?: string
     AND?: CotizacionWhereInput | CotizacionWhereInput[]
     OR?: CotizacionWhereInput[]
     NOT?: CotizacionWhereInput | CotizacionWhereInput[]
@@ -23346,8 +26524,9 @@ export namespace Prisma {
     cliente?: XOR<ClienteRelationFilter, ClienteWhereInput>
     usuario?: XOR<UsuarioNullableRelationFilter, UsuarioWhereInput> | null
     empresa?: XOR<EmpresaNullableRelationFilter, EmpresaWhereInput> | null
+    factura?: XOR<FacturaNullableRelationFilter, FacturaWhereInput> | null
     items?: ItemCotizacionListRelationFilter
-  }, "id" | "numero">
+  }, "id" | "numero" | "facturaId">
 
   export type CotizacionOrderByWithAggregationInput = {
     id?: SortOrder
@@ -23362,6 +26541,7 @@ export namespace Prisma {
     total?: SortOrder
     moneda?: SortOrder
     estado?: SortOrder
+    facturaId?: SortOrderInput | SortOrder
     _count?: CotizacionCountOrderByAggregateInput
     _avg?: CotizacionAvgOrderByAggregateInput
     _max?: CotizacionMaxOrderByAggregateInput
@@ -23385,6 +26565,7 @@ export namespace Prisma {
     total?: FloatWithAggregatesFilter<"Cotizacion"> | number
     moneda?: StringWithAggregatesFilter<"Cotizacion"> | string
     estado?: StringWithAggregatesFilter<"Cotizacion"> | string
+    facturaId?: StringNullableWithAggregatesFilter<"Cotizacion"> | string | null
   }
 
   export type ItemCotizacionWhereInput = {
@@ -23399,6 +26580,7 @@ export namespace Prisma {
     precioUnitario?: FloatFilter<"ItemCotizacion"> | number
     totalLinea?: FloatFilter<"ItemCotizacion"> | number
     cotizacion?: XOR<CotizacionRelationFilter, CotizacionWhereInput>
+    producto?: XOR<ProductoNullableRelationFilter, ProductoWhereInput> | null
   }
 
   export type ItemCotizacionOrderByWithRelationInput = {
@@ -23410,6 +26592,7 @@ export namespace Prisma {
     precioUnitario?: SortOrder
     totalLinea?: SortOrder
     cotizacion?: CotizacionOrderByWithRelationInput
+    producto?: ProductoOrderByWithRelationInput
   }
 
   export type ItemCotizacionWhereUniqueInput = Prisma.AtLeast<{
@@ -23424,6 +26607,7 @@ export namespace Prisma {
     precioUnitario?: FloatFilter<"ItemCotizacion"> | number
     totalLinea?: FloatFilter<"ItemCotizacion"> | number
     cotizacion?: XOR<CotizacionRelationFilter, CotizacionWhereInput>
+    producto?: XOR<ProductoNullableRelationFilter, ProductoWhereInput> | null
   }, "id">
 
   export type ItemCotizacionOrderByWithAggregationInput = {
@@ -23476,6 +26660,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFilter<"Usuario"> | boolean
     mfaSecret?: StringNullableFilter<"Usuario"> | string | null
     sessionVersion?: IntFilter<"Usuario"> | number
+    refreshTokenId?: StringNullableFilter<"Usuario"> | string | null
     sudoModeExpiresAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
     registrationIp?: StringNullableFilter<"Usuario"> | string | null
     registrationLatitude?: FloatNullableFilter<"Usuario"> | number | null
@@ -23483,6 +26668,7 @@ export namespace Prisma {
     lastLoginIp?: StringNullableFilter<"Usuario"> | string | null
     lastLoginAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
     deletedAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
+    scheduledDeletionAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
     createdAt?: DateTimeFilter<"Usuario"> | Date | string
     updatedAt?: DateTimeFilter<"Usuario"> | Date | string
     rolDinamico?: XOR<RolNullableRelationFilter, RolWhereInput> | null
@@ -23496,6 +26682,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionListRelationFilter
     solicitudesActivacion?: SolicitudActivacionListRelationFilter
     auditLogs?: AuditLogListRelationFilter
+    cuentasPorCobrar?: CuentaPorCobrarListRelationFilter
+    gestionesCobranza?: GestionCobranzaListRelationFilter
   }
 
   export type UsuarioOrderByWithRelationInput = {
@@ -23517,6 +26705,7 @@ export namespace Prisma {
     mfaEnabled?: SortOrder
     mfaSecret?: SortOrderInput | SortOrder
     sessionVersion?: SortOrder
+    refreshTokenId?: SortOrderInput | SortOrder
     sudoModeExpiresAt?: SortOrderInput | SortOrder
     registrationIp?: SortOrderInput | SortOrder
     registrationLatitude?: SortOrderInput | SortOrder
@@ -23524,6 +26713,7 @@ export namespace Prisma {
     lastLoginIp?: SortOrderInput | SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
     deletedAt?: SortOrderInput | SortOrder
+    scheduledDeletionAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     rolDinamico?: RolOrderByWithRelationInput
@@ -23537,6 +26727,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionOrderByRelationAggregateInput
     solicitudesActivacion?: SolicitudActivacionOrderByRelationAggregateInput
     auditLogs?: AuditLogOrderByRelationAggregateInput
+    cuentasPorCobrar?: CuentaPorCobrarOrderByRelationAggregateInput
+    gestionesCobranza?: GestionCobranzaOrderByRelationAggregateInput
   }
 
   export type UsuarioWhereUniqueInput = Prisma.AtLeast<{
@@ -23561,6 +26753,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFilter<"Usuario"> | boolean
     mfaSecret?: StringNullableFilter<"Usuario"> | string | null
     sessionVersion?: IntFilter<"Usuario"> | number
+    refreshTokenId?: StringNullableFilter<"Usuario"> | string | null
     sudoModeExpiresAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
     registrationIp?: StringNullableFilter<"Usuario"> | string | null
     registrationLatitude?: FloatNullableFilter<"Usuario"> | number | null
@@ -23568,6 +26761,7 @@ export namespace Prisma {
     lastLoginIp?: StringNullableFilter<"Usuario"> | string | null
     lastLoginAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
     deletedAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
+    scheduledDeletionAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
     createdAt?: DateTimeFilter<"Usuario"> | Date | string
     updatedAt?: DateTimeFilter<"Usuario"> | Date | string
     rolDinamico?: XOR<RolNullableRelationFilter, RolWhereInput> | null
@@ -23581,6 +26775,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionListRelationFilter
     solicitudesActivacion?: SolicitudActivacionListRelationFilter
     auditLogs?: AuditLogListRelationFilter
+    cuentasPorCobrar?: CuentaPorCobrarListRelationFilter
+    gestionesCobranza?: GestionCobranzaListRelationFilter
   }, "id" | "username">
 
   export type UsuarioOrderByWithAggregationInput = {
@@ -23602,6 +26798,7 @@ export namespace Prisma {
     mfaEnabled?: SortOrder
     mfaSecret?: SortOrderInput | SortOrder
     sessionVersion?: SortOrder
+    refreshTokenId?: SortOrderInput | SortOrder
     sudoModeExpiresAt?: SortOrderInput | SortOrder
     registrationIp?: SortOrderInput | SortOrder
     registrationLatitude?: SortOrderInput | SortOrder
@@ -23609,6 +26806,7 @@ export namespace Prisma {
     lastLoginIp?: SortOrderInput | SortOrder
     lastLoginAt?: SortOrderInput | SortOrder
     deletedAt?: SortOrderInput | SortOrder
+    scheduledDeletionAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: UsuarioCountOrderByAggregateInput
@@ -23640,6 +26838,7 @@ export namespace Prisma {
     mfaEnabled?: BoolWithAggregatesFilter<"Usuario"> | boolean
     mfaSecret?: StringNullableWithAggregatesFilter<"Usuario"> | string | null
     sessionVersion?: IntWithAggregatesFilter<"Usuario"> | number
+    refreshTokenId?: StringNullableWithAggregatesFilter<"Usuario"> | string | null
     sudoModeExpiresAt?: DateTimeNullableWithAggregatesFilter<"Usuario"> | Date | string | null
     registrationIp?: StringNullableWithAggregatesFilter<"Usuario"> | string | null
     registrationLatitude?: FloatNullableWithAggregatesFilter<"Usuario"> | number | null
@@ -23647,6 +26846,7 @@ export namespace Prisma {
     lastLoginIp?: StringNullableWithAggregatesFilter<"Usuario"> | string | null
     lastLoginAt?: DateTimeNullableWithAggregatesFilter<"Usuario"> | Date | string | null
     deletedAt?: DateTimeNullableWithAggregatesFilter<"Usuario"> | Date | string | null
+    scheduledDeletionAt?: DateTimeNullableWithAggregatesFilter<"Usuario"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Usuario"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Usuario"> | Date | string
   }
@@ -23661,6 +26861,9 @@ export namespace Prisma {
     metodoPago?: StringFilter<"SolicitudActivacion"> | string
     referencia?: StringFilter<"SolicitudActivacion"> | string
     estado?: StringFilter<"SolicitudActivacion"> | string
+    notas?: StringNullableFilter<"SolicitudActivacion"> | string | null
+    revisadoPor?: StringNullableFilter<"SolicitudActivacion"> | string | null
+    revisadoEn?: DateTimeNullableFilter<"SolicitudActivacion"> | Date | string | null
     createdAt?: DateTimeFilter<"SolicitudActivacion"> | Date | string
     updatedAt?: DateTimeFilter<"SolicitudActivacion"> | Date | string
     usuario?: XOR<UsuarioRelationFilter, UsuarioWhereInput>
@@ -23673,6 +26876,9 @@ export namespace Prisma {
     metodoPago?: SortOrder
     referencia?: SortOrder
     estado?: SortOrder
+    notas?: SortOrderInput | SortOrder
+    revisadoPor?: SortOrderInput | SortOrder
+    revisadoEn?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     usuario?: UsuarioOrderByWithRelationInput
@@ -23688,6 +26894,9 @@ export namespace Prisma {
     metodoPago?: StringFilter<"SolicitudActivacion"> | string
     referencia?: StringFilter<"SolicitudActivacion"> | string
     estado?: StringFilter<"SolicitudActivacion"> | string
+    notas?: StringNullableFilter<"SolicitudActivacion"> | string | null
+    revisadoPor?: StringNullableFilter<"SolicitudActivacion"> | string | null
+    revisadoEn?: DateTimeNullableFilter<"SolicitudActivacion"> | Date | string | null
     createdAt?: DateTimeFilter<"SolicitudActivacion"> | Date | string
     updatedAt?: DateTimeFilter<"SolicitudActivacion"> | Date | string
     usuario?: XOR<UsuarioRelationFilter, UsuarioWhereInput>
@@ -23700,6 +26909,9 @@ export namespace Prisma {
     metodoPago?: SortOrder
     referencia?: SortOrder
     estado?: SortOrder
+    notas?: SortOrderInput | SortOrder
+    revisadoPor?: SortOrderInput | SortOrder
+    revisadoEn?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: SolicitudActivacionCountOrderByAggregateInput
@@ -23717,6 +26929,9 @@ export namespace Prisma {
     metodoPago?: StringWithAggregatesFilter<"SolicitudActivacion"> | string
     referencia?: StringWithAggregatesFilter<"SolicitudActivacion"> | string
     estado?: StringWithAggregatesFilter<"SolicitudActivacion"> | string
+    notas?: StringNullableWithAggregatesFilter<"SolicitudActivacion"> | string | null
+    revisadoPor?: StringNullableWithAggregatesFilter<"SolicitudActivacion"> | string | null
+    revisadoEn?: DateTimeNullableWithAggregatesFilter<"SolicitudActivacion"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"SolicitudActivacion"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"SolicitudActivacion"> | Date | string
   }
@@ -23730,6 +26945,7 @@ export namespace Prisma {
     subtitulo?: StringNullableFilter<"Noticia"> | string | null
     contenido?: StringFilter<"Noticia"> | string
     imagenUrl?: StringNullableFilter<"Noticia"> | string | null
+    videoUrl?: StringNullableFilter<"Noticia"> | string | null
     categoria?: StringFilter<"Noticia"> | string
     destacado?: BoolFilter<"Noticia"> | boolean
     publicado?: BoolFilter<"Noticia"> | boolean
@@ -23743,6 +26959,7 @@ export namespace Prisma {
     subtitulo?: SortOrderInput | SortOrder
     contenido?: SortOrder
     imagenUrl?: SortOrderInput | SortOrder
+    videoUrl?: SortOrderInput | SortOrder
     categoria?: SortOrder
     destacado?: SortOrder
     publicado?: SortOrder
@@ -23759,6 +26976,7 @@ export namespace Prisma {
     subtitulo?: StringNullableFilter<"Noticia"> | string | null
     contenido?: StringFilter<"Noticia"> | string
     imagenUrl?: StringNullableFilter<"Noticia"> | string | null
+    videoUrl?: StringNullableFilter<"Noticia"> | string | null
     categoria?: StringFilter<"Noticia"> | string
     destacado?: BoolFilter<"Noticia"> | boolean
     publicado?: BoolFilter<"Noticia"> | boolean
@@ -23772,6 +26990,7 @@ export namespace Prisma {
     subtitulo?: SortOrderInput | SortOrder
     contenido?: SortOrder
     imagenUrl?: SortOrderInput | SortOrder
+    videoUrl?: SortOrderInput | SortOrder
     categoria?: SortOrder
     destacado?: SortOrder
     publicado?: SortOrder
@@ -23791,6 +27010,7 @@ export namespace Prisma {
     subtitulo?: StringNullableWithAggregatesFilter<"Noticia"> | string | null
     contenido?: StringWithAggregatesFilter<"Noticia"> | string
     imagenUrl?: StringNullableWithAggregatesFilter<"Noticia"> | string | null
+    videoUrl?: StringNullableWithAggregatesFilter<"Noticia"> | string | null
     categoria?: StringWithAggregatesFilter<"Noticia"> | string
     destacado?: BoolWithAggregatesFilter<"Noticia"> | boolean
     publicado?: BoolWithAggregatesFilter<"Noticia"> | boolean
@@ -23892,18 +27112,223 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"Promocion"> | Date | string
   }
 
+  export type CuentaPorCobrarWhereInput = {
+    AND?: CuentaPorCobrarWhereInput | CuentaPorCobrarWhereInput[]
+    OR?: CuentaPorCobrarWhereInput[]
+    NOT?: CuentaPorCobrarWhereInput | CuentaPorCobrarWhereInput[]
+    id?: StringFilter<"CuentaPorCobrar"> | string
+    empresaId?: StringFilter<"CuentaPorCobrar"> | string
+    facturaId?: StringFilter<"CuentaPorCobrar"> | string
+    clienteId?: StringFilter<"CuentaPorCobrar"> | string
+    usuarioId?: StringNullableFilter<"CuentaPorCobrar"> | string | null
+    montoOriginal?: FloatFilter<"CuentaPorCobrar"> | number
+    montoCobrado?: FloatFilter<"CuentaPorCobrar"> | number
+    montoPendiente?: FloatFilter<"CuentaPorCobrar"> | number
+    fechaEmision?: DateTimeFilter<"CuentaPorCobrar"> | Date | string
+    fechaVencimiento?: DateTimeFilter<"CuentaPorCobrar"> | Date | string
+    estado?: StringFilter<"CuentaPorCobrar"> | string
+    diasVencido?: IntFilter<"CuentaPorCobrar"> | number
+    ultimaGestion?: DateTimeNullableFilter<"CuentaPorCobrar"> | Date | string | null
+    notas?: StringNullableFilter<"CuentaPorCobrar"> | string | null
+    createdAt?: DateTimeFilter<"CuentaPorCobrar"> | Date | string
+    updatedAt?: DateTimeFilter<"CuentaPorCobrar"> | Date | string
+    empresa?: XOR<EmpresaNullableRelationFilter, EmpresaWhereInput> | null
+    factura?: XOR<FacturaRelationFilter, FacturaWhereInput>
+    cliente?: XOR<ClienteRelationFilter, ClienteWhereInput>
+    usuario?: XOR<UsuarioNullableRelationFilter, UsuarioWhereInput> | null
+    gestions?: GestionCobranzaListRelationFilter
+  }
+
+  export type CuentaPorCobrarOrderByWithRelationInput = {
+    id?: SortOrder
+    empresaId?: SortOrder
+    facturaId?: SortOrder
+    clienteId?: SortOrder
+    usuarioId?: SortOrderInput | SortOrder
+    montoOriginal?: SortOrder
+    montoCobrado?: SortOrder
+    montoPendiente?: SortOrder
+    fechaEmision?: SortOrder
+    fechaVencimiento?: SortOrder
+    estado?: SortOrder
+    diasVencido?: SortOrder
+    ultimaGestion?: SortOrderInput | SortOrder
+    notas?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    empresa?: EmpresaOrderByWithRelationInput
+    factura?: FacturaOrderByWithRelationInput
+    cliente?: ClienteOrderByWithRelationInput
+    usuario?: UsuarioOrderByWithRelationInput
+    gestions?: GestionCobranzaOrderByRelationAggregateInput
+  }
+
+  export type CuentaPorCobrarWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    facturaId?: string
+    AND?: CuentaPorCobrarWhereInput | CuentaPorCobrarWhereInput[]
+    OR?: CuentaPorCobrarWhereInput[]
+    NOT?: CuentaPorCobrarWhereInput | CuentaPorCobrarWhereInput[]
+    empresaId?: StringFilter<"CuentaPorCobrar"> | string
+    clienteId?: StringFilter<"CuentaPorCobrar"> | string
+    usuarioId?: StringNullableFilter<"CuentaPorCobrar"> | string | null
+    montoOriginal?: FloatFilter<"CuentaPorCobrar"> | number
+    montoCobrado?: FloatFilter<"CuentaPorCobrar"> | number
+    montoPendiente?: FloatFilter<"CuentaPorCobrar"> | number
+    fechaEmision?: DateTimeFilter<"CuentaPorCobrar"> | Date | string
+    fechaVencimiento?: DateTimeFilter<"CuentaPorCobrar"> | Date | string
+    estado?: StringFilter<"CuentaPorCobrar"> | string
+    diasVencido?: IntFilter<"CuentaPorCobrar"> | number
+    ultimaGestion?: DateTimeNullableFilter<"CuentaPorCobrar"> | Date | string | null
+    notas?: StringNullableFilter<"CuentaPorCobrar"> | string | null
+    createdAt?: DateTimeFilter<"CuentaPorCobrar"> | Date | string
+    updatedAt?: DateTimeFilter<"CuentaPorCobrar"> | Date | string
+    empresa?: XOR<EmpresaNullableRelationFilter, EmpresaWhereInput> | null
+    factura?: XOR<FacturaRelationFilter, FacturaWhereInput>
+    cliente?: XOR<ClienteRelationFilter, ClienteWhereInput>
+    usuario?: XOR<UsuarioNullableRelationFilter, UsuarioWhereInput> | null
+    gestions?: GestionCobranzaListRelationFilter
+  }, "id" | "facturaId">
+
+  export type CuentaPorCobrarOrderByWithAggregationInput = {
+    id?: SortOrder
+    empresaId?: SortOrder
+    facturaId?: SortOrder
+    clienteId?: SortOrder
+    usuarioId?: SortOrderInput | SortOrder
+    montoOriginal?: SortOrder
+    montoCobrado?: SortOrder
+    montoPendiente?: SortOrder
+    fechaEmision?: SortOrder
+    fechaVencimiento?: SortOrder
+    estado?: SortOrder
+    diasVencido?: SortOrder
+    ultimaGestion?: SortOrderInput | SortOrder
+    notas?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: CuentaPorCobrarCountOrderByAggregateInput
+    _avg?: CuentaPorCobrarAvgOrderByAggregateInput
+    _max?: CuentaPorCobrarMaxOrderByAggregateInput
+    _min?: CuentaPorCobrarMinOrderByAggregateInput
+    _sum?: CuentaPorCobrarSumOrderByAggregateInput
+  }
+
+  export type CuentaPorCobrarScalarWhereWithAggregatesInput = {
+    AND?: CuentaPorCobrarScalarWhereWithAggregatesInput | CuentaPorCobrarScalarWhereWithAggregatesInput[]
+    OR?: CuentaPorCobrarScalarWhereWithAggregatesInput[]
+    NOT?: CuentaPorCobrarScalarWhereWithAggregatesInput | CuentaPorCobrarScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"CuentaPorCobrar"> | string
+    empresaId?: StringWithAggregatesFilter<"CuentaPorCobrar"> | string
+    facturaId?: StringWithAggregatesFilter<"CuentaPorCobrar"> | string
+    clienteId?: StringWithAggregatesFilter<"CuentaPorCobrar"> | string
+    usuarioId?: StringNullableWithAggregatesFilter<"CuentaPorCobrar"> | string | null
+    montoOriginal?: FloatWithAggregatesFilter<"CuentaPorCobrar"> | number
+    montoCobrado?: FloatWithAggregatesFilter<"CuentaPorCobrar"> | number
+    montoPendiente?: FloatWithAggregatesFilter<"CuentaPorCobrar"> | number
+    fechaEmision?: DateTimeWithAggregatesFilter<"CuentaPorCobrar"> | Date | string
+    fechaVencimiento?: DateTimeWithAggregatesFilter<"CuentaPorCobrar"> | Date | string
+    estado?: StringWithAggregatesFilter<"CuentaPorCobrar"> | string
+    diasVencido?: IntWithAggregatesFilter<"CuentaPorCobrar"> | number
+    ultimaGestion?: DateTimeNullableWithAggregatesFilter<"CuentaPorCobrar"> | Date | string | null
+    notas?: StringNullableWithAggregatesFilter<"CuentaPorCobrar"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"CuentaPorCobrar"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"CuentaPorCobrar"> | Date | string
+  }
+
+  export type GestionCobranzaWhereInput = {
+    AND?: GestionCobranzaWhereInput | GestionCobranzaWhereInput[]
+    OR?: GestionCobranzaWhereInput[]
+    NOT?: GestionCobranzaWhereInput | GestionCobranzaWhereInput[]
+    id?: StringFilter<"GestionCobranza"> | string
+    cuentaPorCobrarId?: StringFilter<"GestionCobranza"> | string
+    empresaId?: StringFilter<"GestionCobranza"> | string
+    usuarioId?: StringFilter<"GestionCobranza"> | string
+    accion?: StringFilter<"GestionCobranza"> | string
+    notas?: StringNullableFilter<"GestionCobranza"> | string | null
+    fecha?: DateTimeFilter<"GestionCobranza"> | Date | string
+    createdAt?: DateTimeFilter<"GestionCobranza"> | Date | string
+    cuentaPorCobrar?: XOR<CuentaPorCobrarRelationFilter, CuentaPorCobrarWhereInput>
+    usuario?: XOR<UsuarioNullableRelationFilter, UsuarioWhereInput> | null
+  }
+
+  export type GestionCobranzaOrderByWithRelationInput = {
+    id?: SortOrder
+    cuentaPorCobrarId?: SortOrder
+    empresaId?: SortOrder
+    usuarioId?: SortOrder
+    accion?: SortOrder
+    notas?: SortOrderInput | SortOrder
+    fecha?: SortOrder
+    createdAt?: SortOrder
+    cuentaPorCobrar?: CuentaPorCobrarOrderByWithRelationInput
+    usuario?: UsuarioOrderByWithRelationInput
+  }
+
+  export type GestionCobranzaWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: GestionCobranzaWhereInput | GestionCobranzaWhereInput[]
+    OR?: GestionCobranzaWhereInput[]
+    NOT?: GestionCobranzaWhereInput | GestionCobranzaWhereInput[]
+    cuentaPorCobrarId?: StringFilter<"GestionCobranza"> | string
+    empresaId?: StringFilter<"GestionCobranza"> | string
+    usuarioId?: StringFilter<"GestionCobranza"> | string
+    accion?: StringFilter<"GestionCobranza"> | string
+    notas?: StringNullableFilter<"GestionCobranza"> | string | null
+    fecha?: DateTimeFilter<"GestionCobranza"> | Date | string
+    createdAt?: DateTimeFilter<"GestionCobranza"> | Date | string
+    cuentaPorCobrar?: XOR<CuentaPorCobrarRelationFilter, CuentaPorCobrarWhereInput>
+    usuario?: XOR<UsuarioNullableRelationFilter, UsuarioWhereInput> | null
+  }, "id">
+
+  export type GestionCobranzaOrderByWithAggregationInput = {
+    id?: SortOrder
+    cuentaPorCobrarId?: SortOrder
+    empresaId?: SortOrder
+    usuarioId?: SortOrder
+    accion?: SortOrder
+    notas?: SortOrderInput | SortOrder
+    fecha?: SortOrder
+    createdAt?: SortOrder
+    _count?: GestionCobranzaCountOrderByAggregateInput
+    _max?: GestionCobranzaMaxOrderByAggregateInput
+    _min?: GestionCobranzaMinOrderByAggregateInput
+  }
+
+  export type GestionCobranzaScalarWhereWithAggregatesInput = {
+    AND?: GestionCobranzaScalarWhereWithAggregatesInput | GestionCobranzaScalarWhereWithAggregatesInput[]
+    OR?: GestionCobranzaScalarWhereWithAggregatesInput[]
+    NOT?: GestionCobranzaScalarWhereWithAggregatesInput | GestionCobranzaScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"GestionCobranza"> | string
+    cuentaPorCobrarId?: StringWithAggregatesFilter<"GestionCobranza"> | string
+    empresaId?: StringWithAggregatesFilter<"GestionCobranza"> | string
+    usuarioId?: StringWithAggregatesFilter<"GestionCobranza"> | string
+    accion?: StringWithAggregatesFilter<"GestionCobranza"> | string
+    notas?: StringNullableWithAggregatesFilter<"GestionCobranza"> | string | null
+    fecha?: DateTimeWithAggregatesFilter<"GestionCobranza"> | Date | string
+    createdAt?: DateTimeWithAggregatesFilter<"GestionCobranza"> | Date | string
+  }
+
   export type EmpresaCreateInput = {
     id?: string
     nombre: string
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuarios?: UsuarioCreateNestedManyWithoutEmpresaRefInput
@@ -23912,6 +27337,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaCreateNestedManyWithoutEmpresaInput
     cotizaciones?: CotizacionCreateNestedManyWithoutEmpresaInput
     auditLogs?: AuditLogCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaUncheckedCreateInput = {
@@ -23920,12 +27346,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaRefInput
@@ -23934,6 +27368,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedCreateNestedManyWithoutEmpresaInput
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutEmpresaInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaUpdateInput = {
@@ -23942,12 +27377,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuarios?: UsuarioUpdateManyWithoutEmpresaRefNestedInput
@@ -23956,6 +27399,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUpdateManyWithoutEmpresaNestedInput
     cotizaciones?: CotizacionUpdateManyWithoutEmpresaNestedInput
     auditLogs?: AuditLogUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutEmpresaNestedInput
   }
 
   export type EmpresaUncheckedUpdateInput = {
@@ -23964,12 +27408,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaRefNestedInput
@@ -23978,6 +27430,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedUpdateManyWithoutEmpresaNestedInput
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutEmpresaNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutEmpresaNestedInput
   }
 
   export type EmpresaCreateManyInput = {
@@ -23986,12 +27439,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -24002,12 +27463,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -24018,12 +27487,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -24286,6 +27763,7 @@ export namespace Prisma {
     empresa?: UsuarioCreateNestedOneWithoutClientesInput
     facturas?: FacturaCreateNestedManyWithoutClienteInput
     cotizaciones?: CotizacionCreateNestedManyWithoutClienteInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutClienteInput
   }
 
   export type ClienteUncheckedCreateInput = {
@@ -24300,6 +27778,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     facturas?: FacturaUncheckedCreateNestedManyWithoutClienteInput
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutClienteInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutClienteInput
   }
 
   export type ClienteUpdateInput = {
@@ -24314,6 +27793,7 @@ export namespace Prisma {
     empresa?: UsuarioUpdateOneWithoutClientesNestedInput
     facturas?: FacturaUpdateManyWithoutClienteNestedInput
     cotizaciones?: CotizacionUpdateManyWithoutClienteNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutClienteNestedInput
   }
 
   export type ClienteUncheckedUpdateInput = {
@@ -24328,6 +27808,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     facturas?: FacturaUncheckedUpdateManyWithoutClienteNestedInput
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutClienteNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutClienteNestedInput
   }
 
   export type ClienteCreateManyInput = {
@@ -24386,6 +27867,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     empresa: UsuarioCreateNestedOneWithoutProductosInput
     itemsFactura?: ItemFacturaCreateNestedManyWithoutProductoInput
+    itemsCotizacion?: ItemCotizacionCreateNestedManyWithoutProductoInput
   }
 
   export type ProductoUncheckedCreateInput = {
@@ -24409,6 +27891,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     itemsFactura?: ItemFacturaUncheckedCreateNestedManyWithoutProductoInput
+    itemsCotizacion?: ItemCotizacionUncheckedCreateNestedManyWithoutProductoInput
   }
 
   export type ProductoUpdateInput = {
@@ -24432,6 +27915,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     empresa?: UsuarioUpdateOneRequiredWithoutProductosNestedInput
     itemsFactura?: ItemFacturaUpdateManyWithoutProductoNestedInput
+    itemsCotizacion?: ItemCotizacionUpdateManyWithoutProductoNestedInput
   }
 
   export type ProductoUncheckedUpdateInput = {
@@ -24455,6 +27939,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     itemsFactura?: ItemFacturaUncheckedUpdateManyWithoutProductoNestedInput
+    itemsCotizacion?: ItemCotizacionUncheckedUpdateManyWithoutProductoNestedInput
   }
 
   export type ProductoCreateManyInput = {
@@ -24537,6 +28022,10 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     cliente: ClienteCreateNestedOneWithoutFacturasInput
@@ -24544,6 +28033,8 @@ export namespace Prisma {
     empresa?: EmpresaCreateNestedOneWithoutFacturasInput
     items?: ItemFacturaCreateNestedManyWithoutFacturaInput
     pagos?: PagoCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionCreateNestedOneWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarCreateNestedOneWithoutFacturaInput
   }
 
   export type FacturaUncheckedCreateInput = {
@@ -24564,10 +28055,16 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     items?: ItemFacturaUncheckedCreateNestedManyWithoutFacturaInput
     pagos?: PagoUncheckedCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionUncheckedCreateNestedOneWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedCreateNestedOneWithoutFacturaInput
   }
 
   export type FacturaUpdateInput = {
@@ -24585,6 +28082,10 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cliente?: ClienteUpdateOneRequiredWithoutFacturasNestedInput
@@ -24592,6 +28093,8 @@ export namespace Prisma {
     empresa?: EmpresaUpdateOneWithoutFacturasNestedInput
     items?: ItemFacturaUpdateManyWithoutFacturaNestedInput
     pagos?: PagoUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUpdateOneWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUpdateOneWithoutFacturaNestedInput
   }
 
   export type FacturaUncheckedUpdateInput = {
@@ -24612,10 +28115,16 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: ItemFacturaUncheckedUpdateManyWithoutFacturaNestedInput
     pagos?: PagoUncheckedUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUncheckedUpdateOneWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedUpdateOneWithoutFacturaNestedInput
   }
 
   export type FacturaCreateManyInput = {
@@ -24636,6 +28145,10 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -24655,6 +28168,10 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -24677,6 +28194,10 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -24806,6 +28327,12 @@ export namespace Prisma {
     referenciaTransaccion?: string | null
     fechaPago?: Date | string
     notas?: string | null
+    tasaBCV?: number | null
+    estado?: string
+    motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    anuladoPor?: string | null
+    fechaAnulacion?: Date | string | null
     createdAt?: Date | string
     factura: FacturaCreateNestedOneWithoutPagosInput
   }
@@ -24819,6 +28346,12 @@ export namespace Prisma {
     referenciaTransaccion?: string | null
     fechaPago?: Date | string
     notas?: string | null
+    tasaBCV?: number | null
+    estado?: string
+    motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    anuladoPor?: string | null
+    fechaAnulacion?: Date | string | null
     createdAt?: Date | string
   }
 
@@ -24830,6 +28363,12 @@ export namespace Prisma {
     referenciaTransaccion?: NullableStringFieldUpdateOperationsInput | string | null
     fechaPago?: DateTimeFieldUpdateOperationsInput | Date | string
     notas?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaBCV?: NullableFloatFieldUpdateOperationsInput | number | null
+    estado?: StringFieldUpdateOperationsInput | string
+    motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     factura?: FacturaUpdateOneRequiredWithoutPagosNestedInput
   }
@@ -24843,6 +28382,12 @@ export namespace Prisma {
     referenciaTransaccion?: NullableStringFieldUpdateOperationsInput | string | null
     fechaPago?: DateTimeFieldUpdateOperationsInput | Date | string
     notas?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaBCV?: NullableFloatFieldUpdateOperationsInput | number | null
+    estado?: StringFieldUpdateOperationsInput | string
+    motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -24855,6 +28400,12 @@ export namespace Prisma {
     referenciaTransaccion?: string | null
     fechaPago?: Date | string
     notas?: string | null
+    tasaBCV?: number | null
+    estado?: string
+    motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    anuladoPor?: string | null
+    fechaAnulacion?: Date | string | null
     createdAt?: Date | string
   }
 
@@ -24866,6 +28417,12 @@ export namespace Prisma {
     referenciaTransaccion?: NullableStringFieldUpdateOperationsInput | string | null
     fechaPago?: DateTimeFieldUpdateOperationsInput | Date | string
     notas?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaBCV?: NullableFloatFieldUpdateOperationsInput | number | null
+    estado?: StringFieldUpdateOperationsInput | string
+    motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -24878,6 +28435,12 @@ export namespace Prisma {
     referenciaTransaccion?: NullableStringFieldUpdateOperationsInput | string | null
     fechaPago?: DateTimeFieldUpdateOperationsInput | Date | string
     notas?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaBCV?: NullableFloatFieldUpdateOperationsInput | number | null
+    estado?: StringFieldUpdateOperationsInput | string
+    motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -24928,6 +28491,8 @@ export namespace Prisma {
     montoFinal?: number | null
     ingresosEfectivo?: number
     ingresosBanco?: number
+    ingresosEfectivoVES?: number | null
+    ingresosBancoVES?: number | null
     estado?: string
     observaciones?: string | null
     arqueoDetalle?: string | null
@@ -24947,6 +28512,8 @@ export namespace Prisma {
     montoFinal?: number | null
     ingresosEfectivo?: number
     ingresosBanco?: number
+    ingresosEfectivoVES?: number | null
+    ingresosBancoVES?: number | null
     estado?: string
     observaciones?: string | null
     arqueoDetalle?: string | null
@@ -24962,6 +28529,8 @@ export namespace Prisma {
     montoFinal?: NullableFloatFieldUpdateOperationsInput | number | null
     ingresosEfectivo?: FloatFieldUpdateOperationsInput | number
     ingresosBanco?: FloatFieldUpdateOperationsInput | number
+    ingresosEfectivoVES?: NullableFloatFieldUpdateOperationsInput | number | null
+    ingresosBancoVES?: NullableFloatFieldUpdateOperationsInput | number | null
     estado?: StringFieldUpdateOperationsInput | string
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     arqueoDetalle?: NullableStringFieldUpdateOperationsInput | string | null
@@ -24981,6 +28550,8 @@ export namespace Prisma {
     montoFinal?: NullableFloatFieldUpdateOperationsInput | number | null
     ingresosEfectivo?: FloatFieldUpdateOperationsInput | number
     ingresosBanco?: FloatFieldUpdateOperationsInput | number
+    ingresosEfectivoVES?: NullableFloatFieldUpdateOperationsInput | number | null
+    ingresosBancoVES?: NullableFloatFieldUpdateOperationsInput | number | null
     estado?: StringFieldUpdateOperationsInput | string
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     arqueoDetalle?: NullableStringFieldUpdateOperationsInput | string | null
@@ -24998,6 +28569,8 @@ export namespace Prisma {
     montoFinal?: number | null
     ingresosEfectivo?: number
     ingresosBanco?: number
+    ingresosEfectivoVES?: number | null
+    ingresosBancoVES?: number | null
     estado?: string
     observaciones?: string | null
     arqueoDetalle?: string | null
@@ -25013,6 +28586,8 @@ export namespace Prisma {
     montoFinal?: NullableFloatFieldUpdateOperationsInput | number | null
     ingresosEfectivo?: FloatFieldUpdateOperationsInput | number
     ingresosBanco?: FloatFieldUpdateOperationsInput | number
+    ingresosEfectivoVES?: NullableFloatFieldUpdateOperationsInput | number | null
+    ingresosBancoVES?: NullableFloatFieldUpdateOperationsInput | number | null
     estado?: StringFieldUpdateOperationsInput | string
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     arqueoDetalle?: NullableStringFieldUpdateOperationsInput | string | null
@@ -25030,6 +28605,8 @@ export namespace Prisma {
     montoFinal?: NullableFloatFieldUpdateOperationsInput | number | null
     ingresosEfectivo?: FloatFieldUpdateOperationsInput | number
     ingresosBanco?: FloatFieldUpdateOperationsInput | number
+    ingresosEfectivoVES?: NullableFloatFieldUpdateOperationsInput | number | null
+    ingresosBancoVES?: NullableFloatFieldUpdateOperationsInput | number | null
     estado?: StringFieldUpdateOperationsInput | string
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     arqueoDetalle?: NullableStringFieldUpdateOperationsInput | string | null
@@ -25050,6 +28627,7 @@ export namespace Prisma {
     cliente: ClienteCreateNestedOneWithoutCotizacionesInput
     usuario?: UsuarioCreateNestedOneWithoutCotizacionesInput
     empresa?: EmpresaCreateNestedOneWithoutCotizacionesInput
+    factura?: FacturaCreateNestedOneWithoutCotizacionOrigenInput
     items?: ItemCotizacionCreateNestedManyWithoutCotizacionInput
   }
 
@@ -25066,6 +28644,7 @@ export namespace Prisma {
     total: number
     moneda?: string
     estado?: string
+    facturaId?: string | null
     items?: ItemCotizacionUncheckedCreateNestedManyWithoutCotizacionInput
   }
 
@@ -25082,6 +28661,7 @@ export namespace Prisma {
     cliente?: ClienteUpdateOneRequiredWithoutCotizacionesNestedInput
     usuario?: UsuarioUpdateOneWithoutCotizacionesNestedInput
     empresa?: EmpresaUpdateOneWithoutCotizacionesNestedInput
+    factura?: FacturaUpdateOneWithoutCotizacionOrigenNestedInput
     items?: ItemCotizacionUpdateManyWithoutCotizacionNestedInput
   }
 
@@ -25098,6 +28678,7 @@ export namespace Prisma {
     total?: FloatFieldUpdateOperationsInput | number
     moneda?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    facturaId?: NullableStringFieldUpdateOperationsInput | string | null
     items?: ItemCotizacionUncheckedUpdateManyWithoutCotizacionNestedInput
   }
 
@@ -25114,6 +28695,7 @@ export namespace Prisma {
     total: number
     moneda?: string
     estado?: string
+    facturaId?: string | null
   }
 
   export type CotizacionUpdateManyMutationInput = {
@@ -25141,16 +28723,17 @@ export namespace Prisma {
     total?: FloatFieldUpdateOperationsInput | number
     moneda?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    facturaId?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type ItemCotizacionCreateInput = {
     id?: string
-    productoId?: string | null
     descripcion: string
     cantidad: number
     precioUnitario: number
     totalLinea: number
     cotizacion: CotizacionCreateNestedOneWithoutItemsInput
+    producto?: ProductoCreateNestedOneWithoutItemsCotizacionInput
   }
 
   export type ItemCotizacionUncheckedCreateInput = {
@@ -25165,12 +28748,12 @@ export namespace Prisma {
 
   export type ItemCotizacionUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
-    productoId?: NullableStringFieldUpdateOperationsInput | string | null
     descripcion?: StringFieldUpdateOperationsInput | string
     cantidad?: IntFieldUpdateOperationsInput | number
     precioUnitario?: FloatFieldUpdateOperationsInput | number
     totalLinea?: FloatFieldUpdateOperationsInput | number
     cotizacion?: CotizacionUpdateOneRequiredWithoutItemsNestedInput
+    producto?: ProductoUpdateOneWithoutItemsCotizacionNestedInput
   }
 
   export type ItemCotizacionUncheckedUpdateInput = {
@@ -25195,7 +28778,6 @@ export namespace Prisma {
 
   export type ItemCotizacionUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
-    productoId?: NullableStringFieldUpdateOperationsInput | string | null
     descripcion?: StringFieldUpdateOperationsInput | string
     cantidad?: IntFieldUpdateOperationsInput | number
     precioUnitario?: FloatFieldUpdateOperationsInput | number
@@ -25228,6 +28810,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -25235,6 +28818,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
@@ -25248,6 +28832,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUncheckedCreateInput = {
@@ -25269,6 +28855,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -25276,6 +28863,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
@@ -25286,6 +28874,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUpdateInput = {
@@ -25304,6 +28894,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -25311,6 +28902,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
@@ -25324,6 +28916,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateInput = {
@@ -25345,6 +28939,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -25352,6 +28947,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -25362,6 +28958,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioCreateManyInput = {
@@ -25383,6 +28981,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -25390,6 +28989,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -25410,6 +29010,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -25417,6 +29018,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -25440,6 +29042,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -25447,6 +29050,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -25457,6 +29061,9 @@ export namespace Prisma {
     metodoPago: string
     referencia: string
     estado?: string
+    notas?: string | null
+    revisadoPor?: string | null
+    revisadoEn?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuario: UsuarioCreateNestedOneWithoutSolicitudesActivacionInput
@@ -25469,6 +29076,9 @@ export namespace Prisma {
     metodoPago: string
     referencia: string
     estado?: string
+    notas?: string | null
+    revisadoPor?: string | null
+    revisadoEn?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -25479,6 +29089,9 @@ export namespace Prisma {
     metodoPago?: StringFieldUpdateOperationsInput | string
     referencia?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuario?: UsuarioUpdateOneRequiredWithoutSolicitudesActivacionNestedInput
@@ -25491,6 +29104,9 @@ export namespace Prisma {
     metodoPago?: StringFieldUpdateOperationsInput | string
     referencia?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -25502,6 +29118,9 @@ export namespace Prisma {
     metodoPago: string
     referencia: string
     estado?: string
+    notas?: string | null
+    revisadoPor?: string | null
+    revisadoEn?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -25512,6 +29131,9 @@ export namespace Prisma {
     metodoPago?: StringFieldUpdateOperationsInput | string
     referencia?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -25523,6 +29145,9 @@ export namespace Prisma {
     metodoPago?: StringFieldUpdateOperationsInput | string
     referencia?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -25533,6 +29158,7 @@ export namespace Prisma {
     subtitulo?: string | null
     contenido: string
     imagenUrl?: string | null
+    videoUrl?: string | null
     categoria?: string
     destacado?: boolean
     publicado?: boolean
@@ -25546,6 +29172,7 @@ export namespace Prisma {
     subtitulo?: string | null
     contenido: string
     imagenUrl?: string | null
+    videoUrl?: string | null
     categoria?: string
     destacado?: boolean
     publicado?: boolean
@@ -25559,6 +29186,7 @@ export namespace Prisma {
     subtitulo?: NullableStringFieldUpdateOperationsInput | string | null
     contenido?: StringFieldUpdateOperationsInput | string
     imagenUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    videoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     categoria?: StringFieldUpdateOperationsInput | string
     destacado?: BoolFieldUpdateOperationsInput | boolean
     publicado?: BoolFieldUpdateOperationsInput | boolean
@@ -25572,6 +29200,7 @@ export namespace Prisma {
     subtitulo?: NullableStringFieldUpdateOperationsInput | string | null
     contenido?: StringFieldUpdateOperationsInput | string
     imagenUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    videoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     categoria?: StringFieldUpdateOperationsInput | string
     destacado?: BoolFieldUpdateOperationsInput | boolean
     publicado?: BoolFieldUpdateOperationsInput | boolean
@@ -25585,6 +29214,7 @@ export namespace Prisma {
     subtitulo?: string | null
     contenido: string
     imagenUrl?: string | null
+    videoUrl?: string | null
     categoria?: string
     destacado?: boolean
     publicado?: boolean
@@ -25598,6 +29228,7 @@ export namespace Prisma {
     subtitulo?: NullableStringFieldUpdateOperationsInput | string | null
     contenido?: StringFieldUpdateOperationsInput | string
     imagenUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    videoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     categoria?: StringFieldUpdateOperationsInput | string
     destacado?: BoolFieldUpdateOperationsInput | boolean
     publicado?: BoolFieldUpdateOperationsInput | boolean
@@ -25611,6 +29242,7 @@ export namespace Prisma {
     subtitulo?: NullableStringFieldUpdateOperationsInput | string | null
     contenido?: StringFieldUpdateOperationsInput | string
     imagenUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    videoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     categoria?: StringFieldUpdateOperationsInput | string
     destacado?: BoolFieldUpdateOperationsInput | boolean
     publicado?: BoolFieldUpdateOperationsInput | boolean
@@ -25730,6 +29362,214 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type CuentaPorCobrarCreateInput = {
+    id?: string
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    empresa?: EmpresaCreateNestedOneWithoutCuentasPorCobrarInput
+    factura: FacturaCreateNestedOneWithoutCuentaPorCobrarInput
+    cliente: ClienteCreateNestedOneWithoutCuentasPorCobrarInput
+    usuario?: UsuarioCreateNestedOneWithoutCuentasPorCobrarInput
+    gestions?: GestionCobranzaCreateNestedManyWithoutCuentaPorCobrarInput
+  }
+
+  export type CuentaPorCobrarUncheckedCreateInput = {
+    id?: string
+    empresaId: string
+    facturaId: string
+    clienteId: string
+    usuarioId?: string | null
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    gestions?: GestionCobranzaUncheckedCreateNestedManyWithoutCuentaPorCobrarInput
+  }
+
+  export type CuentaPorCobrarUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    empresa?: EmpresaUpdateOneWithoutCuentasPorCobrarNestedInput
+    factura?: FacturaUpdateOneRequiredWithoutCuentaPorCobrarNestedInput
+    cliente?: ClienteUpdateOneRequiredWithoutCuentasPorCobrarNestedInput
+    usuario?: UsuarioUpdateOneWithoutCuentasPorCobrarNestedInput
+    gestions?: GestionCobranzaUpdateManyWithoutCuentaPorCobrarNestedInput
+  }
+
+  export type CuentaPorCobrarUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    facturaId?: StringFieldUpdateOperationsInput | string
+    clienteId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: NullableStringFieldUpdateOperationsInput | string | null
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    gestions?: GestionCobranzaUncheckedUpdateManyWithoutCuentaPorCobrarNestedInput
+  }
+
+  export type CuentaPorCobrarCreateManyInput = {
+    id?: string
+    empresaId: string
+    facturaId: string
+    clienteId: string
+    usuarioId?: string | null
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CuentaPorCobrarUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type CuentaPorCobrarUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    facturaId?: StringFieldUpdateOperationsInput | string
+    clienteId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: NullableStringFieldUpdateOperationsInput | string | null
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GestionCobranzaCreateInput = {
+    id?: string
+    empresaId: string
+    accion: string
+    notas?: string | null
+    fecha?: Date | string
+    createdAt?: Date | string
+    cuentaPorCobrar: CuentaPorCobrarCreateNestedOneWithoutGestionsInput
+    usuario?: UsuarioCreateNestedOneWithoutGestionesCobranzaInput
+  }
+
+  export type GestionCobranzaUncheckedCreateInput = {
+    id?: string
+    cuentaPorCobrarId: string
+    empresaId: string
+    usuarioId: string
+    accion: string
+    notas?: string | null
+    fecha?: Date | string
+    createdAt?: Date | string
+  }
+
+  export type GestionCobranzaUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    accion?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    fecha?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    cuentaPorCobrar?: CuentaPorCobrarUpdateOneRequiredWithoutGestionsNestedInput
+    usuario?: UsuarioUpdateOneWithoutGestionesCobranzaNestedInput
+  }
+
+  export type GestionCobranzaUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    cuentaPorCobrarId?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: StringFieldUpdateOperationsInput | string
+    accion?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    fecha?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GestionCobranzaCreateManyInput = {
+    id?: string
+    cuentaPorCobrarId: string
+    empresaId: string
+    usuarioId: string
+    accion: string
+    notas?: string | null
+    fecha?: Date | string
+    createdAt?: Date | string
+  }
+
+  export type GestionCobranzaUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    accion?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    fecha?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GestionCobranzaUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    cuentaPorCobrarId?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: StringFieldUpdateOperationsInput | string
+    accion?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    fecha?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
     in?: string[]
@@ -25758,9 +29598,15 @@ export namespace Prisma {
     not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
-  export type BoolFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolFilter<$PrismaModel> | boolean
+  export type FloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
   }
 
   export type DateTimeNullableFilter<$PrismaModel = never> = {
@@ -25772,6 +29618,11 @@ export namespace Prisma {
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  }
+
+  export type BoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
   }
 
   export type DateTimeFilter<$PrismaModel = never> = {
@@ -25821,6 +29672,12 @@ export namespace Prisma {
     none?: AuditLogWhereInput
   }
 
+  export type CuentaPorCobrarListRelationFilter = {
+    every?: CuentaPorCobrarWhereInput
+    some?: CuentaPorCobrarWhereInput
+    none?: CuentaPorCobrarWhereInput
+  }
+
   export type SortOrderInput = {
     sort: SortOrder
     nulls?: NullsOrder
@@ -25850,20 +29707,36 @@ export namespace Prisma {
     _count?: SortOrder
   }
 
+  export type CuentaPorCobrarOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
   export type EmpresaCountOrderByAggregateInput = {
     id?: SortOrder
     nombre?: SortOrder
     rif?: SortOrder
     direccion?: SortOrder
     telefono?: SortOrder
+    email?: SortOrder
+    monedaSimbolo?: SortOrder
+    monedaCodigo?: SortOrder
+    tasaDolar?: SortOrder
+    tasaDolarModo?: SortOrder
+    tasaDolarActualizadaEn?: SortOrder
     activo?: SortOrder
     subscriptionStatus?: SortOrder
     planType?: SortOrder
     trialStartsAt?: SortOrder
     trialEndsAt?: SortOrder
     currentPeriodEnd?: SortOrder
+    archivedAt?: SortOrder
+    scheduledDeletionAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type EmpresaAvgOrderByAggregateInput = {
+    tasaDolar?: SortOrder
   }
 
   export type EmpresaMaxOrderByAggregateInput = {
@@ -25872,12 +29745,20 @@ export namespace Prisma {
     rif?: SortOrder
     direccion?: SortOrder
     telefono?: SortOrder
+    email?: SortOrder
+    monedaSimbolo?: SortOrder
+    monedaCodigo?: SortOrder
+    tasaDolar?: SortOrder
+    tasaDolarModo?: SortOrder
+    tasaDolarActualizadaEn?: SortOrder
     activo?: SortOrder
     subscriptionStatus?: SortOrder
     planType?: SortOrder
     trialStartsAt?: SortOrder
     trialEndsAt?: SortOrder
     currentPeriodEnd?: SortOrder
+    archivedAt?: SortOrder
+    scheduledDeletionAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -25888,14 +29769,26 @@ export namespace Prisma {
     rif?: SortOrder
     direccion?: SortOrder
     telefono?: SortOrder
+    email?: SortOrder
+    monedaSimbolo?: SortOrder
+    monedaCodigo?: SortOrder
+    tasaDolar?: SortOrder
+    tasaDolarModo?: SortOrder
+    tasaDolarActualizadaEn?: SortOrder
     activo?: SortOrder
     subscriptionStatus?: SortOrder
     planType?: SortOrder
     trialStartsAt?: SortOrder
     trialEndsAt?: SortOrder
     currentPeriodEnd?: SortOrder
+    archivedAt?: SortOrder
+    scheduledDeletionAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type EmpresaSumOrderByAggregateInput = {
+    tasaDolar?: SortOrder
   }
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
@@ -25932,12 +29825,20 @@ export namespace Prisma {
     _max?: NestedStringNullableFilter<$PrismaModel>
   }
 
-  export type BoolWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedBoolFilter<$PrismaModel>
-    _max?: NestedBoolFilter<$PrismaModel>
+  export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
   }
 
   export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -25952,6 +29853,14 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type BoolWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBoolFilter<$PrismaModel>
+    _max?: NestedBoolFilter<$PrismaModel>
   }
 
   export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
@@ -26162,17 +30071,6 @@ export namespace Prisma {
     not?: NestedFloatFilter<$PrismaModel> | number
   }
 
-  export type FloatNullableFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel> | null
-    in?: number[] | null
-    notIn?: number[] | null
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
-  }
-
   export type UsuarioRelationFilter = {
     is?: UsuarioWhereInput
     isNot?: UsuarioWhereInput
@@ -26184,7 +30082,17 @@ export namespace Prisma {
     none?: ItemFacturaWhereInput
   }
 
+  export type ItemCotizacionListRelationFilter = {
+    every?: ItemCotizacionWhereInput
+    some?: ItemCotizacionWhereInput
+    none?: ItemCotizacionWhereInput
+  }
+
   export type ItemFacturaOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ItemCotizacionOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -26295,22 +30203,6 @@ export namespace Prisma {
     _max?: NestedFloatFilter<$PrismaModel>
   }
 
-  export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel> | null
-    in?: number[] | null
-    notIn?: number[] | null
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _avg?: NestedFloatNullableFilter<$PrismaModel>
-    _sum?: NestedFloatNullableFilter<$PrismaModel>
-    _min?: NestedFloatNullableFilter<$PrismaModel>
-    _max?: NestedFloatNullableFilter<$PrismaModel>
-  }
-
   export type IntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[]
@@ -26331,6 +30223,16 @@ export namespace Prisma {
     every?: PagoWhereInput
     some?: PagoWhereInput
     none?: PagoWhereInput
+  }
+
+  export type CotizacionNullableRelationFilter = {
+    is?: CotizacionWhereInput | null
+    isNot?: CotizacionWhereInput | null
+  }
+
+  export type CuentaPorCobrarNullableRelationFilter = {
+    is?: CuentaPorCobrarWhereInput | null
+    isNot?: CuentaPorCobrarWhereInput | null
   }
 
   export type PagoOrderByRelationAggregateInput = {
@@ -26355,6 +30257,10 @@ export namespace Prisma {
     observaciones?: SortOrder
     anuladoPor?: SortOrder
     motivoAnulacion?: SortOrder
+    descripcionAnulacion?: SortOrder
+    fechaAnulacion?: SortOrder
+    tasaAnulacion?: SortOrder
+    requestId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -26366,6 +30272,7 @@ export namespace Prisma {
     total?: SortOrder
     tasaCambio?: SortOrder
     cuotasTotales?: SortOrder
+    tasaAnulacion?: SortOrder
   }
 
   export type FacturaMaxOrderByAggregateInput = {
@@ -26386,6 +30293,10 @@ export namespace Prisma {
     observaciones?: SortOrder
     anuladoPor?: SortOrder
     motivoAnulacion?: SortOrder
+    descripcionAnulacion?: SortOrder
+    fechaAnulacion?: SortOrder
+    tasaAnulacion?: SortOrder
+    requestId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -26408,6 +30319,10 @@ export namespace Prisma {
     observaciones?: SortOrder
     anuladoPor?: SortOrder
     motivoAnulacion?: SortOrder
+    descripcionAnulacion?: SortOrder
+    fechaAnulacion?: SortOrder
+    tasaAnulacion?: SortOrder
+    requestId?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -26419,6 +30334,7 @@ export namespace Prisma {
     total?: SortOrder
     tasaCambio?: SortOrder
     cuotasTotales?: SortOrder
+    tasaAnulacion?: SortOrder
   }
 
   export type IntWithAggregatesFilter<$PrismaModel = never> = {
@@ -26529,11 +30445,18 @@ export namespace Prisma {
     referenciaTransaccion?: SortOrder
     fechaPago?: SortOrder
     notas?: SortOrder
+    tasaBCV?: SortOrder
+    estado?: SortOrder
+    motivoAnulacion?: SortOrder
+    descripcionAnulacion?: SortOrder
+    anuladoPor?: SortOrder
+    fechaAnulacion?: SortOrder
     createdAt?: SortOrder
   }
 
   export type PagoAvgOrderByAggregateInput = {
     monto?: SortOrder
+    tasaBCV?: SortOrder
   }
 
   export type PagoMaxOrderByAggregateInput = {
@@ -26545,6 +30468,12 @@ export namespace Prisma {
     referenciaTransaccion?: SortOrder
     fechaPago?: SortOrder
     notas?: SortOrder
+    tasaBCV?: SortOrder
+    estado?: SortOrder
+    motivoAnulacion?: SortOrder
+    descripcionAnulacion?: SortOrder
+    anuladoPor?: SortOrder
+    fechaAnulacion?: SortOrder
     createdAt?: SortOrder
   }
 
@@ -26557,11 +30486,18 @@ export namespace Prisma {
     referenciaTransaccion?: SortOrder
     fechaPago?: SortOrder
     notas?: SortOrder
+    tasaBCV?: SortOrder
+    estado?: SortOrder
+    motivoAnulacion?: SortOrder
+    descripcionAnulacion?: SortOrder
+    anuladoPor?: SortOrder
+    fechaAnulacion?: SortOrder
     createdAt?: SortOrder
   }
 
   export type PagoSumOrderByAggregateInput = {
     monto?: SortOrder
+    tasaBCV?: SortOrder
   }
 
   export type CorrelativoCountOrderByAggregateInput = {
@@ -26602,6 +30538,8 @@ export namespace Prisma {
     montoFinal?: SortOrder
     ingresosEfectivo?: SortOrder
     ingresosBanco?: SortOrder
+    ingresosEfectivoVES?: SortOrder
+    ingresosBancoVES?: SortOrder
     estado?: SortOrder
     observaciones?: SortOrder
     arqueoDetalle?: SortOrder
@@ -26614,6 +30552,8 @@ export namespace Prisma {
     montoFinal?: SortOrder
     ingresosEfectivo?: SortOrder
     ingresosBanco?: SortOrder
+    ingresosEfectivoVES?: SortOrder
+    ingresosBancoVES?: SortOrder
   }
 
   export type CierreCajaMaxOrderByAggregateInput = {
@@ -26626,6 +30566,8 @@ export namespace Prisma {
     montoFinal?: SortOrder
     ingresosEfectivo?: SortOrder
     ingresosBanco?: SortOrder
+    ingresosEfectivoVES?: SortOrder
+    ingresosBancoVES?: SortOrder
     estado?: SortOrder
     observaciones?: SortOrder
     arqueoDetalle?: SortOrder
@@ -26643,6 +30585,8 @@ export namespace Prisma {
     montoFinal?: SortOrder
     ingresosEfectivo?: SortOrder
     ingresosBanco?: SortOrder
+    ingresosEfectivoVES?: SortOrder
+    ingresosBancoVES?: SortOrder
     estado?: SortOrder
     observaciones?: SortOrder
     arqueoDetalle?: SortOrder
@@ -26655,16 +30599,13 @@ export namespace Prisma {
     montoFinal?: SortOrder
     ingresosEfectivo?: SortOrder
     ingresosBanco?: SortOrder
+    ingresosEfectivoVES?: SortOrder
+    ingresosBancoVES?: SortOrder
   }
 
-  export type ItemCotizacionListRelationFilter = {
-    every?: ItemCotizacionWhereInput
-    some?: ItemCotizacionWhereInput
-    none?: ItemCotizacionWhereInput
-  }
-
-  export type ItemCotizacionOrderByRelationAggregateInput = {
-    _count?: SortOrder
+  export type FacturaNullableRelationFilter = {
+    is?: FacturaWhereInput | null
+    isNot?: FacturaWhereInput | null
   }
 
   export type CotizacionCountOrderByAggregateInput = {
@@ -26680,6 +30621,7 @@ export namespace Prisma {
     total?: SortOrder
     moneda?: SortOrder
     estado?: SortOrder
+    facturaId?: SortOrder
   }
 
   export type CotizacionAvgOrderByAggregateInput = {
@@ -26702,6 +30644,7 @@ export namespace Prisma {
     total?: SortOrder
     moneda?: SortOrder
     estado?: SortOrder
+    facturaId?: SortOrder
   }
 
   export type CotizacionMinOrderByAggregateInput = {
@@ -26717,6 +30660,7 @@ export namespace Prisma {
     total?: SortOrder
     moneda?: SortOrder
     estado?: SortOrder
+    facturaId?: SortOrder
   }
 
   export type CotizacionSumOrderByAggregateInput = {
@@ -26796,6 +30740,12 @@ export namespace Prisma {
     none?: SolicitudActivacionWhereInput
   }
 
+  export type GestionCobranzaListRelationFilter = {
+    every?: GestionCobranzaWhereInput
+    some?: GestionCobranzaWhereInput
+    none?: GestionCobranzaWhereInput
+  }
+
   export type ProductoOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
@@ -26805,6 +30755,10 @@ export namespace Prisma {
   }
 
   export type SolicitudActivacionOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type GestionCobranzaOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -26827,6 +30781,7 @@ export namespace Prisma {
     mfaEnabled?: SortOrder
     mfaSecret?: SortOrder
     sessionVersion?: SortOrder
+    refreshTokenId?: SortOrder
     sudoModeExpiresAt?: SortOrder
     registrationIp?: SortOrder
     registrationLatitude?: SortOrder
@@ -26834,6 +30789,7 @@ export namespace Prisma {
     lastLoginIp?: SortOrder
     lastLoginAt?: SortOrder
     deletedAt?: SortOrder
+    scheduledDeletionAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -26863,6 +30819,7 @@ export namespace Prisma {
     mfaEnabled?: SortOrder
     mfaSecret?: SortOrder
     sessionVersion?: SortOrder
+    refreshTokenId?: SortOrder
     sudoModeExpiresAt?: SortOrder
     registrationIp?: SortOrder
     registrationLatitude?: SortOrder
@@ -26870,6 +30827,7 @@ export namespace Prisma {
     lastLoginIp?: SortOrder
     lastLoginAt?: SortOrder
     deletedAt?: SortOrder
+    scheduledDeletionAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -26893,6 +30851,7 @@ export namespace Prisma {
     mfaEnabled?: SortOrder
     mfaSecret?: SortOrder
     sessionVersion?: SortOrder
+    refreshTokenId?: SortOrder
     sudoModeExpiresAt?: SortOrder
     registrationIp?: SortOrder
     registrationLatitude?: SortOrder
@@ -26900,6 +30859,7 @@ export namespace Prisma {
     lastLoginIp?: SortOrder
     lastLoginAt?: SortOrder
     deletedAt?: SortOrder
+    scheduledDeletionAt?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -26917,6 +30877,9 @@ export namespace Prisma {
     metodoPago?: SortOrder
     referencia?: SortOrder
     estado?: SortOrder
+    notas?: SortOrder
+    revisadoPor?: SortOrder
+    revisadoEn?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -26928,6 +30891,9 @@ export namespace Prisma {
     metodoPago?: SortOrder
     referencia?: SortOrder
     estado?: SortOrder
+    notas?: SortOrder
+    revisadoPor?: SortOrder
+    revisadoEn?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -26939,6 +30905,9 @@ export namespace Prisma {
     metodoPago?: SortOrder
     referencia?: SortOrder
     estado?: SortOrder
+    notas?: SortOrder
+    revisadoPor?: SortOrder
+    revisadoEn?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -26949,6 +30918,7 @@ export namespace Prisma {
     subtitulo?: SortOrder
     contenido?: SortOrder
     imagenUrl?: SortOrder
+    videoUrl?: SortOrder
     categoria?: SortOrder
     destacado?: SortOrder
     publicado?: SortOrder
@@ -26962,6 +30932,7 @@ export namespace Prisma {
     subtitulo?: SortOrder
     contenido?: SortOrder
     imagenUrl?: SortOrder
+    videoUrl?: SortOrder
     categoria?: SortOrder
     destacado?: SortOrder
     publicado?: SortOrder
@@ -26975,6 +30946,7 @@ export namespace Prisma {
     subtitulo?: SortOrder
     contenido?: SortOrder
     imagenUrl?: SortOrder
+    videoUrl?: SortOrder
     categoria?: SortOrder
     destacado?: SortOrder
     publicado?: SortOrder
@@ -27044,6 +31016,115 @@ export namespace Prisma {
     usosActuales?: SortOrder
   }
 
+  export type CuentaPorCobrarCountOrderByAggregateInput = {
+    id?: SortOrder
+    empresaId?: SortOrder
+    facturaId?: SortOrder
+    clienteId?: SortOrder
+    usuarioId?: SortOrder
+    montoOriginal?: SortOrder
+    montoCobrado?: SortOrder
+    montoPendiente?: SortOrder
+    fechaEmision?: SortOrder
+    fechaVencimiento?: SortOrder
+    estado?: SortOrder
+    diasVencido?: SortOrder
+    ultimaGestion?: SortOrder
+    notas?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CuentaPorCobrarAvgOrderByAggregateInput = {
+    montoOriginal?: SortOrder
+    montoCobrado?: SortOrder
+    montoPendiente?: SortOrder
+    diasVencido?: SortOrder
+  }
+
+  export type CuentaPorCobrarMaxOrderByAggregateInput = {
+    id?: SortOrder
+    empresaId?: SortOrder
+    facturaId?: SortOrder
+    clienteId?: SortOrder
+    usuarioId?: SortOrder
+    montoOriginal?: SortOrder
+    montoCobrado?: SortOrder
+    montoPendiente?: SortOrder
+    fechaEmision?: SortOrder
+    fechaVencimiento?: SortOrder
+    estado?: SortOrder
+    diasVencido?: SortOrder
+    ultimaGestion?: SortOrder
+    notas?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CuentaPorCobrarMinOrderByAggregateInput = {
+    id?: SortOrder
+    empresaId?: SortOrder
+    facturaId?: SortOrder
+    clienteId?: SortOrder
+    usuarioId?: SortOrder
+    montoOriginal?: SortOrder
+    montoCobrado?: SortOrder
+    montoPendiente?: SortOrder
+    fechaEmision?: SortOrder
+    fechaVencimiento?: SortOrder
+    estado?: SortOrder
+    diasVencido?: SortOrder
+    ultimaGestion?: SortOrder
+    notas?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type CuentaPorCobrarSumOrderByAggregateInput = {
+    montoOriginal?: SortOrder
+    montoCobrado?: SortOrder
+    montoPendiente?: SortOrder
+    diasVencido?: SortOrder
+  }
+
+  export type CuentaPorCobrarRelationFilter = {
+    is?: CuentaPorCobrarWhereInput
+    isNot?: CuentaPorCobrarWhereInput
+  }
+
+  export type GestionCobranzaCountOrderByAggregateInput = {
+    id?: SortOrder
+    cuentaPorCobrarId?: SortOrder
+    empresaId?: SortOrder
+    usuarioId?: SortOrder
+    accion?: SortOrder
+    notas?: SortOrder
+    fecha?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type GestionCobranzaMaxOrderByAggregateInput = {
+    id?: SortOrder
+    cuentaPorCobrarId?: SortOrder
+    empresaId?: SortOrder
+    usuarioId?: SortOrder
+    accion?: SortOrder
+    notas?: SortOrder
+    fecha?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type GestionCobranzaMinOrderByAggregateInput = {
+    id?: SortOrder
+    cuentaPorCobrarId?: SortOrder
+    empresaId?: SortOrder
+    usuarioId?: SortOrder
+    accion?: SortOrder
+    notas?: SortOrder
+    fecha?: SortOrder
+    createdAt?: SortOrder
+  }
+
   export type UsuarioCreateNestedManyWithoutEmpresaRefInput = {
     create?: XOR<UsuarioCreateWithoutEmpresaRefInput, UsuarioUncheckedCreateWithoutEmpresaRefInput> | UsuarioCreateWithoutEmpresaRefInput[] | UsuarioUncheckedCreateWithoutEmpresaRefInput[]
     connectOrCreate?: UsuarioCreateOrConnectWithoutEmpresaRefInput | UsuarioCreateOrConnectWithoutEmpresaRefInput[]
@@ -27084,6 +31165,13 @@ export namespace Prisma {
     connectOrCreate?: AuditLogCreateOrConnectWithoutEmpresaInput | AuditLogCreateOrConnectWithoutEmpresaInput[]
     createMany?: AuditLogCreateManyEmpresaInputEnvelope
     connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+  }
+
+  export type CuentaPorCobrarCreateNestedManyWithoutEmpresaInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutEmpresaInput, CuentaPorCobrarUncheckedCreateWithoutEmpresaInput> | CuentaPorCobrarCreateWithoutEmpresaInput[] | CuentaPorCobrarUncheckedCreateWithoutEmpresaInput[]
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutEmpresaInput | CuentaPorCobrarCreateOrConnectWithoutEmpresaInput[]
+    createMany?: CuentaPorCobrarCreateManyEmpresaInputEnvelope
+    connect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
   }
 
   export type UsuarioUncheckedCreateNestedManyWithoutEmpresaRefInput = {
@@ -27128,6 +31216,13 @@ export namespace Prisma {
     connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
   }
 
+  export type CuentaPorCobrarUncheckedCreateNestedManyWithoutEmpresaInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutEmpresaInput, CuentaPorCobrarUncheckedCreateWithoutEmpresaInput> | CuentaPorCobrarCreateWithoutEmpresaInput[] | CuentaPorCobrarUncheckedCreateWithoutEmpresaInput[]
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutEmpresaInput | CuentaPorCobrarCreateOrConnectWithoutEmpresaInput[]
+    createMany?: CuentaPorCobrarCreateManyEmpresaInputEnvelope
+    connect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+  }
+
   export type StringFieldUpdateOperationsInput = {
     set?: string
   }
@@ -27136,12 +31231,20 @@ export namespace Prisma {
     set?: string | null
   }
 
-  export type BoolFieldUpdateOperationsInput = {
-    set?: boolean
+  export type NullableFloatFieldUpdateOperationsInput = {
+    set?: number | null
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
   }
 
   export type NullableDateTimeFieldUpdateOperationsInput = {
     set?: Date | string | null
+  }
+
+  export type BoolFieldUpdateOperationsInput = {
+    set?: boolean
   }
 
   export type DateTimeFieldUpdateOperationsInput = {
@@ -27232,6 +31335,20 @@ export namespace Prisma {
     deleteMany?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
   }
 
+  export type CuentaPorCobrarUpdateManyWithoutEmpresaNestedInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutEmpresaInput, CuentaPorCobrarUncheckedCreateWithoutEmpresaInput> | CuentaPorCobrarCreateWithoutEmpresaInput[] | CuentaPorCobrarUncheckedCreateWithoutEmpresaInput[]
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutEmpresaInput | CuentaPorCobrarCreateOrConnectWithoutEmpresaInput[]
+    upsert?: CuentaPorCobrarUpsertWithWhereUniqueWithoutEmpresaInput | CuentaPorCobrarUpsertWithWhereUniqueWithoutEmpresaInput[]
+    createMany?: CuentaPorCobrarCreateManyEmpresaInputEnvelope
+    set?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    disconnect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    delete?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    connect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    update?: CuentaPorCobrarUpdateWithWhereUniqueWithoutEmpresaInput | CuentaPorCobrarUpdateWithWhereUniqueWithoutEmpresaInput[]
+    updateMany?: CuentaPorCobrarUpdateManyWithWhereWithoutEmpresaInput | CuentaPorCobrarUpdateManyWithWhereWithoutEmpresaInput[]
+    deleteMany?: CuentaPorCobrarScalarWhereInput | CuentaPorCobrarScalarWhereInput[]
+  }
+
   export type UsuarioUncheckedUpdateManyWithoutEmpresaRefNestedInput = {
     create?: XOR<UsuarioCreateWithoutEmpresaRefInput, UsuarioUncheckedCreateWithoutEmpresaRefInput> | UsuarioCreateWithoutEmpresaRefInput[] | UsuarioUncheckedCreateWithoutEmpresaRefInput[]
     connectOrCreate?: UsuarioCreateOrConnectWithoutEmpresaRefInput | UsuarioCreateOrConnectWithoutEmpresaRefInput[]
@@ -27314,6 +31431,20 @@ export namespace Prisma {
     update?: AuditLogUpdateWithWhereUniqueWithoutEmpresaInput | AuditLogUpdateWithWhereUniqueWithoutEmpresaInput[]
     updateMany?: AuditLogUpdateManyWithWhereWithoutEmpresaInput | AuditLogUpdateManyWithWhereWithoutEmpresaInput[]
     deleteMany?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
+  }
+
+  export type CuentaPorCobrarUncheckedUpdateManyWithoutEmpresaNestedInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutEmpresaInput, CuentaPorCobrarUncheckedCreateWithoutEmpresaInput> | CuentaPorCobrarCreateWithoutEmpresaInput[] | CuentaPorCobrarUncheckedCreateWithoutEmpresaInput[]
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutEmpresaInput | CuentaPorCobrarCreateOrConnectWithoutEmpresaInput[]
+    upsert?: CuentaPorCobrarUpsertWithWhereUniqueWithoutEmpresaInput | CuentaPorCobrarUpsertWithWhereUniqueWithoutEmpresaInput[]
+    createMany?: CuentaPorCobrarCreateManyEmpresaInputEnvelope
+    set?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    disconnect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    delete?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    connect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    update?: CuentaPorCobrarUpdateWithWhereUniqueWithoutEmpresaInput | CuentaPorCobrarUpdateWithWhereUniqueWithoutEmpresaInput[]
+    updateMany?: CuentaPorCobrarUpdateManyWithWhereWithoutEmpresaInput | CuentaPorCobrarUpdateManyWithWhereWithoutEmpresaInput[]
+    deleteMany?: CuentaPorCobrarScalarWhereInput | CuentaPorCobrarScalarWhereInput[]
   }
 
   export type EmpresaCreateNestedOneWithoutRolesInput = {
@@ -27538,6 +31669,13 @@ export namespace Prisma {
     connect?: CotizacionWhereUniqueInput | CotizacionWhereUniqueInput[]
   }
 
+  export type CuentaPorCobrarCreateNestedManyWithoutClienteInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutClienteInput, CuentaPorCobrarUncheckedCreateWithoutClienteInput> | CuentaPorCobrarCreateWithoutClienteInput[] | CuentaPorCobrarUncheckedCreateWithoutClienteInput[]
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutClienteInput | CuentaPorCobrarCreateOrConnectWithoutClienteInput[]
+    createMany?: CuentaPorCobrarCreateManyClienteInputEnvelope
+    connect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+  }
+
   export type FacturaUncheckedCreateNestedManyWithoutClienteInput = {
     create?: XOR<FacturaCreateWithoutClienteInput, FacturaUncheckedCreateWithoutClienteInput> | FacturaCreateWithoutClienteInput[] | FacturaUncheckedCreateWithoutClienteInput[]
     connectOrCreate?: FacturaCreateOrConnectWithoutClienteInput | FacturaCreateOrConnectWithoutClienteInput[]
@@ -27550,6 +31688,13 @@ export namespace Prisma {
     connectOrCreate?: CotizacionCreateOrConnectWithoutClienteInput | CotizacionCreateOrConnectWithoutClienteInput[]
     createMany?: CotizacionCreateManyClienteInputEnvelope
     connect?: CotizacionWhereUniqueInput | CotizacionWhereUniqueInput[]
+  }
+
+  export type CuentaPorCobrarUncheckedCreateNestedManyWithoutClienteInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutClienteInput, CuentaPorCobrarUncheckedCreateWithoutClienteInput> | CuentaPorCobrarCreateWithoutClienteInput[] | CuentaPorCobrarUncheckedCreateWithoutClienteInput[]
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutClienteInput | CuentaPorCobrarCreateOrConnectWithoutClienteInput[]
+    createMany?: CuentaPorCobrarCreateManyClienteInputEnvelope
+    connect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
   }
 
   export type UsuarioUpdateOneWithoutClientesNestedInput = {
@@ -27590,6 +31735,20 @@ export namespace Prisma {
     deleteMany?: CotizacionScalarWhereInput | CotizacionScalarWhereInput[]
   }
 
+  export type CuentaPorCobrarUpdateManyWithoutClienteNestedInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutClienteInput, CuentaPorCobrarUncheckedCreateWithoutClienteInput> | CuentaPorCobrarCreateWithoutClienteInput[] | CuentaPorCobrarUncheckedCreateWithoutClienteInput[]
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutClienteInput | CuentaPorCobrarCreateOrConnectWithoutClienteInput[]
+    upsert?: CuentaPorCobrarUpsertWithWhereUniqueWithoutClienteInput | CuentaPorCobrarUpsertWithWhereUniqueWithoutClienteInput[]
+    createMany?: CuentaPorCobrarCreateManyClienteInputEnvelope
+    set?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    disconnect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    delete?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    connect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    update?: CuentaPorCobrarUpdateWithWhereUniqueWithoutClienteInput | CuentaPorCobrarUpdateWithWhereUniqueWithoutClienteInput[]
+    updateMany?: CuentaPorCobrarUpdateManyWithWhereWithoutClienteInput | CuentaPorCobrarUpdateManyWithWhereWithoutClienteInput[]
+    deleteMany?: CuentaPorCobrarScalarWhereInput | CuentaPorCobrarScalarWhereInput[]
+  }
+
   export type FacturaUncheckedUpdateManyWithoutClienteNestedInput = {
     create?: XOR<FacturaCreateWithoutClienteInput, FacturaUncheckedCreateWithoutClienteInput> | FacturaCreateWithoutClienteInput[] | FacturaUncheckedCreateWithoutClienteInput[]
     connectOrCreate?: FacturaCreateOrConnectWithoutClienteInput | FacturaCreateOrConnectWithoutClienteInput[]
@@ -27618,6 +31777,20 @@ export namespace Prisma {
     deleteMany?: CotizacionScalarWhereInput | CotizacionScalarWhereInput[]
   }
 
+  export type CuentaPorCobrarUncheckedUpdateManyWithoutClienteNestedInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutClienteInput, CuentaPorCobrarUncheckedCreateWithoutClienteInput> | CuentaPorCobrarCreateWithoutClienteInput[] | CuentaPorCobrarUncheckedCreateWithoutClienteInput[]
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutClienteInput | CuentaPorCobrarCreateOrConnectWithoutClienteInput[]
+    upsert?: CuentaPorCobrarUpsertWithWhereUniqueWithoutClienteInput | CuentaPorCobrarUpsertWithWhereUniqueWithoutClienteInput[]
+    createMany?: CuentaPorCobrarCreateManyClienteInputEnvelope
+    set?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    disconnect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    delete?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    connect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    update?: CuentaPorCobrarUpdateWithWhereUniqueWithoutClienteInput | CuentaPorCobrarUpdateWithWhereUniqueWithoutClienteInput[]
+    updateMany?: CuentaPorCobrarUpdateManyWithWhereWithoutClienteInput | CuentaPorCobrarUpdateManyWithWhereWithoutClienteInput[]
+    deleteMany?: CuentaPorCobrarScalarWhereInput | CuentaPorCobrarScalarWhereInput[]
+  }
+
   export type UsuarioCreateNestedOneWithoutProductosInput = {
     create?: XOR<UsuarioCreateWithoutProductosInput, UsuarioUncheckedCreateWithoutProductosInput>
     connectOrCreate?: UsuarioCreateOrConnectWithoutProductosInput
@@ -27631,6 +31804,13 @@ export namespace Prisma {
     connect?: ItemFacturaWhereUniqueInput | ItemFacturaWhereUniqueInput[]
   }
 
+  export type ItemCotizacionCreateNestedManyWithoutProductoInput = {
+    create?: XOR<ItemCotizacionCreateWithoutProductoInput, ItemCotizacionUncheckedCreateWithoutProductoInput> | ItemCotizacionCreateWithoutProductoInput[] | ItemCotizacionUncheckedCreateWithoutProductoInput[]
+    connectOrCreate?: ItemCotizacionCreateOrConnectWithoutProductoInput | ItemCotizacionCreateOrConnectWithoutProductoInput[]
+    createMany?: ItemCotizacionCreateManyProductoInputEnvelope
+    connect?: ItemCotizacionWhereUniqueInput | ItemCotizacionWhereUniqueInput[]
+  }
+
   export type ItemFacturaUncheckedCreateNestedManyWithoutProductoInput = {
     create?: XOR<ItemFacturaCreateWithoutProductoInput, ItemFacturaUncheckedCreateWithoutProductoInput> | ItemFacturaCreateWithoutProductoInput[] | ItemFacturaUncheckedCreateWithoutProductoInput[]
     connectOrCreate?: ItemFacturaCreateOrConnectWithoutProductoInput | ItemFacturaCreateOrConnectWithoutProductoInput[]
@@ -27638,16 +31818,15 @@ export namespace Prisma {
     connect?: ItemFacturaWhereUniqueInput | ItemFacturaWhereUniqueInput[]
   }
 
-  export type FloatFieldUpdateOperationsInput = {
-    set?: number
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
+  export type ItemCotizacionUncheckedCreateNestedManyWithoutProductoInput = {
+    create?: XOR<ItemCotizacionCreateWithoutProductoInput, ItemCotizacionUncheckedCreateWithoutProductoInput> | ItemCotizacionCreateWithoutProductoInput[] | ItemCotizacionUncheckedCreateWithoutProductoInput[]
+    connectOrCreate?: ItemCotizacionCreateOrConnectWithoutProductoInput | ItemCotizacionCreateOrConnectWithoutProductoInput[]
+    createMany?: ItemCotizacionCreateManyProductoInputEnvelope
+    connect?: ItemCotizacionWhereUniqueInput | ItemCotizacionWhereUniqueInput[]
   }
 
-  export type NullableFloatFieldUpdateOperationsInput = {
-    set?: number | null
+  export type FloatFieldUpdateOperationsInput = {
+    set?: number
     increment?: number
     decrement?: number
     multiply?: number
@@ -27676,6 +31855,20 @@ export namespace Prisma {
     deleteMany?: ItemFacturaScalarWhereInput | ItemFacturaScalarWhereInput[]
   }
 
+  export type ItemCotizacionUpdateManyWithoutProductoNestedInput = {
+    create?: XOR<ItemCotizacionCreateWithoutProductoInput, ItemCotizacionUncheckedCreateWithoutProductoInput> | ItemCotizacionCreateWithoutProductoInput[] | ItemCotizacionUncheckedCreateWithoutProductoInput[]
+    connectOrCreate?: ItemCotizacionCreateOrConnectWithoutProductoInput | ItemCotizacionCreateOrConnectWithoutProductoInput[]
+    upsert?: ItemCotizacionUpsertWithWhereUniqueWithoutProductoInput | ItemCotizacionUpsertWithWhereUniqueWithoutProductoInput[]
+    createMany?: ItemCotizacionCreateManyProductoInputEnvelope
+    set?: ItemCotizacionWhereUniqueInput | ItemCotizacionWhereUniqueInput[]
+    disconnect?: ItemCotizacionWhereUniqueInput | ItemCotizacionWhereUniqueInput[]
+    delete?: ItemCotizacionWhereUniqueInput | ItemCotizacionWhereUniqueInput[]
+    connect?: ItemCotizacionWhereUniqueInput | ItemCotizacionWhereUniqueInput[]
+    update?: ItemCotizacionUpdateWithWhereUniqueWithoutProductoInput | ItemCotizacionUpdateWithWhereUniqueWithoutProductoInput[]
+    updateMany?: ItemCotizacionUpdateManyWithWhereWithoutProductoInput | ItemCotizacionUpdateManyWithWhereWithoutProductoInput[]
+    deleteMany?: ItemCotizacionScalarWhereInput | ItemCotizacionScalarWhereInput[]
+  }
+
   export type ItemFacturaUncheckedUpdateManyWithoutProductoNestedInput = {
     create?: XOR<ItemFacturaCreateWithoutProductoInput, ItemFacturaUncheckedCreateWithoutProductoInput> | ItemFacturaCreateWithoutProductoInput[] | ItemFacturaUncheckedCreateWithoutProductoInput[]
     connectOrCreate?: ItemFacturaCreateOrConnectWithoutProductoInput | ItemFacturaCreateOrConnectWithoutProductoInput[]
@@ -27688,6 +31881,20 @@ export namespace Prisma {
     update?: ItemFacturaUpdateWithWhereUniqueWithoutProductoInput | ItemFacturaUpdateWithWhereUniqueWithoutProductoInput[]
     updateMany?: ItemFacturaUpdateManyWithWhereWithoutProductoInput | ItemFacturaUpdateManyWithWhereWithoutProductoInput[]
     deleteMany?: ItemFacturaScalarWhereInput | ItemFacturaScalarWhereInput[]
+  }
+
+  export type ItemCotizacionUncheckedUpdateManyWithoutProductoNestedInput = {
+    create?: XOR<ItemCotizacionCreateWithoutProductoInput, ItemCotizacionUncheckedCreateWithoutProductoInput> | ItemCotizacionCreateWithoutProductoInput[] | ItemCotizacionUncheckedCreateWithoutProductoInput[]
+    connectOrCreate?: ItemCotizacionCreateOrConnectWithoutProductoInput | ItemCotizacionCreateOrConnectWithoutProductoInput[]
+    upsert?: ItemCotizacionUpsertWithWhereUniqueWithoutProductoInput | ItemCotizacionUpsertWithWhereUniqueWithoutProductoInput[]
+    createMany?: ItemCotizacionCreateManyProductoInputEnvelope
+    set?: ItemCotizacionWhereUniqueInput | ItemCotizacionWhereUniqueInput[]
+    disconnect?: ItemCotizacionWhereUniqueInput | ItemCotizacionWhereUniqueInput[]
+    delete?: ItemCotizacionWhereUniqueInput | ItemCotizacionWhereUniqueInput[]
+    connect?: ItemCotizacionWhereUniqueInput | ItemCotizacionWhereUniqueInput[]
+    update?: ItemCotizacionUpdateWithWhereUniqueWithoutProductoInput | ItemCotizacionUpdateWithWhereUniqueWithoutProductoInput[]
+    updateMany?: ItemCotizacionUpdateManyWithWhereWithoutProductoInput | ItemCotizacionUpdateManyWithWhereWithoutProductoInput[]
+    deleteMany?: ItemCotizacionScalarWhereInput | ItemCotizacionScalarWhereInput[]
   }
 
   export type ClienteCreateNestedOneWithoutFacturasInput = {
@@ -27722,6 +31929,18 @@ export namespace Prisma {
     connect?: PagoWhereUniqueInput | PagoWhereUniqueInput[]
   }
 
+  export type CotizacionCreateNestedOneWithoutFacturaInput = {
+    create?: XOR<CotizacionCreateWithoutFacturaInput, CotizacionUncheckedCreateWithoutFacturaInput>
+    connectOrCreate?: CotizacionCreateOrConnectWithoutFacturaInput
+    connect?: CotizacionWhereUniqueInput
+  }
+
+  export type CuentaPorCobrarCreateNestedOneWithoutFacturaInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutFacturaInput, CuentaPorCobrarUncheckedCreateWithoutFacturaInput>
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutFacturaInput
+    connect?: CuentaPorCobrarWhereUniqueInput
+  }
+
   export type ItemFacturaUncheckedCreateNestedManyWithoutFacturaInput = {
     create?: XOR<ItemFacturaCreateWithoutFacturaInput, ItemFacturaUncheckedCreateWithoutFacturaInput> | ItemFacturaCreateWithoutFacturaInput[] | ItemFacturaUncheckedCreateWithoutFacturaInput[]
     connectOrCreate?: ItemFacturaCreateOrConnectWithoutFacturaInput | ItemFacturaCreateOrConnectWithoutFacturaInput[]
@@ -27734,6 +31953,18 @@ export namespace Prisma {
     connectOrCreate?: PagoCreateOrConnectWithoutFacturaInput | PagoCreateOrConnectWithoutFacturaInput[]
     createMany?: PagoCreateManyFacturaInputEnvelope
     connect?: PagoWhereUniqueInput | PagoWhereUniqueInput[]
+  }
+
+  export type CotizacionUncheckedCreateNestedOneWithoutFacturaInput = {
+    create?: XOR<CotizacionCreateWithoutFacturaInput, CotizacionUncheckedCreateWithoutFacturaInput>
+    connectOrCreate?: CotizacionCreateOrConnectWithoutFacturaInput
+    connect?: CotizacionWhereUniqueInput
+  }
+
+  export type CuentaPorCobrarUncheckedCreateNestedOneWithoutFacturaInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutFacturaInput, CuentaPorCobrarUncheckedCreateWithoutFacturaInput>
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutFacturaInput
+    connect?: CuentaPorCobrarWhereUniqueInput
   }
 
   export type IntFieldUpdateOperationsInput = {
@@ -27800,6 +32031,26 @@ export namespace Prisma {
     deleteMany?: PagoScalarWhereInput | PagoScalarWhereInput[]
   }
 
+  export type CotizacionUpdateOneWithoutFacturaNestedInput = {
+    create?: XOR<CotizacionCreateWithoutFacturaInput, CotizacionUncheckedCreateWithoutFacturaInput>
+    connectOrCreate?: CotizacionCreateOrConnectWithoutFacturaInput
+    upsert?: CotizacionUpsertWithoutFacturaInput
+    disconnect?: CotizacionWhereInput | boolean
+    delete?: CotizacionWhereInput | boolean
+    connect?: CotizacionWhereUniqueInput
+    update?: XOR<XOR<CotizacionUpdateToOneWithWhereWithoutFacturaInput, CotizacionUpdateWithoutFacturaInput>, CotizacionUncheckedUpdateWithoutFacturaInput>
+  }
+
+  export type CuentaPorCobrarUpdateOneWithoutFacturaNestedInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutFacturaInput, CuentaPorCobrarUncheckedCreateWithoutFacturaInput>
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutFacturaInput
+    upsert?: CuentaPorCobrarUpsertWithoutFacturaInput
+    disconnect?: CuentaPorCobrarWhereInput | boolean
+    delete?: CuentaPorCobrarWhereInput | boolean
+    connect?: CuentaPorCobrarWhereUniqueInput
+    update?: XOR<XOR<CuentaPorCobrarUpdateToOneWithWhereWithoutFacturaInput, CuentaPorCobrarUpdateWithoutFacturaInput>, CuentaPorCobrarUncheckedUpdateWithoutFacturaInput>
+  }
+
   export type ItemFacturaUncheckedUpdateManyWithoutFacturaNestedInput = {
     create?: XOR<ItemFacturaCreateWithoutFacturaInput, ItemFacturaUncheckedCreateWithoutFacturaInput> | ItemFacturaCreateWithoutFacturaInput[] | ItemFacturaUncheckedCreateWithoutFacturaInput[]
     connectOrCreate?: ItemFacturaCreateOrConnectWithoutFacturaInput | ItemFacturaCreateOrConnectWithoutFacturaInput[]
@@ -27826,6 +32077,26 @@ export namespace Prisma {
     update?: PagoUpdateWithWhereUniqueWithoutFacturaInput | PagoUpdateWithWhereUniqueWithoutFacturaInput[]
     updateMany?: PagoUpdateManyWithWhereWithoutFacturaInput | PagoUpdateManyWithWhereWithoutFacturaInput[]
     deleteMany?: PagoScalarWhereInput | PagoScalarWhereInput[]
+  }
+
+  export type CotizacionUncheckedUpdateOneWithoutFacturaNestedInput = {
+    create?: XOR<CotizacionCreateWithoutFacturaInput, CotizacionUncheckedCreateWithoutFacturaInput>
+    connectOrCreate?: CotizacionCreateOrConnectWithoutFacturaInput
+    upsert?: CotizacionUpsertWithoutFacturaInput
+    disconnect?: CotizacionWhereInput | boolean
+    delete?: CotizacionWhereInput | boolean
+    connect?: CotizacionWhereUniqueInput
+    update?: XOR<XOR<CotizacionUpdateToOneWithWhereWithoutFacturaInput, CotizacionUpdateWithoutFacturaInput>, CotizacionUncheckedUpdateWithoutFacturaInput>
+  }
+
+  export type CuentaPorCobrarUncheckedUpdateOneWithoutFacturaNestedInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutFacturaInput, CuentaPorCobrarUncheckedCreateWithoutFacturaInput>
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutFacturaInput
+    upsert?: CuentaPorCobrarUpsertWithoutFacturaInput
+    disconnect?: CuentaPorCobrarWhereInput | boolean
+    delete?: CuentaPorCobrarWhereInput | boolean
+    connect?: CuentaPorCobrarWhereUniqueInput
+    update?: XOR<XOR<CuentaPorCobrarUpdateToOneWithWhereWithoutFacturaInput, CuentaPorCobrarUpdateWithoutFacturaInput>, CuentaPorCobrarUncheckedUpdateWithoutFacturaInput>
   }
 
   export type FacturaCreateNestedOneWithoutItemsInput = {
@@ -27922,6 +32193,12 @@ export namespace Prisma {
     connect?: EmpresaWhereUniqueInput
   }
 
+  export type FacturaCreateNestedOneWithoutCotizacionOrigenInput = {
+    create?: XOR<FacturaCreateWithoutCotizacionOrigenInput, FacturaUncheckedCreateWithoutCotizacionOrigenInput>
+    connectOrCreate?: FacturaCreateOrConnectWithoutCotizacionOrigenInput
+    connect?: FacturaWhereUniqueInput
+  }
+
   export type ItemCotizacionCreateNestedManyWithoutCotizacionInput = {
     create?: XOR<ItemCotizacionCreateWithoutCotizacionInput, ItemCotizacionUncheckedCreateWithoutCotizacionInput> | ItemCotizacionCreateWithoutCotizacionInput[] | ItemCotizacionUncheckedCreateWithoutCotizacionInput[]
     connectOrCreate?: ItemCotizacionCreateOrConnectWithoutCotizacionInput | ItemCotizacionCreateOrConnectWithoutCotizacionInput[]
@@ -27964,6 +32241,16 @@ export namespace Prisma {
     update?: XOR<XOR<EmpresaUpdateToOneWithWhereWithoutCotizacionesInput, EmpresaUpdateWithoutCotizacionesInput>, EmpresaUncheckedUpdateWithoutCotizacionesInput>
   }
 
+  export type FacturaUpdateOneWithoutCotizacionOrigenNestedInput = {
+    create?: XOR<FacturaCreateWithoutCotizacionOrigenInput, FacturaUncheckedCreateWithoutCotizacionOrigenInput>
+    connectOrCreate?: FacturaCreateOrConnectWithoutCotizacionOrigenInput
+    upsert?: FacturaUpsertWithoutCotizacionOrigenInput
+    disconnect?: FacturaWhereInput | boolean
+    delete?: FacturaWhereInput | boolean
+    connect?: FacturaWhereUniqueInput
+    update?: XOR<XOR<FacturaUpdateToOneWithWhereWithoutCotizacionOrigenInput, FacturaUpdateWithoutCotizacionOrigenInput>, FacturaUncheckedUpdateWithoutCotizacionOrigenInput>
+  }
+
   export type ItemCotizacionUpdateManyWithoutCotizacionNestedInput = {
     create?: XOR<ItemCotizacionCreateWithoutCotizacionInput, ItemCotizacionUncheckedCreateWithoutCotizacionInput> | ItemCotizacionCreateWithoutCotizacionInput[] | ItemCotizacionUncheckedCreateWithoutCotizacionInput[]
     connectOrCreate?: ItemCotizacionCreateOrConnectWithoutCotizacionInput | ItemCotizacionCreateOrConnectWithoutCotizacionInput[]
@@ -27998,12 +32285,28 @@ export namespace Prisma {
     connect?: CotizacionWhereUniqueInput
   }
 
+  export type ProductoCreateNestedOneWithoutItemsCotizacionInput = {
+    create?: XOR<ProductoCreateWithoutItemsCotizacionInput, ProductoUncheckedCreateWithoutItemsCotizacionInput>
+    connectOrCreate?: ProductoCreateOrConnectWithoutItemsCotizacionInput
+    connect?: ProductoWhereUniqueInput
+  }
+
   export type CotizacionUpdateOneRequiredWithoutItemsNestedInput = {
     create?: XOR<CotizacionCreateWithoutItemsInput, CotizacionUncheckedCreateWithoutItemsInput>
     connectOrCreate?: CotizacionCreateOrConnectWithoutItemsInput
     upsert?: CotizacionUpsertWithoutItemsInput
     connect?: CotizacionWhereUniqueInput
     update?: XOR<XOR<CotizacionUpdateToOneWithWhereWithoutItemsInput, CotizacionUpdateWithoutItemsInput>, CotizacionUncheckedUpdateWithoutItemsInput>
+  }
+
+  export type ProductoUpdateOneWithoutItemsCotizacionNestedInput = {
+    create?: XOR<ProductoCreateWithoutItemsCotizacionInput, ProductoUncheckedCreateWithoutItemsCotizacionInput>
+    connectOrCreate?: ProductoCreateOrConnectWithoutItemsCotizacionInput
+    upsert?: ProductoUpsertWithoutItemsCotizacionInput
+    disconnect?: ProductoWhereInput | boolean
+    delete?: ProductoWhereInput | boolean
+    connect?: ProductoWhereUniqueInput
+    update?: XOR<XOR<ProductoUpdateToOneWithWhereWithoutItemsCotizacionInput, ProductoUpdateWithoutItemsCotizacionInput>, ProductoUncheckedUpdateWithoutItemsCotizacionInput>
   }
 
   export type RolCreateNestedOneWithoutUsuariosInput = {
@@ -28080,6 +32383,20 @@ export namespace Prisma {
     connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
   }
 
+  export type CuentaPorCobrarCreateNestedManyWithoutUsuarioInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutUsuarioInput, CuentaPorCobrarUncheckedCreateWithoutUsuarioInput> | CuentaPorCobrarCreateWithoutUsuarioInput[] | CuentaPorCobrarUncheckedCreateWithoutUsuarioInput[]
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutUsuarioInput | CuentaPorCobrarCreateOrConnectWithoutUsuarioInput[]
+    createMany?: CuentaPorCobrarCreateManyUsuarioInputEnvelope
+    connect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+  }
+
+  export type GestionCobranzaCreateNestedManyWithoutUsuarioInput = {
+    create?: XOR<GestionCobranzaCreateWithoutUsuarioInput, GestionCobranzaUncheckedCreateWithoutUsuarioInput> | GestionCobranzaCreateWithoutUsuarioInput[] | GestionCobranzaUncheckedCreateWithoutUsuarioInput[]
+    connectOrCreate?: GestionCobranzaCreateOrConnectWithoutUsuarioInput | GestionCobranzaCreateOrConnectWithoutUsuarioInput[]
+    createMany?: GestionCobranzaCreateManyUsuarioInputEnvelope
+    connect?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+  }
+
   export type UsuarioUncheckedCreateNestedManyWithoutEmpresaInput = {
     create?: XOR<UsuarioCreateWithoutEmpresaInput, UsuarioUncheckedCreateWithoutEmpresaInput> | UsuarioCreateWithoutEmpresaInput[] | UsuarioUncheckedCreateWithoutEmpresaInput[]
     connectOrCreate?: UsuarioCreateOrConnectWithoutEmpresaInput | UsuarioCreateOrConnectWithoutEmpresaInput[]
@@ -28134,6 +32451,20 @@ export namespace Prisma {
     connectOrCreate?: AuditLogCreateOrConnectWithoutUsuarioInput | AuditLogCreateOrConnectWithoutUsuarioInput[]
     createMany?: AuditLogCreateManyUsuarioInputEnvelope
     connect?: AuditLogWhereUniqueInput | AuditLogWhereUniqueInput[]
+  }
+
+  export type CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutUsuarioInput, CuentaPorCobrarUncheckedCreateWithoutUsuarioInput> | CuentaPorCobrarCreateWithoutUsuarioInput[] | CuentaPorCobrarUncheckedCreateWithoutUsuarioInput[]
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutUsuarioInput | CuentaPorCobrarCreateOrConnectWithoutUsuarioInput[]
+    createMany?: CuentaPorCobrarCreateManyUsuarioInputEnvelope
+    connect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+  }
+
+  export type GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput = {
+    create?: XOR<GestionCobranzaCreateWithoutUsuarioInput, GestionCobranzaUncheckedCreateWithoutUsuarioInput> | GestionCobranzaCreateWithoutUsuarioInput[] | GestionCobranzaUncheckedCreateWithoutUsuarioInput[]
+    connectOrCreate?: GestionCobranzaCreateOrConnectWithoutUsuarioInput | GestionCobranzaCreateOrConnectWithoutUsuarioInput[]
+    createMany?: GestionCobranzaCreateManyUsuarioInputEnvelope
+    connect?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
   }
 
   export type RolUpdateOneWithoutUsuariosNestedInput = {
@@ -28278,6 +32609,34 @@ export namespace Prisma {
     deleteMany?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
   }
 
+  export type CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutUsuarioInput, CuentaPorCobrarUncheckedCreateWithoutUsuarioInput> | CuentaPorCobrarCreateWithoutUsuarioInput[] | CuentaPorCobrarUncheckedCreateWithoutUsuarioInput[]
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutUsuarioInput | CuentaPorCobrarCreateOrConnectWithoutUsuarioInput[]
+    upsert?: CuentaPorCobrarUpsertWithWhereUniqueWithoutUsuarioInput | CuentaPorCobrarUpsertWithWhereUniqueWithoutUsuarioInput[]
+    createMany?: CuentaPorCobrarCreateManyUsuarioInputEnvelope
+    set?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    disconnect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    delete?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    connect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    update?: CuentaPorCobrarUpdateWithWhereUniqueWithoutUsuarioInput | CuentaPorCobrarUpdateWithWhereUniqueWithoutUsuarioInput[]
+    updateMany?: CuentaPorCobrarUpdateManyWithWhereWithoutUsuarioInput | CuentaPorCobrarUpdateManyWithWhereWithoutUsuarioInput[]
+    deleteMany?: CuentaPorCobrarScalarWhereInput | CuentaPorCobrarScalarWhereInput[]
+  }
+
+  export type GestionCobranzaUpdateManyWithoutUsuarioNestedInput = {
+    create?: XOR<GestionCobranzaCreateWithoutUsuarioInput, GestionCobranzaUncheckedCreateWithoutUsuarioInput> | GestionCobranzaCreateWithoutUsuarioInput[] | GestionCobranzaUncheckedCreateWithoutUsuarioInput[]
+    connectOrCreate?: GestionCobranzaCreateOrConnectWithoutUsuarioInput | GestionCobranzaCreateOrConnectWithoutUsuarioInput[]
+    upsert?: GestionCobranzaUpsertWithWhereUniqueWithoutUsuarioInput | GestionCobranzaUpsertWithWhereUniqueWithoutUsuarioInput[]
+    createMany?: GestionCobranzaCreateManyUsuarioInputEnvelope
+    set?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    disconnect?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    delete?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    connect?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    update?: GestionCobranzaUpdateWithWhereUniqueWithoutUsuarioInput | GestionCobranzaUpdateWithWhereUniqueWithoutUsuarioInput[]
+    updateMany?: GestionCobranzaUpdateManyWithWhereWithoutUsuarioInput | GestionCobranzaUpdateManyWithWhereWithoutUsuarioInput[]
+    deleteMany?: GestionCobranzaScalarWhereInput | GestionCobranzaScalarWhereInput[]
+  }
+
   export type UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput = {
     create?: XOR<UsuarioCreateWithoutEmpresaInput, UsuarioUncheckedCreateWithoutEmpresaInput> | UsuarioCreateWithoutEmpresaInput[] | UsuarioUncheckedCreateWithoutEmpresaInput[]
     connectOrCreate?: UsuarioCreateOrConnectWithoutEmpresaInput | UsuarioCreateOrConnectWithoutEmpresaInput[]
@@ -28390,6 +32749,34 @@ export namespace Prisma {
     deleteMany?: AuditLogScalarWhereInput | AuditLogScalarWhereInput[]
   }
 
+  export type CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutUsuarioInput, CuentaPorCobrarUncheckedCreateWithoutUsuarioInput> | CuentaPorCobrarCreateWithoutUsuarioInput[] | CuentaPorCobrarUncheckedCreateWithoutUsuarioInput[]
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutUsuarioInput | CuentaPorCobrarCreateOrConnectWithoutUsuarioInput[]
+    upsert?: CuentaPorCobrarUpsertWithWhereUniqueWithoutUsuarioInput | CuentaPorCobrarUpsertWithWhereUniqueWithoutUsuarioInput[]
+    createMany?: CuentaPorCobrarCreateManyUsuarioInputEnvelope
+    set?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    disconnect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    delete?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    connect?: CuentaPorCobrarWhereUniqueInput | CuentaPorCobrarWhereUniqueInput[]
+    update?: CuentaPorCobrarUpdateWithWhereUniqueWithoutUsuarioInput | CuentaPorCobrarUpdateWithWhereUniqueWithoutUsuarioInput[]
+    updateMany?: CuentaPorCobrarUpdateManyWithWhereWithoutUsuarioInput | CuentaPorCobrarUpdateManyWithWhereWithoutUsuarioInput[]
+    deleteMany?: CuentaPorCobrarScalarWhereInput | CuentaPorCobrarScalarWhereInput[]
+  }
+
+  export type GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput = {
+    create?: XOR<GestionCobranzaCreateWithoutUsuarioInput, GestionCobranzaUncheckedCreateWithoutUsuarioInput> | GestionCobranzaCreateWithoutUsuarioInput[] | GestionCobranzaUncheckedCreateWithoutUsuarioInput[]
+    connectOrCreate?: GestionCobranzaCreateOrConnectWithoutUsuarioInput | GestionCobranzaCreateOrConnectWithoutUsuarioInput[]
+    upsert?: GestionCobranzaUpsertWithWhereUniqueWithoutUsuarioInput | GestionCobranzaUpsertWithWhereUniqueWithoutUsuarioInput[]
+    createMany?: GestionCobranzaCreateManyUsuarioInputEnvelope
+    set?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    disconnect?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    delete?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    connect?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    update?: GestionCobranzaUpdateWithWhereUniqueWithoutUsuarioInput | GestionCobranzaUpdateWithWhereUniqueWithoutUsuarioInput[]
+    updateMany?: GestionCobranzaUpdateManyWithWhereWithoutUsuarioInput | GestionCobranzaUpdateManyWithWhereWithoutUsuarioInput[]
+    deleteMany?: GestionCobranzaScalarWhereInput | GestionCobranzaScalarWhereInput[]
+  }
+
   export type UsuarioCreateNestedOneWithoutSolicitudesActivacionInput = {
     create?: XOR<UsuarioCreateWithoutSolicitudesActivacionInput, UsuarioUncheckedCreateWithoutSolicitudesActivacionInput>
     connectOrCreate?: UsuarioCreateOrConnectWithoutSolicitudesActivacionInput
@@ -28402,6 +32789,138 @@ export namespace Prisma {
     upsert?: UsuarioUpsertWithoutSolicitudesActivacionInput
     connect?: UsuarioWhereUniqueInput
     update?: XOR<XOR<UsuarioUpdateToOneWithWhereWithoutSolicitudesActivacionInput, UsuarioUpdateWithoutSolicitudesActivacionInput>, UsuarioUncheckedUpdateWithoutSolicitudesActivacionInput>
+  }
+
+  export type EmpresaCreateNestedOneWithoutCuentasPorCobrarInput = {
+    create?: XOR<EmpresaCreateWithoutCuentasPorCobrarInput, EmpresaUncheckedCreateWithoutCuentasPorCobrarInput>
+    connectOrCreate?: EmpresaCreateOrConnectWithoutCuentasPorCobrarInput
+    connect?: EmpresaWhereUniqueInput
+  }
+
+  export type FacturaCreateNestedOneWithoutCuentaPorCobrarInput = {
+    create?: XOR<FacturaCreateWithoutCuentaPorCobrarInput, FacturaUncheckedCreateWithoutCuentaPorCobrarInput>
+    connectOrCreate?: FacturaCreateOrConnectWithoutCuentaPorCobrarInput
+    connect?: FacturaWhereUniqueInput
+  }
+
+  export type ClienteCreateNestedOneWithoutCuentasPorCobrarInput = {
+    create?: XOR<ClienteCreateWithoutCuentasPorCobrarInput, ClienteUncheckedCreateWithoutCuentasPorCobrarInput>
+    connectOrCreate?: ClienteCreateOrConnectWithoutCuentasPorCobrarInput
+    connect?: ClienteWhereUniqueInput
+  }
+
+  export type UsuarioCreateNestedOneWithoutCuentasPorCobrarInput = {
+    create?: XOR<UsuarioCreateWithoutCuentasPorCobrarInput, UsuarioUncheckedCreateWithoutCuentasPorCobrarInput>
+    connectOrCreate?: UsuarioCreateOrConnectWithoutCuentasPorCobrarInput
+    connect?: UsuarioWhereUniqueInput
+  }
+
+  export type GestionCobranzaCreateNestedManyWithoutCuentaPorCobrarInput = {
+    create?: XOR<GestionCobranzaCreateWithoutCuentaPorCobrarInput, GestionCobranzaUncheckedCreateWithoutCuentaPorCobrarInput> | GestionCobranzaCreateWithoutCuentaPorCobrarInput[] | GestionCobranzaUncheckedCreateWithoutCuentaPorCobrarInput[]
+    connectOrCreate?: GestionCobranzaCreateOrConnectWithoutCuentaPorCobrarInput | GestionCobranzaCreateOrConnectWithoutCuentaPorCobrarInput[]
+    createMany?: GestionCobranzaCreateManyCuentaPorCobrarInputEnvelope
+    connect?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+  }
+
+  export type GestionCobranzaUncheckedCreateNestedManyWithoutCuentaPorCobrarInput = {
+    create?: XOR<GestionCobranzaCreateWithoutCuentaPorCobrarInput, GestionCobranzaUncheckedCreateWithoutCuentaPorCobrarInput> | GestionCobranzaCreateWithoutCuentaPorCobrarInput[] | GestionCobranzaUncheckedCreateWithoutCuentaPorCobrarInput[]
+    connectOrCreate?: GestionCobranzaCreateOrConnectWithoutCuentaPorCobrarInput | GestionCobranzaCreateOrConnectWithoutCuentaPorCobrarInput[]
+    createMany?: GestionCobranzaCreateManyCuentaPorCobrarInputEnvelope
+    connect?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+  }
+
+  export type EmpresaUpdateOneWithoutCuentasPorCobrarNestedInput = {
+    create?: XOR<EmpresaCreateWithoutCuentasPorCobrarInput, EmpresaUncheckedCreateWithoutCuentasPorCobrarInput>
+    connectOrCreate?: EmpresaCreateOrConnectWithoutCuentasPorCobrarInput
+    upsert?: EmpresaUpsertWithoutCuentasPorCobrarInput
+    disconnect?: EmpresaWhereInput | boolean
+    delete?: EmpresaWhereInput | boolean
+    connect?: EmpresaWhereUniqueInput
+    update?: XOR<XOR<EmpresaUpdateToOneWithWhereWithoutCuentasPorCobrarInput, EmpresaUpdateWithoutCuentasPorCobrarInput>, EmpresaUncheckedUpdateWithoutCuentasPorCobrarInput>
+  }
+
+  export type FacturaUpdateOneRequiredWithoutCuentaPorCobrarNestedInput = {
+    create?: XOR<FacturaCreateWithoutCuentaPorCobrarInput, FacturaUncheckedCreateWithoutCuentaPorCobrarInput>
+    connectOrCreate?: FacturaCreateOrConnectWithoutCuentaPorCobrarInput
+    upsert?: FacturaUpsertWithoutCuentaPorCobrarInput
+    connect?: FacturaWhereUniqueInput
+    update?: XOR<XOR<FacturaUpdateToOneWithWhereWithoutCuentaPorCobrarInput, FacturaUpdateWithoutCuentaPorCobrarInput>, FacturaUncheckedUpdateWithoutCuentaPorCobrarInput>
+  }
+
+  export type ClienteUpdateOneRequiredWithoutCuentasPorCobrarNestedInput = {
+    create?: XOR<ClienteCreateWithoutCuentasPorCobrarInput, ClienteUncheckedCreateWithoutCuentasPorCobrarInput>
+    connectOrCreate?: ClienteCreateOrConnectWithoutCuentasPorCobrarInput
+    upsert?: ClienteUpsertWithoutCuentasPorCobrarInput
+    connect?: ClienteWhereUniqueInput
+    update?: XOR<XOR<ClienteUpdateToOneWithWhereWithoutCuentasPorCobrarInput, ClienteUpdateWithoutCuentasPorCobrarInput>, ClienteUncheckedUpdateWithoutCuentasPorCobrarInput>
+  }
+
+  export type UsuarioUpdateOneWithoutCuentasPorCobrarNestedInput = {
+    create?: XOR<UsuarioCreateWithoutCuentasPorCobrarInput, UsuarioUncheckedCreateWithoutCuentasPorCobrarInput>
+    connectOrCreate?: UsuarioCreateOrConnectWithoutCuentasPorCobrarInput
+    upsert?: UsuarioUpsertWithoutCuentasPorCobrarInput
+    disconnect?: UsuarioWhereInput | boolean
+    delete?: UsuarioWhereInput | boolean
+    connect?: UsuarioWhereUniqueInput
+    update?: XOR<XOR<UsuarioUpdateToOneWithWhereWithoutCuentasPorCobrarInput, UsuarioUpdateWithoutCuentasPorCobrarInput>, UsuarioUncheckedUpdateWithoutCuentasPorCobrarInput>
+  }
+
+  export type GestionCobranzaUpdateManyWithoutCuentaPorCobrarNestedInput = {
+    create?: XOR<GestionCobranzaCreateWithoutCuentaPorCobrarInput, GestionCobranzaUncheckedCreateWithoutCuentaPorCobrarInput> | GestionCobranzaCreateWithoutCuentaPorCobrarInput[] | GestionCobranzaUncheckedCreateWithoutCuentaPorCobrarInput[]
+    connectOrCreate?: GestionCobranzaCreateOrConnectWithoutCuentaPorCobrarInput | GestionCobranzaCreateOrConnectWithoutCuentaPorCobrarInput[]
+    upsert?: GestionCobranzaUpsertWithWhereUniqueWithoutCuentaPorCobrarInput | GestionCobranzaUpsertWithWhereUniqueWithoutCuentaPorCobrarInput[]
+    createMany?: GestionCobranzaCreateManyCuentaPorCobrarInputEnvelope
+    set?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    disconnect?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    delete?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    connect?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    update?: GestionCobranzaUpdateWithWhereUniqueWithoutCuentaPorCobrarInput | GestionCobranzaUpdateWithWhereUniqueWithoutCuentaPorCobrarInput[]
+    updateMany?: GestionCobranzaUpdateManyWithWhereWithoutCuentaPorCobrarInput | GestionCobranzaUpdateManyWithWhereWithoutCuentaPorCobrarInput[]
+    deleteMany?: GestionCobranzaScalarWhereInput | GestionCobranzaScalarWhereInput[]
+  }
+
+  export type GestionCobranzaUncheckedUpdateManyWithoutCuentaPorCobrarNestedInput = {
+    create?: XOR<GestionCobranzaCreateWithoutCuentaPorCobrarInput, GestionCobranzaUncheckedCreateWithoutCuentaPorCobrarInput> | GestionCobranzaCreateWithoutCuentaPorCobrarInput[] | GestionCobranzaUncheckedCreateWithoutCuentaPorCobrarInput[]
+    connectOrCreate?: GestionCobranzaCreateOrConnectWithoutCuentaPorCobrarInput | GestionCobranzaCreateOrConnectWithoutCuentaPorCobrarInput[]
+    upsert?: GestionCobranzaUpsertWithWhereUniqueWithoutCuentaPorCobrarInput | GestionCobranzaUpsertWithWhereUniqueWithoutCuentaPorCobrarInput[]
+    createMany?: GestionCobranzaCreateManyCuentaPorCobrarInputEnvelope
+    set?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    disconnect?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    delete?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    connect?: GestionCobranzaWhereUniqueInput | GestionCobranzaWhereUniqueInput[]
+    update?: GestionCobranzaUpdateWithWhereUniqueWithoutCuentaPorCobrarInput | GestionCobranzaUpdateWithWhereUniqueWithoutCuentaPorCobrarInput[]
+    updateMany?: GestionCobranzaUpdateManyWithWhereWithoutCuentaPorCobrarInput | GestionCobranzaUpdateManyWithWhereWithoutCuentaPorCobrarInput[]
+    deleteMany?: GestionCobranzaScalarWhereInput | GestionCobranzaScalarWhereInput[]
+  }
+
+  export type CuentaPorCobrarCreateNestedOneWithoutGestionsInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutGestionsInput, CuentaPorCobrarUncheckedCreateWithoutGestionsInput>
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutGestionsInput
+    connect?: CuentaPorCobrarWhereUniqueInput
+  }
+
+  export type UsuarioCreateNestedOneWithoutGestionesCobranzaInput = {
+    create?: XOR<UsuarioCreateWithoutGestionesCobranzaInput, UsuarioUncheckedCreateWithoutGestionesCobranzaInput>
+    connectOrCreate?: UsuarioCreateOrConnectWithoutGestionesCobranzaInput
+    connect?: UsuarioWhereUniqueInput
+  }
+
+  export type CuentaPorCobrarUpdateOneRequiredWithoutGestionsNestedInput = {
+    create?: XOR<CuentaPorCobrarCreateWithoutGestionsInput, CuentaPorCobrarUncheckedCreateWithoutGestionsInput>
+    connectOrCreate?: CuentaPorCobrarCreateOrConnectWithoutGestionsInput
+    upsert?: CuentaPorCobrarUpsertWithoutGestionsInput
+    connect?: CuentaPorCobrarWhereUniqueInput
+    update?: XOR<XOR<CuentaPorCobrarUpdateToOneWithWhereWithoutGestionsInput, CuentaPorCobrarUpdateWithoutGestionsInput>, CuentaPorCobrarUncheckedUpdateWithoutGestionsInput>
+  }
+
+  export type UsuarioUpdateOneWithoutGestionesCobranzaNestedInput = {
+    create?: XOR<UsuarioCreateWithoutGestionesCobranzaInput, UsuarioUncheckedCreateWithoutGestionesCobranzaInput>
+    connectOrCreate?: UsuarioCreateOrConnectWithoutGestionesCobranzaInput
+    upsert?: UsuarioUpsertWithoutGestionesCobranzaInput
+    disconnect?: UsuarioWhereInput | boolean
+    delete?: UsuarioWhereInput | boolean
+    connect?: UsuarioWhereUniqueInput
+    update?: XOR<XOR<UsuarioUpdateToOneWithWhereWithoutGestionesCobranzaInput, UsuarioUpdateWithoutGestionesCobranzaInput>, UsuarioUncheckedUpdateWithoutGestionesCobranzaInput>
   }
 
   export type NestedStringFilter<$PrismaModel = never> = {
@@ -28432,9 +32951,15 @@ export namespace Prisma {
     not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
-  export type NestedBoolFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolFilter<$PrismaModel> | boolean
+  export type NestedFloatNullableFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
   }
 
   export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
@@ -28446,6 +32971,11 @@ export namespace Prisma {
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
+  }
+
+  export type NestedBoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
   }
 
   export type NestedDateTimeFilter<$PrismaModel = never> = {
@@ -28515,12 +33045,20 @@ export namespace Prisma {
     not?: NestedIntNullableFilter<$PrismaModel> | number | null
   }
 
-  export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedBoolFilter<$PrismaModel>
-    _max?: NestedBoolFilter<$PrismaModel>
+  export type NestedFloatNullableWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | FloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
+    lt?: number | FloatFieldRefInput<$PrismaModel>
+    lte?: number | FloatFieldRefInput<$PrismaModel>
+    gt?: number | FloatFieldRefInput<$PrismaModel>
+    gte?: number | FloatFieldRefInput<$PrismaModel>
+    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _avg?: NestedFloatNullableFilter<$PrismaModel>
+    _sum?: NestedFloatNullableFilter<$PrismaModel>
+    _min?: NestedFloatNullableFilter<$PrismaModel>
+    _max?: NestedFloatNullableFilter<$PrismaModel>
   }
 
   export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
@@ -28535,6 +33073,14 @@ export namespace Prisma {
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedDateTimeNullableFilter<$PrismaModel>
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
+  }
+
+  export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBoolFilter<$PrismaModel>
+    _max?: NestedBoolFilter<$PrismaModel>
   }
 
   export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
@@ -28562,17 +33108,6 @@ export namespace Prisma {
     not?: NestedFloatFilter<$PrismaModel> | number
   }
 
-  export type NestedFloatNullableFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel> | null
-    in?: number[] | null
-    notIn?: number[] | null
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatNullableFilter<$PrismaModel> | number | null
-  }
-
   export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel>
     in?: number[]
@@ -28587,22 +33122,6 @@ export namespace Prisma {
     _sum?: NestedFloatFilter<$PrismaModel>
     _min?: NestedFloatFilter<$PrismaModel>
     _max?: NestedFloatFilter<$PrismaModel>
-  }
-
-  export type NestedFloatNullableWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | FloatFieldRefInput<$PrismaModel> | null
-    in?: number[] | null
-    notIn?: number[] | null
-    lt?: number | FloatFieldRefInput<$PrismaModel>
-    lte?: number | FloatFieldRefInput<$PrismaModel>
-    gt?: number | FloatFieldRefInput<$PrismaModel>
-    gte?: number | FloatFieldRefInput<$PrismaModel>
-    not?: NestedFloatNullableWithAggregatesFilter<$PrismaModel> | number | null
-    _count?: NestedIntNullableFilter<$PrismaModel>
-    _avg?: NestedFloatNullableFilter<$PrismaModel>
-    _sum?: NestedFloatNullableFilter<$PrismaModel>
-    _min?: NestedFloatNullableFilter<$PrismaModel>
-    _max?: NestedFloatNullableFilter<$PrismaModel>
   }
 
   export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
@@ -28637,6 +33156,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -28644,6 +33164,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
@@ -28656,6 +33177,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUncheckedCreateWithoutEmpresaRefInput = {
@@ -28676,6 +33199,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -28683,6 +33207,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
@@ -28693,6 +33218,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioCreateOrConnectWithoutEmpresaRefInput = {
@@ -28746,12 +33273,18 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     cliente: ClienteCreateNestedOneWithoutFacturasInput
     usuario?: UsuarioCreateNestedOneWithoutFacturasInput
     items?: ItemFacturaCreateNestedManyWithoutFacturaInput
     pagos?: PagoCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionCreateNestedOneWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarCreateNestedOneWithoutFacturaInput
   }
 
   export type FacturaUncheckedCreateWithoutEmpresaInput = {
@@ -28771,10 +33304,16 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     items?: ItemFacturaUncheckedCreateNestedManyWithoutFacturaInput
     pagos?: PagoUncheckedCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionUncheckedCreateNestedOneWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedCreateNestedOneWithoutFacturaInput
   }
 
   export type FacturaCreateOrConnectWithoutEmpresaInput = {
@@ -28794,6 +33333,8 @@ export namespace Prisma {
     montoFinal?: number | null
     ingresosEfectivo?: number
     ingresosBanco?: number
+    ingresosEfectivoVES?: number | null
+    ingresosBancoVES?: number | null
     estado?: string
     observaciones?: string | null
     arqueoDetalle?: string | null
@@ -28811,6 +33352,8 @@ export namespace Prisma {
     montoFinal?: number | null
     ingresosEfectivo?: number
     ingresosBanco?: number
+    ingresosEfectivoVES?: number | null
+    ingresosBancoVES?: number | null
     estado?: string
     observaciones?: string | null
     arqueoDetalle?: string | null
@@ -28839,6 +33382,7 @@ export namespace Prisma {
     estado?: string
     cliente: ClienteCreateNestedOneWithoutCotizacionesInput
     usuario?: UsuarioCreateNestedOneWithoutCotizacionesInput
+    factura?: FacturaCreateNestedOneWithoutCotizacionOrigenInput
     items?: ItemCotizacionCreateNestedManyWithoutCotizacionInput
   }
 
@@ -28854,6 +33398,7 @@ export namespace Prisma {
     total: number
     moneda?: string
     estado?: string
+    facturaId?: string | null
     items?: ItemCotizacionUncheckedCreateNestedManyWithoutCotizacionInput
   }
 
@@ -28901,6 +33446,53 @@ export namespace Prisma {
     data: AuditLogCreateManyEmpresaInput | AuditLogCreateManyEmpresaInput[]
   }
 
+  export type CuentaPorCobrarCreateWithoutEmpresaInput = {
+    id?: string
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    factura: FacturaCreateNestedOneWithoutCuentaPorCobrarInput
+    cliente: ClienteCreateNestedOneWithoutCuentasPorCobrarInput
+    usuario?: UsuarioCreateNestedOneWithoutCuentasPorCobrarInput
+    gestions?: GestionCobranzaCreateNestedManyWithoutCuentaPorCobrarInput
+  }
+
+  export type CuentaPorCobrarUncheckedCreateWithoutEmpresaInput = {
+    id?: string
+    facturaId: string
+    clienteId: string
+    usuarioId?: string | null
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    gestions?: GestionCobranzaUncheckedCreateNestedManyWithoutCuentaPorCobrarInput
+  }
+
+  export type CuentaPorCobrarCreateOrConnectWithoutEmpresaInput = {
+    where: CuentaPorCobrarWhereUniqueInput
+    create: XOR<CuentaPorCobrarCreateWithoutEmpresaInput, CuentaPorCobrarUncheckedCreateWithoutEmpresaInput>
+  }
+
+  export type CuentaPorCobrarCreateManyEmpresaInputEnvelope = {
+    data: CuentaPorCobrarCreateManyEmpresaInput | CuentaPorCobrarCreateManyEmpresaInput[]
+  }
+
   export type UsuarioUpsertWithWhereUniqueWithoutEmpresaRefInput = {
     where: UsuarioWhereUniqueInput
     update: XOR<UsuarioUpdateWithoutEmpresaRefInput, UsuarioUncheckedUpdateWithoutEmpresaRefInput>
@@ -28939,6 +33531,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFilter<"Usuario"> | boolean
     mfaSecret?: StringNullableFilter<"Usuario"> | string | null
     sessionVersion?: IntFilter<"Usuario"> | number
+    refreshTokenId?: StringNullableFilter<"Usuario"> | string | null
     sudoModeExpiresAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
     registrationIp?: StringNullableFilter<"Usuario"> | string | null
     registrationLatitude?: FloatNullableFilter<"Usuario"> | number | null
@@ -28946,6 +33539,7 @@ export namespace Prisma {
     lastLoginIp?: StringNullableFilter<"Usuario"> | string | null
     lastLoginAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
     deletedAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
+    scheduledDeletionAt?: DateTimeNullableFilter<"Usuario"> | Date | string | null
     createdAt?: DateTimeFilter<"Usuario"> | Date | string
     updatedAt?: DateTimeFilter<"Usuario"> | Date | string
   }
@@ -29014,6 +33608,10 @@ export namespace Prisma {
     observaciones?: StringNullableFilter<"Factura"> | string | null
     anuladoPor?: StringNullableFilter<"Factura"> | string | null
     motivoAnulacion?: StringNullableFilter<"Factura"> | string | null
+    descripcionAnulacion?: StringNullableFilter<"Factura"> | string | null
+    fechaAnulacion?: DateTimeNullableFilter<"Factura"> | Date | string | null
+    tasaAnulacion?: FloatNullableFilter<"Factura"> | number | null
+    requestId?: StringNullableFilter<"Factura"> | string | null
     createdAt?: DateTimeFilter<"Factura"> | Date | string
     updatedAt?: DateTimeFilter<"Factura"> | Date | string
   }
@@ -29047,6 +33645,8 @@ export namespace Prisma {
     montoFinal?: FloatNullableFilter<"CierreCaja"> | number | null
     ingresosEfectivo?: FloatFilter<"CierreCaja"> | number
     ingresosBanco?: FloatFilter<"CierreCaja"> | number
+    ingresosEfectivoVES?: FloatNullableFilter<"CierreCaja"> | number | null
+    ingresosBancoVES?: FloatNullableFilter<"CierreCaja"> | number | null
     estado?: StringFilter<"CierreCaja"> | string
     observaciones?: StringNullableFilter<"CierreCaja"> | string | null
     arqueoDetalle?: StringNullableFilter<"CierreCaja"> | string | null
@@ -29086,6 +33686,7 @@ export namespace Prisma {
     total?: FloatFilter<"Cotizacion"> | number
     moneda?: StringFilter<"Cotizacion"> | string
     estado?: StringFilter<"Cotizacion"> | string
+    facturaId?: StringNullableFilter<"Cotizacion"> | string | null
   }
 
   export type AuditLogUpsertWithWhereUniqueWithoutEmpresaInput = {
@@ -29121,18 +33722,64 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"AuditLog"> | Date | string
   }
 
+  export type CuentaPorCobrarUpsertWithWhereUniqueWithoutEmpresaInput = {
+    where: CuentaPorCobrarWhereUniqueInput
+    update: XOR<CuentaPorCobrarUpdateWithoutEmpresaInput, CuentaPorCobrarUncheckedUpdateWithoutEmpresaInput>
+    create: XOR<CuentaPorCobrarCreateWithoutEmpresaInput, CuentaPorCobrarUncheckedCreateWithoutEmpresaInput>
+  }
+
+  export type CuentaPorCobrarUpdateWithWhereUniqueWithoutEmpresaInput = {
+    where: CuentaPorCobrarWhereUniqueInput
+    data: XOR<CuentaPorCobrarUpdateWithoutEmpresaInput, CuentaPorCobrarUncheckedUpdateWithoutEmpresaInput>
+  }
+
+  export type CuentaPorCobrarUpdateManyWithWhereWithoutEmpresaInput = {
+    where: CuentaPorCobrarScalarWhereInput
+    data: XOR<CuentaPorCobrarUpdateManyMutationInput, CuentaPorCobrarUncheckedUpdateManyWithoutEmpresaInput>
+  }
+
+  export type CuentaPorCobrarScalarWhereInput = {
+    AND?: CuentaPorCobrarScalarWhereInput | CuentaPorCobrarScalarWhereInput[]
+    OR?: CuentaPorCobrarScalarWhereInput[]
+    NOT?: CuentaPorCobrarScalarWhereInput | CuentaPorCobrarScalarWhereInput[]
+    id?: StringFilter<"CuentaPorCobrar"> | string
+    empresaId?: StringFilter<"CuentaPorCobrar"> | string
+    facturaId?: StringFilter<"CuentaPorCobrar"> | string
+    clienteId?: StringFilter<"CuentaPorCobrar"> | string
+    usuarioId?: StringNullableFilter<"CuentaPorCobrar"> | string | null
+    montoOriginal?: FloatFilter<"CuentaPorCobrar"> | number
+    montoCobrado?: FloatFilter<"CuentaPorCobrar"> | number
+    montoPendiente?: FloatFilter<"CuentaPorCobrar"> | number
+    fechaEmision?: DateTimeFilter<"CuentaPorCobrar"> | Date | string
+    fechaVencimiento?: DateTimeFilter<"CuentaPorCobrar"> | Date | string
+    estado?: StringFilter<"CuentaPorCobrar"> | string
+    diasVencido?: IntFilter<"CuentaPorCobrar"> | number
+    ultimaGestion?: DateTimeNullableFilter<"CuentaPorCobrar"> | Date | string | null
+    notas?: StringNullableFilter<"CuentaPorCobrar"> | string | null
+    createdAt?: DateTimeFilter<"CuentaPorCobrar"> | Date | string
+    updatedAt?: DateTimeFilter<"CuentaPorCobrar"> | Date | string
+  }
+
   export type EmpresaCreateWithoutRolesInput = {
     id?: string
     nombre: string
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuarios?: UsuarioCreateNestedManyWithoutEmpresaRefInput
@@ -29140,6 +33787,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaCreateNestedManyWithoutEmpresaInput
     cotizaciones?: CotizacionCreateNestedManyWithoutEmpresaInput
     auditLogs?: AuditLogCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaUncheckedCreateWithoutRolesInput = {
@@ -29148,12 +33796,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaRefInput
@@ -29161,6 +33817,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedCreateNestedManyWithoutEmpresaInput
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutEmpresaInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaCreateOrConnectWithoutRolesInput = {
@@ -29184,6 +33841,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -29191,6 +33849,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     empresaRef?: EmpresaCreateNestedOneWithoutUsuariosInput
@@ -29203,6 +33862,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUncheckedCreateWithoutRolDinamicoInput = {
@@ -29223,6 +33884,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -29230,6 +33892,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
@@ -29240,6 +33903,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioCreateOrConnectWithoutRolDinamicoInput = {
@@ -29285,12 +33950,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuarios?: UsuarioUpdateManyWithoutEmpresaRefNestedInput
@@ -29298,6 +33971,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUpdateManyWithoutEmpresaNestedInput
     cotizaciones?: CotizacionUpdateManyWithoutEmpresaNestedInput
     auditLogs?: AuditLogUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutEmpresaNestedInput
   }
 
   export type EmpresaUncheckedUpdateWithoutRolesInput = {
@@ -29306,12 +33980,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaRefNestedInput
@@ -29319,6 +34001,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedUpdateManyWithoutEmpresaNestedInput
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutEmpresaNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutEmpresaNestedInput
   }
 
   export type UsuarioUpsertWithWhereUniqueWithoutRolDinamicoInput = {
@@ -29496,12 +34179,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuarios?: UsuarioCreateNestedManyWithoutEmpresaRefInput
@@ -29509,6 +34200,7 @@ export namespace Prisma {
     facturas?: FacturaCreateNestedManyWithoutEmpresaInput
     cierresCaja?: CierreCajaCreateNestedManyWithoutEmpresaInput
     cotizaciones?: CotizacionCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaUncheckedCreateWithoutAuditLogsInput = {
@@ -29517,12 +34209,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaRefInput
@@ -29530,6 +34230,7 @@ export namespace Prisma {
     facturas?: FacturaUncheckedCreateNestedManyWithoutEmpresaInput
     cierresCaja?: CierreCajaUncheckedCreateNestedManyWithoutEmpresaInput
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaCreateOrConnectWithoutAuditLogsInput = {
@@ -29553,6 +34254,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -29560,6 +34262,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
@@ -29572,6 +34275,8 @@ export namespace Prisma {
     cierresCaja?: CierreCajaCreateNestedManyWithoutUsuarioInput
     cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUncheckedCreateWithoutAuditLogsInput = {
@@ -29593,6 +34298,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -29600,6 +34306,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
@@ -29609,6 +34316,8 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedCreateNestedManyWithoutUsuarioInput
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioCreateOrConnectWithoutAuditLogsInput = {
@@ -29633,12 +34342,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuarios?: UsuarioUpdateManyWithoutEmpresaRefNestedInput
@@ -29646,6 +34363,7 @@ export namespace Prisma {
     facturas?: FacturaUpdateManyWithoutEmpresaNestedInput
     cierresCaja?: CierreCajaUpdateManyWithoutEmpresaNestedInput
     cotizaciones?: CotizacionUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutEmpresaNestedInput
   }
 
   export type EmpresaUncheckedUpdateWithoutAuditLogsInput = {
@@ -29654,12 +34372,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaRefNestedInput
@@ -29667,6 +34393,7 @@ export namespace Prisma {
     facturas?: FacturaUncheckedUpdateManyWithoutEmpresaNestedInput
     cierresCaja?: CierreCajaUncheckedUpdateManyWithoutEmpresaNestedInput
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutEmpresaNestedInput
   }
 
   export type UsuarioUpsertWithoutAuditLogsInput = {
@@ -29696,6 +34423,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -29703,6 +34431,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
@@ -29715,6 +34444,8 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUpdateManyWithoutUsuarioNestedInput
     cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateWithoutAuditLogsInput = {
@@ -29736,6 +34467,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -29743,6 +34475,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -29752,6 +34485,8 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedUpdateManyWithoutUsuarioNestedInput
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioCreateWithoutClientesInput = {
@@ -29770,6 +34505,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -29777,6 +34513,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
@@ -29789,6 +34526,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUncheckedCreateWithoutClientesInput = {
@@ -29810,6 +34549,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -29817,6 +34557,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
@@ -29826,6 +34567,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioCreateOrConnectWithoutClientesInput = {
@@ -29848,12 +34591,18 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuario?: UsuarioCreateNestedOneWithoutFacturasInput
     empresa?: EmpresaCreateNestedOneWithoutFacturasInput
     items?: ItemFacturaCreateNestedManyWithoutFacturaInput
     pagos?: PagoCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionCreateNestedOneWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarCreateNestedOneWithoutFacturaInput
   }
 
   export type FacturaUncheckedCreateWithoutClienteInput = {
@@ -29873,10 +34622,16 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     items?: ItemFacturaUncheckedCreateNestedManyWithoutFacturaInput
     pagos?: PagoUncheckedCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionUncheckedCreateNestedOneWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedCreateNestedOneWithoutFacturaInput
   }
 
   export type FacturaCreateOrConnectWithoutClienteInput = {
@@ -29900,6 +34655,7 @@ export namespace Prisma {
     estado?: string
     usuario?: UsuarioCreateNestedOneWithoutCotizacionesInput
     empresa?: EmpresaCreateNestedOneWithoutCotizacionesInput
+    factura?: FacturaCreateNestedOneWithoutCotizacionOrigenInput
     items?: ItemCotizacionCreateNestedManyWithoutCotizacionInput
   }
 
@@ -29915,6 +34671,7 @@ export namespace Prisma {
     total: number
     moneda?: string
     estado?: string
+    facturaId?: string | null
     items?: ItemCotizacionUncheckedCreateNestedManyWithoutCotizacionInput
   }
 
@@ -29925,6 +34682,53 @@ export namespace Prisma {
 
   export type CotizacionCreateManyClienteInputEnvelope = {
     data: CotizacionCreateManyClienteInput | CotizacionCreateManyClienteInput[]
+  }
+
+  export type CuentaPorCobrarCreateWithoutClienteInput = {
+    id?: string
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    empresa?: EmpresaCreateNestedOneWithoutCuentasPorCobrarInput
+    factura: FacturaCreateNestedOneWithoutCuentaPorCobrarInput
+    usuario?: UsuarioCreateNestedOneWithoutCuentasPorCobrarInput
+    gestions?: GestionCobranzaCreateNestedManyWithoutCuentaPorCobrarInput
+  }
+
+  export type CuentaPorCobrarUncheckedCreateWithoutClienteInput = {
+    id?: string
+    empresaId: string
+    facturaId: string
+    usuarioId?: string | null
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    gestions?: GestionCobranzaUncheckedCreateNestedManyWithoutCuentaPorCobrarInput
+  }
+
+  export type CuentaPorCobrarCreateOrConnectWithoutClienteInput = {
+    where: CuentaPorCobrarWhereUniqueInput
+    create: XOR<CuentaPorCobrarCreateWithoutClienteInput, CuentaPorCobrarUncheckedCreateWithoutClienteInput>
+  }
+
+  export type CuentaPorCobrarCreateManyClienteInputEnvelope = {
+    data: CuentaPorCobrarCreateManyClienteInput | CuentaPorCobrarCreateManyClienteInput[]
   }
 
   export type UsuarioUpsertWithoutClientesInput = {
@@ -29954,6 +34758,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -29961,6 +34766,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
@@ -29973,6 +34779,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateWithoutClientesInput = {
@@ -29994,6 +34802,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -30001,6 +34810,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -30010,6 +34820,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
   }
 
   export type FacturaUpsertWithWhereUniqueWithoutClienteInput = {
@@ -30044,6 +34856,22 @@ export namespace Prisma {
     data: XOR<CotizacionUpdateManyMutationInput, CotizacionUncheckedUpdateManyWithoutClienteInput>
   }
 
+  export type CuentaPorCobrarUpsertWithWhereUniqueWithoutClienteInput = {
+    where: CuentaPorCobrarWhereUniqueInput
+    update: XOR<CuentaPorCobrarUpdateWithoutClienteInput, CuentaPorCobrarUncheckedUpdateWithoutClienteInput>
+    create: XOR<CuentaPorCobrarCreateWithoutClienteInput, CuentaPorCobrarUncheckedCreateWithoutClienteInput>
+  }
+
+  export type CuentaPorCobrarUpdateWithWhereUniqueWithoutClienteInput = {
+    where: CuentaPorCobrarWhereUniqueInput
+    data: XOR<CuentaPorCobrarUpdateWithoutClienteInput, CuentaPorCobrarUncheckedUpdateWithoutClienteInput>
+  }
+
+  export type CuentaPorCobrarUpdateManyWithWhereWithoutClienteInput = {
+    where: CuentaPorCobrarScalarWhereInput
+    data: XOR<CuentaPorCobrarUpdateManyMutationInput, CuentaPorCobrarUncheckedUpdateManyWithoutClienteInput>
+  }
+
   export type UsuarioCreateWithoutProductosInput = {
     id?: string
     username: string
@@ -30060,6 +34888,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -30067,6 +34896,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
@@ -30079,6 +34909,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUncheckedCreateWithoutProductosInput = {
@@ -30100,6 +34932,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -30107,6 +34940,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
@@ -30116,6 +34950,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioCreateOrConnectWithoutProductosInput = {
@@ -30164,6 +35000,33 @@ export namespace Prisma {
     data: ItemFacturaCreateManyProductoInput | ItemFacturaCreateManyProductoInput[]
   }
 
+  export type ItemCotizacionCreateWithoutProductoInput = {
+    id?: string
+    descripcion: string
+    cantidad: number
+    precioUnitario: number
+    totalLinea: number
+    cotizacion: CotizacionCreateNestedOneWithoutItemsInput
+  }
+
+  export type ItemCotizacionUncheckedCreateWithoutProductoInput = {
+    id?: string
+    cotizacionId: string
+    descripcion: string
+    cantidad: number
+    precioUnitario: number
+    totalLinea: number
+  }
+
+  export type ItemCotizacionCreateOrConnectWithoutProductoInput = {
+    where: ItemCotizacionWhereUniqueInput
+    create: XOR<ItemCotizacionCreateWithoutProductoInput, ItemCotizacionUncheckedCreateWithoutProductoInput>
+  }
+
+  export type ItemCotizacionCreateManyProductoInputEnvelope = {
+    data: ItemCotizacionCreateManyProductoInput | ItemCotizacionCreateManyProductoInput[]
+  }
+
   export type UsuarioUpsertWithoutProductosInput = {
     update: XOR<UsuarioUpdateWithoutProductosInput, UsuarioUncheckedUpdateWithoutProductosInput>
     create: XOR<UsuarioCreateWithoutProductosInput, UsuarioUncheckedCreateWithoutProductosInput>
@@ -30191,6 +35054,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -30198,6 +35062,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
@@ -30210,6 +35075,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateWithoutProductosInput = {
@@ -30231,6 +35098,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -30238,6 +35106,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -30247,6 +35116,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
   }
 
   export type ItemFacturaUpsertWithWhereUniqueWithoutProductoInput = {
@@ -30285,6 +35156,35 @@ export namespace Prisma {
     createdAt?: DateTimeFilter<"ItemFactura"> | Date | string
   }
 
+  export type ItemCotizacionUpsertWithWhereUniqueWithoutProductoInput = {
+    where: ItemCotizacionWhereUniqueInput
+    update: XOR<ItemCotizacionUpdateWithoutProductoInput, ItemCotizacionUncheckedUpdateWithoutProductoInput>
+    create: XOR<ItemCotizacionCreateWithoutProductoInput, ItemCotizacionUncheckedCreateWithoutProductoInput>
+  }
+
+  export type ItemCotizacionUpdateWithWhereUniqueWithoutProductoInput = {
+    where: ItemCotizacionWhereUniqueInput
+    data: XOR<ItemCotizacionUpdateWithoutProductoInput, ItemCotizacionUncheckedUpdateWithoutProductoInput>
+  }
+
+  export type ItemCotizacionUpdateManyWithWhereWithoutProductoInput = {
+    where: ItemCotizacionScalarWhereInput
+    data: XOR<ItemCotizacionUpdateManyMutationInput, ItemCotizacionUncheckedUpdateManyWithoutProductoInput>
+  }
+
+  export type ItemCotizacionScalarWhereInput = {
+    AND?: ItemCotizacionScalarWhereInput | ItemCotizacionScalarWhereInput[]
+    OR?: ItemCotizacionScalarWhereInput[]
+    NOT?: ItemCotizacionScalarWhereInput | ItemCotizacionScalarWhereInput[]
+    id?: StringFilter<"ItemCotizacion"> | string
+    cotizacionId?: StringFilter<"ItemCotizacion"> | string
+    productoId?: StringNullableFilter<"ItemCotizacion"> | string | null
+    descripcion?: StringFilter<"ItemCotizacion"> | string
+    cantidad?: IntFilter<"ItemCotizacion"> | number
+    precioUnitario?: FloatFilter<"ItemCotizacion"> | number
+    totalLinea?: FloatFilter<"ItemCotizacion"> | number
+  }
+
   export type ClienteCreateWithoutFacturasInput = {
     id?: string
     razonSocial: string
@@ -30296,6 +35196,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     empresa?: UsuarioCreateNestedOneWithoutClientesInput
     cotizaciones?: CotizacionCreateNestedManyWithoutClienteInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutClienteInput
   }
 
   export type ClienteUncheckedCreateWithoutFacturasInput = {
@@ -30309,6 +35210,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutClienteInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutClienteInput
   }
 
   export type ClienteCreateOrConnectWithoutFacturasInput = {
@@ -30332,6 +35234,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -30339,6 +35242,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
@@ -30351,6 +35255,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUncheckedCreateWithoutFacturasInput = {
@@ -30372,6 +35278,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -30379,6 +35286,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
@@ -30388,6 +35296,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioCreateOrConnectWithoutFacturasInput = {
@@ -30401,12 +35311,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuarios?: UsuarioCreateNestedManyWithoutEmpresaRefInput
@@ -30414,6 +35332,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaCreateNestedManyWithoutEmpresaInput
     cotizaciones?: CotizacionCreateNestedManyWithoutEmpresaInput
     auditLogs?: AuditLogCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaUncheckedCreateWithoutFacturasInput = {
@@ -30422,12 +35341,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaRefInput
@@ -30435,6 +35362,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedCreateNestedManyWithoutEmpresaInput
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutEmpresaInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaCreateOrConnectWithoutFacturasInput = {
@@ -30491,6 +35419,12 @@ export namespace Prisma {
     referenciaTransaccion?: string | null
     fechaPago?: Date | string
     notas?: string | null
+    tasaBCV?: number | null
+    estado?: string
+    motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    anuladoPor?: string | null
+    fechaAnulacion?: Date | string | null
     createdAt?: Date | string
   }
 
@@ -30502,6 +35436,12 @@ export namespace Prisma {
     referenciaTransaccion?: string | null
     fechaPago?: Date | string
     notas?: string | null
+    tasaBCV?: number | null
+    estado?: string
+    motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    anuladoPor?: string | null
+    fechaAnulacion?: Date | string | null
     createdAt?: Date | string
   }
 
@@ -30512,6 +35452,86 @@ export namespace Prisma {
 
   export type PagoCreateManyFacturaInputEnvelope = {
     data: PagoCreateManyFacturaInput | PagoCreateManyFacturaInput[]
+  }
+
+  export type CotizacionCreateWithoutFacturaInput = {
+    id?: string
+    numero: number
+    fechaEmision?: Date | string
+    fechaValidez: Date | string
+    subtotal: number
+    impuestoTotal: number
+    total: number
+    moneda?: string
+    estado?: string
+    cliente: ClienteCreateNestedOneWithoutCotizacionesInput
+    usuario?: UsuarioCreateNestedOneWithoutCotizacionesInput
+    empresa?: EmpresaCreateNestedOneWithoutCotizacionesInput
+    items?: ItemCotizacionCreateNestedManyWithoutCotizacionInput
+  }
+
+  export type CotizacionUncheckedCreateWithoutFacturaInput = {
+    id?: string
+    numero: number
+    clienteId: string
+    usuarioId?: string | null
+    empresaId?: string | null
+    fechaEmision?: Date | string
+    fechaValidez: Date | string
+    subtotal: number
+    impuestoTotal: number
+    total: number
+    moneda?: string
+    estado?: string
+    items?: ItemCotizacionUncheckedCreateNestedManyWithoutCotizacionInput
+  }
+
+  export type CotizacionCreateOrConnectWithoutFacturaInput = {
+    where: CotizacionWhereUniqueInput
+    create: XOR<CotizacionCreateWithoutFacturaInput, CotizacionUncheckedCreateWithoutFacturaInput>
+  }
+
+  export type CuentaPorCobrarCreateWithoutFacturaInput = {
+    id?: string
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    empresa?: EmpresaCreateNestedOneWithoutCuentasPorCobrarInput
+    cliente: ClienteCreateNestedOneWithoutCuentasPorCobrarInput
+    usuario?: UsuarioCreateNestedOneWithoutCuentasPorCobrarInput
+    gestions?: GestionCobranzaCreateNestedManyWithoutCuentaPorCobrarInput
+  }
+
+  export type CuentaPorCobrarUncheckedCreateWithoutFacturaInput = {
+    id?: string
+    empresaId: string
+    clienteId: string
+    usuarioId?: string | null
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    gestions?: GestionCobranzaUncheckedCreateNestedManyWithoutCuentaPorCobrarInput
+  }
+
+  export type CuentaPorCobrarCreateOrConnectWithoutFacturaInput = {
+    where: CuentaPorCobrarWhereUniqueInput
+    create: XOR<CuentaPorCobrarCreateWithoutFacturaInput, CuentaPorCobrarUncheckedCreateWithoutFacturaInput>
   }
 
   export type ClienteUpsertWithoutFacturasInput = {
@@ -30536,6 +35556,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     empresa?: UsuarioUpdateOneWithoutClientesNestedInput
     cotizaciones?: CotizacionUpdateManyWithoutClienteNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutClienteNestedInput
   }
 
   export type ClienteUncheckedUpdateWithoutFacturasInput = {
@@ -30549,6 +35570,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutClienteNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutClienteNestedInput
   }
 
   export type UsuarioUpsertWithoutFacturasInput = {
@@ -30578,6 +35600,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -30585,6 +35608,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
@@ -30597,6 +35621,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateWithoutFacturasInput = {
@@ -30618,6 +35644,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -30625,6 +35652,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -30634,6 +35662,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
   }
 
   export type EmpresaUpsertWithoutFacturasInput = {
@@ -30653,12 +35683,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuarios?: UsuarioUpdateManyWithoutEmpresaRefNestedInput
@@ -30666,6 +35704,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUpdateManyWithoutEmpresaNestedInput
     cotizaciones?: CotizacionUpdateManyWithoutEmpresaNestedInput
     auditLogs?: AuditLogUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutEmpresaNestedInput
   }
 
   export type EmpresaUncheckedUpdateWithoutFacturasInput = {
@@ -30674,12 +35713,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaRefNestedInput
@@ -30687,6 +35734,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedUpdateManyWithoutEmpresaNestedInput
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutEmpresaNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutEmpresaNestedInput
   }
 
   export type ItemFacturaUpsertWithWhereUniqueWithoutFacturaInput = {
@@ -30733,7 +35781,105 @@ export namespace Prisma {
     referenciaTransaccion?: StringNullableFilter<"Pago"> | string | null
     fechaPago?: DateTimeFilter<"Pago"> | Date | string
     notas?: StringNullableFilter<"Pago"> | string | null
+    tasaBCV?: FloatNullableFilter<"Pago"> | number | null
+    estado?: StringFilter<"Pago"> | string
+    motivoAnulacion?: StringNullableFilter<"Pago"> | string | null
+    descripcionAnulacion?: StringNullableFilter<"Pago"> | string | null
+    anuladoPor?: StringNullableFilter<"Pago"> | string | null
+    fechaAnulacion?: DateTimeNullableFilter<"Pago"> | Date | string | null
     createdAt?: DateTimeFilter<"Pago"> | Date | string
+  }
+
+  export type CotizacionUpsertWithoutFacturaInput = {
+    update: XOR<CotizacionUpdateWithoutFacturaInput, CotizacionUncheckedUpdateWithoutFacturaInput>
+    create: XOR<CotizacionCreateWithoutFacturaInput, CotizacionUncheckedCreateWithoutFacturaInput>
+    where?: CotizacionWhereInput
+  }
+
+  export type CotizacionUpdateToOneWithWhereWithoutFacturaInput = {
+    where?: CotizacionWhereInput
+    data: XOR<CotizacionUpdateWithoutFacturaInput, CotizacionUncheckedUpdateWithoutFacturaInput>
+  }
+
+  export type CotizacionUpdateWithoutFacturaInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    numero?: IntFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaValidez?: DateTimeFieldUpdateOperationsInput | Date | string
+    subtotal?: FloatFieldUpdateOperationsInput | number
+    impuestoTotal?: FloatFieldUpdateOperationsInput | number
+    total?: FloatFieldUpdateOperationsInput | number
+    moneda?: StringFieldUpdateOperationsInput | string
+    estado?: StringFieldUpdateOperationsInput | string
+    cliente?: ClienteUpdateOneRequiredWithoutCotizacionesNestedInput
+    usuario?: UsuarioUpdateOneWithoutCotizacionesNestedInput
+    empresa?: EmpresaUpdateOneWithoutCotizacionesNestedInput
+    items?: ItemCotizacionUpdateManyWithoutCotizacionNestedInput
+  }
+
+  export type CotizacionUncheckedUpdateWithoutFacturaInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    numero?: IntFieldUpdateOperationsInput | number
+    clienteId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: NullableStringFieldUpdateOperationsInput | string | null
+    empresaId?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaValidez?: DateTimeFieldUpdateOperationsInput | Date | string
+    subtotal?: FloatFieldUpdateOperationsInput | number
+    impuestoTotal?: FloatFieldUpdateOperationsInput | number
+    total?: FloatFieldUpdateOperationsInput | number
+    moneda?: StringFieldUpdateOperationsInput | string
+    estado?: StringFieldUpdateOperationsInput | string
+    items?: ItemCotizacionUncheckedUpdateManyWithoutCotizacionNestedInput
+  }
+
+  export type CuentaPorCobrarUpsertWithoutFacturaInput = {
+    update: XOR<CuentaPorCobrarUpdateWithoutFacturaInput, CuentaPorCobrarUncheckedUpdateWithoutFacturaInput>
+    create: XOR<CuentaPorCobrarCreateWithoutFacturaInput, CuentaPorCobrarUncheckedCreateWithoutFacturaInput>
+    where?: CuentaPorCobrarWhereInput
+  }
+
+  export type CuentaPorCobrarUpdateToOneWithWhereWithoutFacturaInput = {
+    where?: CuentaPorCobrarWhereInput
+    data: XOR<CuentaPorCobrarUpdateWithoutFacturaInput, CuentaPorCobrarUncheckedUpdateWithoutFacturaInput>
+  }
+
+  export type CuentaPorCobrarUpdateWithoutFacturaInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    empresa?: EmpresaUpdateOneWithoutCuentasPorCobrarNestedInput
+    cliente?: ClienteUpdateOneRequiredWithoutCuentasPorCobrarNestedInput
+    usuario?: UsuarioUpdateOneWithoutCuentasPorCobrarNestedInput
+    gestions?: GestionCobranzaUpdateManyWithoutCuentaPorCobrarNestedInput
+  }
+
+  export type CuentaPorCobrarUncheckedUpdateWithoutFacturaInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    clienteId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: NullableStringFieldUpdateOperationsInput | string | null
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    gestions?: GestionCobranzaUncheckedUpdateManyWithoutCuentaPorCobrarNestedInput
   }
 
   export type FacturaCreateWithoutItemsInput = {
@@ -30751,12 +35897,18 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     cliente: ClienteCreateNestedOneWithoutFacturasInput
     usuario?: UsuarioCreateNestedOneWithoutFacturasInput
     empresa?: EmpresaCreateNestedOneWithoutFacturasInput
     pagos?: PagoCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionCreateNestedOneWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarCreateNestedOneWithoutFacturaInput
   }
 
   export type FacturaUncheckedCreateWithoutItemsInput = {
@@ -30777,9 +35929,15 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     pagos?: PagoUncheckedCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionUncheckedCreateNestedOneWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedCreateNestedOneWithoutFacturaInput
   }
 
   export type FacturaCreateOrConnectWithoutItemsInput = {
@@ -30807,6 +35965,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     empresa: UsuarioCreateNestedOneWithoutProductosInput
+    itemsCotizacion?: ItemCotizacionCreateNestedManyWithoutProductoInput
   }
 
   export type ProductoUncheckedCreateWithoutItemsFacturaInput = {
@@ -30829,6 +35988,7 @@ export namespace Prisma {
     empresaId: string
     createdAt?: Date | string
     updatedAt?: Date | string
+    itemsCotizacion?: ItemCotizacionUncheckedCreateNestedManyWithoutProductoInput
   }
 
   export type ProductoCreateOrConnectWithoutItemsFacturaInput = {
@@ -30862,12 +36022,18 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cliente?: ClienteUpdateOneRequiredWithoutFacturasNestedInput
     usuario?: UsuarioUpdateOneWithoutFacturasNestedInput
     empresa?: EmpresaUpdateOneWithoutFacturasNestedInput
     pagos?: PagoUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUpdateOneWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUpdateOneWithoutFacturaNestedInput
   }
 
   export type FacturaUncheckedUpdateWithoutItemsInput = {
@@ -30888,9 +36054,15 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pagos?: PagoUncheckedUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUncheckedUpdateOneWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedUpdateOneWithoutFacturaNestedInput
   }
 
   export type ProductoUpsertWithoutItemsFacturaInput = {
@@ -30924,6 +36096,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     empresa?: UsuarioUpdateOneRequiredWithoutProductosNestedInput
+    itemsCotizacion?: ItemCotizacionUpdateManyWithoutProductoNestedInput
   }
 
   export type ProductoUncheckedUpdateWithoutItemsFacturaInput = {
@@ -30946,6 +36119,7 @@ export namespace Prisma {
     empresaId?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    itemsCotizacion?: ItemCotizacionUncheckedUpdateManyWithoutProductoNestedInput
   }
 
   export type FacturaCreateWithoutPagosInput = {
@@ -30963,12 +36137,18 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     cliente: ClienteCreateNestedOneWithoutFacturasInput
     usuario?: UsuarioCreateNestedOneWithoutFacturasInput
     empresa?: EmpresaCreateNestedOneWithoutFacturasInput
     items?: ItemFacturaCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionCreateNestedOneWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarCreateNestedOneWithoutFacturaInput
   }
 
   export type FacturaUncheckedCreateWithoutPagosInput = {
@@ -30989,9 +36169,15 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     items?: ItemFacturaUncheckedCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionUncheckedCreateNestedOneWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedCreateNestedOneWithoutFacturaInput
   }
 
   export type FacturaCreateOrConnectWithoutPagosInput = {
@@ -31025,12 +36211,18 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cliente?: ClienteUpdateOneRequiredWithoutFacturasNestedInput
     usuario?: UsuarioUpdateOneWithoutFacturasNestedInput
     empresa?: EmpresaUpdateOneWithoutFacturasNestedInput
     items?: ItemFacturaUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUpdateOneWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUpdateOneWithoutFacturaNestedInput
   }
 
   export type FacturaUncheckedUpdateWithoutPagosInput = {
@@ -31051,9 +36243,15 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: ItemFacturaUncheckedUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUncheckedUpdateOneWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedUpdateOneWithoutFacturaNestedInput
   }
 
   export type UsuarioCreateWithoutCierresCajaInput = {
@@ -31072,6 +36270,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -31079,6 +36278,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
@@ -31091,6 +36291,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUncheckedCreateWithoutCierresCajaInput = {
@@ -31112,6 +36314,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -31119,6 +36322,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
@@ -31128,6 +36332,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioCreateOrConnectWithoutCierresCajaInput = {
@@ -31141,12 +36347,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuarios?: UsuarioCreateNestedManyWithoutEmpresaRefInput
@@ -31154,6 +36368,7 @@ export namespace Prisma {
     facturas?: FacturaCreateNestedManyWithoutEmpresaInput
     cotizaciones?: CotizacionCreateNestedManyWithoutEmpresaInput
     auditLogs?: AuditLogCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaUncheckedCreateWithoutCierresCajaInput = {
@@ -31162,12 +36377,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaRefInput
@@ -31175,6 +36398,7 @@ export namespace Prisma {
     facturas?: FacturaUncheckedCreateNestedManyWithoutEmpresaInput
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutEmpresaInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaCreateOrConnectWithoutCierresCajaInput = {
@@ -31209,6 +36433,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -31216,6 +36441,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
@@ -31228,6 +36454,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateWithoutCierresCajaInput = {
@@ -31249,6 +36477,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -31256,6 +36485,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -31265,6 +36495,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
   }
 
   export type EmpresaUpsertWithoutCierresCajaInput = {
@@ -31284,12 +36516,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuarios?: UsuarioUpdateManyWithoutEmpresaRefNestedInput
@@ -31297,6 +36537,7 @@ export namespace Prisma {
     facturas?: FacturaUpdateManyWithoutEmpresaNestedInput
     cotizaciones?: CotizacionUpdateManyWithoutEmpresaNestedInput
     auditLogs?: AuditLogUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutEmpresaNestedInput
   }
 
   export type EmpresaUncheckedUpdateWithoutCierresCajaInput = {
@@ -31305,12 +36546,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaRefNestedInput
@@ -31318,6 +36567,7 @@ export namespace Prisma {
     facturas?: FacturaUncheckedUpdateManyWithoutEmpresaNestedInput
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutEmpresaNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutEmpresaNestedInput
   }
 
   export type ClienteCreateWithoutCotizacionesInput = {
@@ -31331,6 +36581,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     empresa?: UsuarioCreateNestedOneWithoutClientesInput
     facturas?: FacturaCreateNestedManyWithoutClienteInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutClienteInput
   }
 
   export type ClienteUncheckedCreateWithoutCotizacionesInput = {
@@ -31344,6 +36595,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     facturas?: FacturaUncheckedCreateNestedManyWithoutClienteInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutClienteInput
   }
 
   export type ClienteCreateOrConnectWithoutCotizacionesInput = {
@@ -31367,6 +36619,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -31374,6 +36627,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
@@ -31386,6 +36640,8 @@ export namespace Prisma {
     cierresCaja?: CierreCajaCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUncheckedCreateWithoutCotizacionesInput = {
@@ -31407,6 +36663,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -31414,6 +36671,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
@@ -31423,6 +36681,8 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioCreateOrConnectWithoutCotizacionesInput = {
@@ -31436,12 +36696,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuarios?: UsuarioCreateNestedManyWithoutEmpresaRefInput
@@ -31449,6 +36717,7 @@ export namespace Prisma {
     facturas?: FacturaCreateNestedManyWithoutEmpresaInput
     cierresCaja?: CierreCajaCreateNestedManyWithoutEmpresaInput
     auditLogs?: AuditLogCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaUncheckedCreateWithoutCotizacionesInput = {
@@ -31457,12 +36726,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     usuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaRefInput
@@ -31470,6 +36747,7 @@ export namespace Prisma {
     facturas?: FacturaUncheckedCreateNestedManyWithoutEmpresaInput
     cierresCaja?: CierreCajaUncheckedCreateNestedManyWithoutEmpresaInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaCreateOrConnectWithoutCotizacionesInput = {
@@ -31477,13 +36755,76 @@ export namespace Prisma {
     create: XOR<EmpresaCreateWithoutCotizacionesInput, EmpresaUncheckedCreateWithoutCotizacionesInput>
   }
 
+  export type FacturaCreateWithoutCotizacionOrigenInput = {
+    id?: string
+    numeroFactura: number
+    fechaEmision?: Date | string
+    fechaVencimiento: Date | string
+    subtotal: number
+    impuestoTotal: number
+    total: number
+    estado?: string
+    moneda?: string
+    tasaCambio?: number
+    cuotasTotales?: number
+    observaciones?: string | null
+    anuladoPor?: string | null
+    motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    cliente: ClienteCreateNestedOneWithoutFacturasInput
+    usuario?: UsuarioCreateNestedOneWithoutFacturasInput
+    empresa?: EmpresaCreateNestedOneWithoutFacturasInput
+    items?: ItemFacturaCreateNestedManyWithoutFacturaInput
+    pagos?: PagoCreateNestedManyWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarCreateNestedOneWithoutFacturaInput
+  }
+
+  export type FacturaUncheckedCreateWithoutCotizacionOrigenInput = {
+    id?: string
+    numeroFactura: number
+    clienteId: string
+    usuarioId?: string | null
+    empresaId?: string | null
+    fechaEmision?: Date | string
+    fechaVencimiento: Date | string
+    subtotal: number
+    impuestoTotal: number
+    total: number
+    estado?: string
+    moneda?: string
+    tasaCambio?: number
+    cuotasTotales?: number
+    observaciones?: string | null
+    anuladoPor?: string | null
+    motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    items?: ItemFacturaUncheckedCreateNestedManyWithoutFacturaInput
+    pagos?: PagoUncheckedCreateNestedManyWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedCreateNestedOneWithoutFacturaInput
+  }
+
+  export type FacturaCreateOrConnectWithoutCotizacionOrigenInput = {
+    where: FacturaWhereUniqueInput
+    create: XOR<FacturaCreateWithoutCotizacionOrigenInput, FacturaUncheckedCreateWithoutCotizacionOrigenInput>
+  }
+
   export type ItemCotizacionCreateWithoutCotizacionInput = {
     id?: string
-    productoId?: string | null
     descripcion: string
     cantidad: number
     precioUnitario: number
     totalLinea: number
+    producto?: ProductoCreateNestedOneWithoutItemsCotizacionInput
   }
 
   export type ItemCotizacionUncheckedCreateWithoutCotizacionInput = {
@@ -31526,6 +36867,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     empresa?: UsuarioUpdateOneWithoutClientesNestedInput
     facturas?: FacturaUpdateManyWithoutClienteNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutClienteNestedInput
   }
 
   export type ClienteUncheckedUpdateWithoutCotizacionesInput = {
@@ -31539,6 +36881,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     facturas?: FacturaUncheckedUpdateManyWithoutClienteNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutClienteNestedInput
   }
 
   export type UsuarioUpsertWithoutCotizacionesInput = {
@@ -31568,6 +36911,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -31575,6 +36919,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
@@ -31587,6 +36932,8 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateWithoutCotizacionesInput = {
@@ -31608,6 +36955,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -31615,6 +36963,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -31624,6 +36973,8 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
   }
 
   export type EmpresaUpsertWithoutCotizacionesInput = {
@@ -31643,12 +36994,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuarios?: UsuarioUpdateManyWithoutEmpresaRefNestedInput
@@ -31656,6 +37015,7 @@ export namespace Prisma {
     facturas?: FacturaUpdateManyWithoutEmpresaNestedInput
     cierresCaja?: CierreCajaUpdateManyWithoutEmpresaNestedInput
     auditLogs?: AuditLogUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutEmpresaNestedInput
   }
 
   export type EmpresaUncheckedUpdateWithoutCotizacionesInput = {
@@ -31664,12 +37024,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaRefNestedInput
@@ -31677,6 +37045,76 @@ export namespace Prisma {
     facturas?: FacturaUncheckedUpdateManyWithoutEmpresaNestedInput
     cierresCaja?: CierreCajaUncheckedUpdateManyWithoutEmpresaNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutEmpresaNestedInput
+  }
+
+  export type FacturaUpsertWithoutCotizacionOrigenInput = {
+    update: XOR<FacturaUpdateWithoutCotizacionOrigenInput, FacturaUncheckedUpdateWithoutCotizacionOrigenInput>
+    create: XOR<FacturaCreateWithoutCotizacionOrigenInput, FacturaUncheckedCreateWithoutCotizacionOrigenInput>
+    where?: FacturaWhereInput
+  }
+
+  export type FacturaUpdateToOneWithWhereWithoutCotizacionOrigenInput = {
+    where?: FacturaWhereInput
+    data: XOR<FacturaUpdateWithoutCotizacionOrigenInput, FacturaUncheckedUpdateWithoutCotizacionOrigenInput>
+  }
+
+  export type FacturaUpdateWithoutCotizacionOrigenInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    numeroFactura?: IntFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    subtotal?: FloatFieldUpdateOperationsInput | number
+    impuestoTotal?: FloatFieldUpdateOperationsInput | number
+    total?: FloatFieldUpdateOperationsInput | number
+    estado?: StringFieldUpdateOperationsInput | string
+    moneda?: StringFieldUpdateOperationsInput | string
+    tasaCambio?: FloatFieldUpdateOperationsInput | number
+    cuotasTotales?: IntFieldUpdateOperationsInput | number
+    observaciones?: NullableStringFieldUpdateOperationsInput | string | null
+    anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    cliente?: ClienteUpdateOneRequiredWithoutFacturasNestedInput
+    usuario?: UsuarioUpdateOneWithoutFacturasNestedInput
+    empresa?: EmpresaUpdateOneWithoutFacturasNestedInput
+    items?: ItemFacturaUpdateManyWithoutFacturaNestedInput
+    pagos?: PagoUpdateManyWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUpdateOneWithoutFacturaNestedInput
+  }
+
+  export type FacturaUncheckedUpdateWithoutCotizacionOrigenInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    numeroFactura?: IntFieldUpdateOperationsInput | number
+    clienteId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: NullableStringFieldUpdateOperationsInput | string | null
+    empresaId?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    subtotal?: FloatFieldUpdateOperationsInput | number
+    impuestoTotal?: FloatFieldUpdateOperationsInput | number
+    total?: FloatFieldUpdateOperationsInput | number
+    estado?: StringFieldUpdateOperationsInput | string
+    moneda?: StringFieldUpdateOperationsInput | string
+    tasaCambio?: FloatFieldUpdateOperationsInput | number
+    cuotasTotales?: IntFieldUpdateOperationsInput | number
+    observaciones?: NullableStringFieldUpdateOperationsInput | string | null
+    anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    items?: ItemFacturaUncheckedUpdateManyWithoutFacturaNestedInput
+    pagos?: PagoUncheckedUpdateManyWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedUpdateOneWithoutFacturaNestedInput
   }
 
   export type ItemCotizacionUpsertWithWhereUniqueWithoutCotizacionInput = {
@@ -31695,19 +37133,6 @@ export namespace Prisma {
     data: XOR<ItemCotizacionUpdateManyMutationInput, ItemCotizacionUncheckedUpdateManyWithoutCotizacionInput>
   }
 
-  export type ItemCotizacionScalarWhereInput = {
-    AND?: ItemCotizacionScalarWhereInput | ItemCotizacionScalarWhereInput[]
-    OR?: ItemCotizacionScalarWhereInput[]
-    NOT?: ItemCotizacionScalarWhereInput | ItemCotizacionScalarWhereInput[]
-    id?: StringFilter<"ItemCotizacion"> | string
-    cotizacionId?: StringFilter<"ItemCotizacion"> | string
-    productoId?: StringNullableFilter<"ItemCotizacion"> | string | null
-    descripcion?: StringFilter<"ItemCotizacion"> | string
-    cantidad?: IntFilter<"ItemCotizacion"> | number
-    precioUnitario?: FloatFilter<"ItemCotizacion"> | number
-    totalLinea?: FloatFilter<"ItemCotizacion"> | number
-  }
-
   export type CotizacionCreateWithoutItemsInput = {
     id?: string
     numero: number
@@ -31721,6 +37146,7 @@ export namespace Prisma {
     cliente: ClienteCreateNestedOneWithoutCotizacionesInput
     usuario?: UsuarioCreateNestedOneWithoutCotizacionesInput
     empresa?: EmpresaCreateNestedOneWithoutCotizacionesInput
+    factura?: FacturaCreateNestedOneWithoutCotizacionOrigenInput
   }
 
   export type CotizacionUncheckedCreateWithoutItemsInput = {
@@ -31736,11 +37162,63 @@ export namespace Prisma {
     total: number
     moneda?: string
     estado?: string
+    facturaId?: string | null
   }
 
   export type CotizacionCreateOrConnectWithoutItemsInput = {
     where: CotizacionWhereUniqueInput
     create: XOR<CotizacionCreateWithoutItemsInput, CotizacionUncheckedCreateWithoutItemsInput>
+  }
+
+  export type ProductoCreateWithoutItemsCotizacionInput = {
+    id?: string
+    sku: string
+    nombre: string
+    descripcion?: string | null
+    imagenUrl?: string | null
+    unidadMedida?: string
+    stockActual?: number
+    stockMinimo?: number
+    esVentaPorPeso?: boolean
+    precioPorKilo?: number | null
+    toleranciaPeso?: number | null
+    precioVenta: number
+    costoCompra?: number
+    tasaImpuesto?: number
+    categoria?: string
+    activo?: boolean
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    empresa: UsuarioCreateNestedOneWithoutProductosInput
+    itemsFactura?: ItemFacturaCreateNestedManyWithoutProductoInput
+  }
+
+  export type ProductoUncheckedCreateWithoutItemsCotizacionInput = {
+    id?: string
+    sku: string
+    nombre: string
+    descripcion?: string | null
+    imagenUrl?: string | null
+    unidadMedida?: string
+    stockActual?: number
+    stockMinimo?: number
+    esVentaPorPeso?: boolean
+    precioPorKilo?: number | null
+    toleranciaPeso?: number | null
+    precioVenta: number
+    costoCompra?: number
+    tasaImpuesto?: number
+    categoria?: string
+    activo?: boolean
+    empresaId: string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    itemsFactura?: ItemFacturaUncheckedCreateNestedManyWithoutProductoInput
+  }
+
+  export type ProductoCreateOrConnectWithoutItemsCotizacionInput = {
+    where: ProductoWhereUniqueInput
+    create: XOR<ProductoCreateWithoutItemsCotizacionInput, ProductoUncheckedCreateWithoutItemsCotizacionInput>
   }
 
   export type CotizacionUpsertWithoutItemsInput = {
@@ -31767,6 +37245,7 @@ export namespace Prisma {
     cliente?: ClienteUpdateOneRequiredWithoutCotizacionesNestedInput
     usuario?: UsuarioUpdateOneWithoutCotizacionesNestedInput
     empresa?: EmpresaUpdateOneWithoutCotizacionesNestedInput
+    factura?: FacturaUpdateOneWithoutCotizacionOrigenNestedInput
   }
 
   export type CotizacionUncheckedUpdateWithoutItemsInput = {
@@ -31782,6 +37261,64 @@ export namespace Prisma {
     total?: FloatFieldUpdateOperationsInput | number
     moneda?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    facturaId?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type ProductoUpsertWithoutItemsCotizacionInput = {
+    update: XOR<ProductoUpdateWithoutItemsCotizacionInput, ProductoUncheckedUpdateWithoutItemsCotizacionInput>
+    create: XOR<ProductoCreateWithoutItemsCotizacionInput, ProductoUncheckedCreateWithoutItemsCotizacionInput>
+    where?: ProductoWhereInput
+  }
+
+  export type ProductoUpdateToOneWithWhereWithoutItemsCotizacionInput = {
+    where?: ProductoWhereInput
+    data: XOR<ProductoUpdateWithoutItemsCotizacionInput, ProductoUncheckedUpdateWithoutItemsCotizacionInput>
+  }
+
+  export type ProductoUpdateWithoutItemsCotizacionInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sku?: StringFieldUpdateOperationsInput | string
+    nombre?: StringFieldUpdateOperationsInput | string
+    descripcion?: NullableStringFieldUpdateOperationsInput | string | null
+    imagenUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    unidadMedida?: StringFieldUpdateOperationsInput | string
+    stockActual?: FloatFieldUpdateOperationsInput | number
+    stockMinimo?: FloatFieldUpdateOperationsInput | number
+    esVentaPorPeso?: BoolFieldUpdateOperationsInput | boolean
+    precioPorKilo?: NullableFloatFieldUpdateOperationsInput | number | null
+    toleranciaPeso?: NullableFloatFieldUpdateOperationsInput | number | null
+    precioVenta?: FloatFieldUpdateOperationsInput | number
+    costoCompra?: FloatFieldUpdateOperationsInput | number
+    tasaImpuesto?: FloatFieldUpdateOperationsInput | number
+    categoria?: StringFieldUpdateOperationsInput | string
+    activo?: BoolFieldUpdateOperationsInput | boolean
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    empresa?: UsuarioUpdateOneRequiredWithoutProductosNestedInput
+    itemsFactura?: ItemFacturaUpdateManyWithoutProductoNestedInput
+  }
+
+  export type ProductoUncheckedUpdateWithoutItemsCotizacionInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    sku?: StringFieldUpdateOperationsInput | string
+    nombre?: StringFieldUpdateOperationsInput | string
+    descripcion?: NullableStringFieldUpdateOperationsInput | string | null
+    imagenUrl?: NullableStringFieldUpdateOperationsInput | string | null
+    unidadMedida?: StringFieldUpdateOperationsInput | string
+    stockActual?: FloatFieldUpdateOperationsInput | number
+    stockMinimo?: FloatFieldUpdateOperationsInput | number
+    esVentaPorPeso?: BoolFieldUpdateOperationsInput | boolean
+    precioPorKilo?: NullableFloatFieldUpdateOperationsInput | number | null
+    toleranciaPeso?: NullableFloatFieldUpdateOperationsInput | number | null
+    precioVenta?: FloatFieldUpdateOperationsInput | number
+    costoCompra?: FloatFieldUpdateOperationsInput | number
+    tasaImpuesto?: FloatFieldUpdateOperationsInput | number
+    categoria?: StringFieldUpdateOperationsInput | string
+    activo?: BoolFieldUpdateOperationsInput | boolean
+    empresaId?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    itemsFactura?: ItemFacturaUncheckedUpdateManyWithoutProductoNestedInput
   }
 
   export type RolCreateWithoutUsuariosInput = {
@@ -31813,12 +37350,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     roles?: RolCreateNestedManyWithoutEmpresaInput
@@ -31826,6 +37371,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaCreateNestedManyWithoutEmpresaInput
     cotizaciones?: CotizacionCreateNestedManyWithoutEmpresaInput
     auditLogs?: AuditLogCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaUncheckedCreateWithoutUsuariosInput = {
@@ -31834,12 +37380,20 @@ export namespace Prisma {
     rif: string
     direccion?: string | null
     telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
     activo?: boolean
     subscriptionStatus?: string
     planType?: string | null
     trialStartsAt?: Date | string | null
     trialEndsAt?: Date | string | null
     currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     roles?: RolUncheckedCreateNestedManyWithoutEmpresaInput
@@ -31847,6 +37401,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedCreateNestedManyWithoutEmpresaInput
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutEmpresaInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutEmpresaInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutEmpresaInput
   }
 
   export type EmpresaCreateOrConnectWithoutUsuariosInput = {
@@ -31870,6 +37425,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -31877,6 +37433,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
@@ -31889,6 +37446,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUncheckedCreateWithoutSubUsuariosInput = {
@@ -31910,6 +37469,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -31917,6 +37477,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     productos?: ProductoUncheckedCreateNestedManyWithoutEmpresaInput
@@ -31926,6 +37487,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioCreateOrConnectWithoutSubUsuariosInput = {
@@ -31949,6 +37512,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -31956,6 +37520,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
@@ -31968,6 +37533,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUncheckedCreateWithoutEmpresaInput = {
@@ -31988,6 +37555,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -31995,6 +37563,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
@@ -32005,6 +37574,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
     solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioCreateOrConnectWithoutEmpresaInput = {
@@ -32036,6 +37607,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     itemsFactura?: ItemFacturaCreateNestedManyWithoutProductoInput
+    itemsCotizacion?: ItemCotizacionCreateNestedManyWithoutProductoInput
   }
 
   export type ProductoUncheckedCreateWithoutEmpresaInput = {
@@ -32058,6 +37630,7 @@ export namespace Prisma {
     createdAt?: Date | string
     updatedAt?: Date | string
     itemsFactura?: ItemFacturaUncheckedCreateNestedManyWithoutProductoInput
+    itemsCotizacion?: ItemCotizacionUncheckedCreateNestedManyWithoutProductoInput
   }
 
   export type ProductoCreateOrConnectWithoutEmpresaInput = {
@@ -32080,6 +37653,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     facturas?: FacturaCreateNestedManyWithoutClienteInput
     cotizaciones?: CotizacionCreateNestedManyWithoutClienteInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutClienteInput
   }
 
   export type ClienteUncheckedCreateWithoutEmpresaInput = {
@@ -32093,6 +37667,7 @@ export namespace Prisma {
     updatedAt?: Date | string
     facturas?: FacturaUncheckedCreateNestedManyWithoutClienteInput
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutClienteInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutClienteInput
   }
 
   export type ClienteCreateOrConnectWithoutEmpresaInput = {
@@ -32119,12 +37694,18 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     cliente: ClienteCreateNestedOneWithoutFacturasInput
     empresa?: EmpresaCreateNestedOneWithoutFacturasInput
     items?: ItemFacturaCreateNestedManyWithoutFacturaInput
     pagos?: PagoCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionCreateNestedOneWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarCreateNestedOneWithoutFacturaInput
   }
 
   export type FacturaUncheckedCreateWithoutUsuarioInput = {
@@ -32144,10 +37725,16 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     items?: ItemFacturaUncheckedCreateNestedManyWithoutFacturaInput
     pagos?: PagoUncheckedCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionUncheckedCreateNestedOneWithoutFacturaInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedCreateNestedOneWithoutFacturaInput
   }
 
   export type FacturaCreateOrConnectWithoutUsuarioInput = {
@@ -32167,6 +37754,8 @@ export namespace Prisma {
     montoFinal?: number | null
     ingresosEfectivo?: number
     ingresosBanco?: number
+    ingresosEfectivoVES?: number | null
+    ingresosBancoVES?: number | null
     estado?: string
     observaciones?: string | null
     arqueoDetalle?: string | null
@@ -32184,6 +37773,8 @@ export namespace Prisma {
     montoFinal?: number | null
     ingresosEfectivo?: number
     ingresosBanco?: number
+    ingresosEfectivoVES?: number | null
+    ingresosBancoVES?: number | null
     estado?: string
     observaciones?: string | null
     arqueoDetalle?: string | null
@@ -32212,6 +37803,7 @@ export namespace Prisma {
     estado?: string
     cliente: ClienteCreateNestedOneWithoutCotizacionesInput
     empresa?: EmpresaCreateNestedOneWithoutCotizacionesInput
+    factura?: FacturaCreateNestedOneWithoutCotizacionOrigenInput
     items?: ItemCotizacionCreateNestedManyWithoutCotizacionInput
   }
 
@@ -32227,6 +37819,7 @@ export namespace Prisma {
     total: number
     moneda?: string
     estado?: string
+    facturaId?: string | null
     items?: ItemCotizacionUncheckedCreateNestedManyWithoutCotizacionInput
   }
 
@@ -32245,6 +37838,9 @@ export namespace Prisma {
     metodoPago: string
     referencia: string
     estado?: string
+    notas?: string | null
+    revisadoPor?: string | null
+    revisadoEn?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -32255,6 +37851,9 @@ export namespace Prisma {
     metodoPago: string
     referencia: string
     estado?: string
+    notas?: string | null
+    revisadoPor?: string | null
+    revisadoEn?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -32303,6 +37902,82 @@ export namespace Prisma {
     data: AuditLogCreateManyUsuarioInput | AuditLogCreateManyUsuarioInput[]
   }
 
+  export type CuentaPorCobrarCreateWithoutUsuarioInput = {
+    id?: string
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    empresa?: EmpresaCreateNestedOneWithoutCuentasPorCobrarInput
+    factura: FacturaCreateNestedOneWithoutCuentaPorCobrarInput
+    cliente: ClienteCreateNestedOneWithoutCuentasPorCobrarInput
+    gestions?: GestionCobranzaCreateNestedManyWithoutCuentaPorCobrarInput
+  }
+
+  export type CuentaPorCobrarUncheckedCreateWithoutUsuarioInput = {
+    id?: string
+    empresaId: string
+    facturaId: string
+    clienteId: string
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    gestions?: GestionCobranzaUncheckedCreateNestedManyWithoutCuentaPorCobrarInput
+  }
+
+  export type CuentaPorCobrarCreateOrConnectWithoutUsuarioInput = {
+    where: CuentaPorCobrarWhereUniqueInput
+    create: XOR<CuentaPorCobrarCreateWithoutUsuarioInput, CuentaPorCobrarUncheckedCreateWithoutUsuarioInput>
+  }
+
+  export type CuentaPorCobrarCreateManyUsuarioInputEnvelope = {
+    data: CuentaPorCobrarCreateManyUsuarioInput | CuentaPorCobrarCreateManyUsuarioInput[]
+  }
+
+  export type GestionCobranzaCreateWithoutUsuarioInput = {
+    id?: string
+    empresaId: string
+    accion: string
+    notas?: string | null
+    fecha?: Date | string
+    createdAt?: Date | string
+    cuentaPorCobrar: CuentaPorCobrarCreateNestedOneWithoutGestionsInput
+  }
+
+  export type GestionCobranzaUncheckedCreateWithoutUsuarioInput = {
+    id?: string
+    cuentaPorCobrarId: string
+    empresaId: string
+    accion: string
+    notas?: string | null
+    fecha?: Date | string
+    createdAt?: Date | string
+  }
+
+  export type GestionCobranzaCreateOrConnectWithoutUsuarioInput = {
+    where: GestionCobranzaWhereUniqueInput
+    create: XOR<GestionCobranzaCreateWithoutUsuarioInput, GestionCobranzaUncheckedCreateWithoutUsuarioInput>
+  }
+
+  export type GestionCobranzaCreateManyUsuarioInputEnvelope = {
+    data: GestionCobranzaCreateManyUsuarioInput | GestionCobranzaCreateManyUsuarioInput[]
+  }
+
   export type RolUpsertWithoutUsuariosInput = {
     update: XOR<RolUpdateWithoutUsuariosInput, RolUncheckedUpdateWithoutUsuariosInput>
     create: XOR<RolCreateWithoutUsuariosInput, RolUncheckedCreateWithoutUsuariosInput>
@@ -32349,12 +38024,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     roles?: RolUpdateManyWithoutEmpresaNestedInput
@@ -32362,6 +38045,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUpdateManyWithoutEmpresaNestedInput
     cotizaciones?: CotizacionUpdateManyWithoutEmpresaNestedInput
     auditLogs?: AuditLogUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutEmpresaNestedInput
   }
 
   export type EmpresaUncheckedUpdateWithoutUsuariosInput = {
@@ -32370,12 +38054,20 @@ export namespace Prisma {
     rif?: StringFieldUpdateOperationsInput | string
     direccion?: NullableStringFieldUpdateOperationsInput | string | null
     telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     activo?: BoolFieldUpdateOperationsInput | boolean
     subscriptionStatus?: StringFieldUpdateOperationsInput | string
     planType?: NullableStringFieldUpdateOperationsInput | string | null
     trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     roles?: RolUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -32383,6 +38075,7 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedUpdateManyWithoutEmpresaNestedInput
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutEmpresaNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutEmpresaNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutEmpresaNestedInput
   }
 
   export type UsuarioUpsertWithoutSubUsuariosInput = {
@@ -32412,6 +38105,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -32419,6 +38113,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
@@ -32431,6 +38126,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateWithoutSubUsuariosInput = {
@@ -32452,6 +38149,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -32459,6 +38157,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     productos?: ProductoUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -32468,6 +38167,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUpsertWithWhereUniqueWithoutEmpresaInput = {
@@ -32632,6 +38333,9 @@ export namespace Prisma {
     metodoPago?: StringFilter<"SolicitudActivacion"> | string
     referencia?: StringFilter<"SolicitudActivacion"> | string
     estado?: StringFilter<"SolicitudActivacion"> | string
+    notas?: StringNullableFilter<"SolicitudActivacion"> | string | null
+    revisadoPor?: StringNullableFilter<"SolicitudActivacion"> | string | null
+    revisadoEn?: DateTimeNullableFilter<"SolicitudActivacion"> | Date | string | null
     createdAt?: DateTimeFilter<"SolicitudActivacion"> | Date | string
     updatedAt?: DateTimeFilter<"SolicitudActivacion"> | Date | string
   }
@@ -32652,6 +38356,52 @@ export namespace Prisma {
     data: XOR<AuditLogUpdateManyMutationInput, AuditLogUncheckedUpdateManyWithoutUsuarioInput>
   }
 
+  export type CuentaPorCobrarUpsertWithWhereUniqueWithoutUsuarioInput = {
+    where: CuentaPorCobrarWhereUniqueInput
+    update: XOR<CuentaPorCobrarUpdateWithoutUsuarioInput, CuentaPorCobrarUncheckedUpdateWithoutUsuarioInput>
+    create: XOR<CuentaPorCobrarCreateWithoutUsuarioInput, CuentaPorCobrarUncheckedCreateWithoutUsuarioInput>
+  }
+
+  export type CuentaPorCobrarUpdateWithWhereUniqueWithoutUsuarioInput = {
+    where: CuentaPorCobrarWhereUniqueInput
+    data: XOR<CuentaPorCobrarUpdateWithoutUsuarioInput, CuentaPorCobrarUncheckedUpdateWithoutUsuarioInput>
+  }
+
+  export type CuentaPorCobrarUpdateManyWithWhereWithoutUsuarioInput = {
+    where: CuentaPorCobrarScalarWhereInput
+    data: XOR<CuentaPorCobrarUpdateManyMutationInput, CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioInput>
+  }
+
+  export type GestionCobranzaUpsertWithWhereUniqueWithoutUsuarioInput = {
+    where: GestionCobranzaWhereUniqueInput
+    update: XOR<GestionCobranzaUpdateWithoutUsuarioInput, GestionCobranzaUncheckedUpdateWithoutUsuarioInput>
+    create: XOR<GestionCobranzaCreateWithoutUsuarioInput, GestionCobranzaUncheckedCreateWithoutUsuarioInput>
+  }
+
+  export type GestionCobranzaUpdateWithWhereUniqueWithoutUsuarioInput = {
+    where: GestionCobranzaWhereUniqueInput
+    data: XOR<GestionCobranzaUpdateWithoutUsuarioInput, GestionCobranzaUncheckedUpdateWithoutUsuarioInput>
+  }
+
+  export type GestionCobranzaUpdateManyWithWhereWithoutUsuarioInput = {
+    where: GestionCobranzaScalarWhereInput
+    data: XOR<GestionCobranzaUpdateManyMutationInput, GestionCobranzaUncheckedUpdateManyWithoutUsuarioInput>
+  }
+
+  export type GestionCobranzaScalarWhereInput = {
+    AND?: GestionCobranzaScalarWhereInput | GestionCobranzaScalarWhereInput[]
+    OR?: GestionCobranzaScalarWhereInput[]
+    NOT?: GestionCobranzaScalarWhereInput | GestionCobranzaScalarWhereInput[]
+    id?: StringFilter<"GestionCobranza"> | string
+    cuentaPorCobrarId?: StringFilter<"GestionCobranza"> | string
+    empresaId?: StringFilter<"GestionCobranza"> | string
+    usuarioId?: StringFilter<"GestionCobranza"> | string
+    accion?: StringFilter<"GestionCobranza"> | string
+    notas?: StringNullableFilter<"GestionCobranza"> | string | null
+    fecha?: DateTimeFilter<"GestionCobranza"> | Date | string
+    createdAt?: DateTimeFilter<"GestionCobranza"> | Date | string
+  }
+
   export type UsuarioCreateWithoutSolicitudesActivacionInput = {
     id?: string
     username: string
@@ -32668,6 +38418,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -32675,6 +38426,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
@@ -32687,6 +38439,8 @@ export namespace Prisma {
     cierresCaja?: CierreCajaCreateNestedManyWithoutUsuarioInput
     cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioUncheckedCreateWithoutSolicitudesActivacionInput = {
@@ -32708,6 +38462,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -32715,6 +38470,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
@@ -32724,6 +38480,8 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedCreateNestedManyWithoutUsuarioInput
     cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
     auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
   }
 
   export type UsuarioCreateOrConnectWithoutSolicitudesActivacionInput = {
@@ -32758,6 +38516,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -32765,6 +38524,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
@@ -32777,6 +38537,8 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUpdateManyWithoutUsuarioNestedInput
     cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateWithoutSolicitudesActivacionInput = {
@@ -32798,6 +38560,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -32805,6 +38568,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -32814,6 +38578,845 @@ export namespace Prisma {
     cierresCaja?: CierreCajaUncheckedUpdateManyWithoutUsuarioNestedInput
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
+  }
+
+  export type EmpresaCreateWithoutCuentasPorCobrarInput = {
+    id?: string
+    nombre: string
+    rif: string
+    direccion?: string | null
+    telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
+    activo?: boolean
+    subscriptionStatus?: string
+    planType?: string | null
+    trialStartsAt?: Date | string | null
+    trialEndsAt?: Date | string | null
+    currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    usuarios?: UsuarioCreateNestedManyWithoutEmpresaRefInput
+    roles?: RolCreateNestedManyWithoutEmpresaInput
+    facturas?: FacturaCreateNestedManyWithoutEmpresaInput
+    cierresCaja?: CierreCajaCreateNestedManyWithoutEmpresaInput
+    cotizaciones?: CotizacionCreateNestedManyWithoutEmpresaInput
+    auditLogs?: AuditLogCreateNestedManyWithoutEmpresaInput
+  }
+
+  export type EmpresaUncheckedCreateWithoutCuentasPorCobrarInput = {
+    id?: string
+    nombre: string
+    rif: string
+    direccion?: string | null
+    telefono?: string | null
+    email?: string | null
+    monedaSimbolo?: string | null
+    monedaCodigo?: string | null
+    tasaDolar?: number | null
+    tasaDolarModo?: string
+    tasaDolarActualizadaEn?: Date | string | null
+    activo?: boolean
+    subscriptionStatus?: string
+    planType?: string | null
+    trialStartsAt?: Date | string | null
+    trialEndsAt?: Date | string | null
+    currentPeriodEnd?: Date | string | null
+    archivedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    usuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaRefInput
+    roles?: RolUncheckedCreateNestedManyWithoutEmpresaInput
+    facturas?: FacturaUncheckedCreateNestedManyWithoutEmpresaInput
+    cierresCaja?: CierreCajaUncheckedCreateNestedManyWithoutEmpresaInput
+    cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutEmpresaInput
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutEmpresaInput
+  }
+
+  export type EmpresaCreateOrConnectWithoutCuentasPorCobrarInput = {
+    where: EmpresaWhereUniqueInput
+    create: XOR<EmpresaCreateWithoutCuentasPorCobrarInput, EmpresaUncheckedCreateWithoutCuentasPorCobrarInput>
+  }
+
+  export type FacturaCreateWithoutCuentaPorCobrarInput = {
+    id?: string
+    numeroFactura: number
+    fechaEmision?: Date | string
+    fechaVencimiento: Date | string
+    subtotal: number
+    impuestoTotal: number
+    total: number
+    estado?: string
+    moneda?: string
+    tasaCambio?: number
+    cuotasTotales?: number
+    observaciones?: string | null
+    anuladoPor?: string | null
+    motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    cliente: ClienteCreateNestedOneWithoutFacturasInput
+    usuario?: UsuarioCreateNestedOneWithoutFacturasInput
+    empresa?: EmpresaCreateNestedOneWithoutFacturasInput
+    items?: ItemFacturaCreateNestedManyWithoutFacturaInput
+    pagos?: PagoCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionCreateNestedOneWithoutFacturaInput
+  }
+
+  export type FacturaUncheckedCreateWithoutCuentaPorCobrarInput = {
+    id?: string
+    numeroFactura: number
+    clienteId: string
+    usuarioId?: string | null
+    empresaId?: string | null
+    fechaEmision?: Date | string
+    fechaVencimiento: Date | string
+    subtotal: number
+    impuestoTotal: number
+    total: number
+    estado?: string
+    moneda?: string
+    tasaCambio?: number
+    cuotasTotales?: number
+    observaciones?: string | null
+    anuladoPor?: string | null
+    motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    items?: ItemFacturaUncheckedCreateNestedManyWithoutFacturaInput
+    pagos?: PagoUncheckedCreateNestedManyWithoutFacturaInput
+    cotizacionOrigen?: CotizacionUncheckedCreateNestedOneWithoutFacturaInput
+  }
+
+  export type FacturaCreateOrConnectWithoutCuentaPorCobrarInput = {
+    where: FacturaWhereUniqueInput
+    create: XOR<FacturaCreateWithoutCuentaPorCobrarInput, FacturaUncheckedCreateWithoutCuentaPorCobrarInput>
+  }
+
+  export type ClienteCreateWithoutCuentasPorCobrarInput = {
+    id?: string
+    razonSocial: string
+    rifCedula: string
+    direccion?: string | null
+    telefono?: string | null
+    correo?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    empresa?: UsuarioCreateNestedOneWithoutClientesInput
+    facturas?: FacturaCreateNestedManyWithoutClienteInput
+    cotizaciones?: CotizacionCreateNestedManyWithoutClienteInput
+  }
+
+  export type ClienteUncheckedCreateWithoutCuentasPorCobrarInput = {
+    id?: string
+    razonSocial: string
+    rifCedula: string
+    direccion?: string | null
+    telefono?: string | null
+    correo?: string | null
+    empresaId?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    facturas?: FacturaUncheckedCreateNestedManyWithoutClienteInput
+    cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutClienteInput
+  }
+
+  export type ClienteCreateOrConnectWithoutCuentasPorCobrarInput = {
+    where: ClienteWhereUniqueInput
+    create: XOR<ClienteCreateWithoutCuentasPorCobrarInput, ClienteUncheckedCreateWithoutCuentasPorCobrarInput>
+  }
+
+  export type UsuarioCreateWithoutCuentasPorCobrarInput = {
+    id?: string
+    username: string
+    passwordHash: string
+    nombre?: string
+    email?: string | null
+    rol?: string
+    activo?: boolean
+    subscriptionStatus?: string
+    planType?: string | null
+    trialStartsAt?: Date | string | null
+    trialEndsAt?: Date | string | null
+    currentPeriodEnd?: Date | string | null
+    mfaEnabled?: boolean
+    mfaSecret?: string | null
+    sessionVersion?: number
+    refreshTokenId?: string | null
+    sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
+    lastLoginIp?: string | null
+    lastLoginAt?: Date | string | null
+    deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
+    empresaRef?: EmpresaCreateNestedOneWithoutUsuariosInput
+    empresa?: UsuarioCreateNestedOneWithoutSubUsuariosInput
+    subUsuarios?: UsuarioCreateNestedManyWithoutEmpresaInput
+    productos?: ProductoCreateNestedManyWithoutEmpresaInput
+    clientes?: ClienteCreateNestedManyWithoutEmpresaInput
+    facturas?: FacturaCreateNestedManyWithoutUsuarioInput
+    cierresCaja?: CierreCajaCreateNestedManyWithoutUsuarioInput
+    cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
+    solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
+    auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaCreateNestedManyWithoutUsuarioInput
+  }
+
+  export type UsuarioUncheckedCreateWithoutCuentasPorCobrarInput = {
+    id?: string
+    username: string
+    passwordHash: string
+    nombre?: string
+    email?: string | null
+    rol?: string
+    rolId?: string | null
+    activo?: boolean
+    empresaId?: string | null
+    empresaRefId?: string | null
+    subscriptionStatus?: string
+    planType?: string | null
+    trialStartsAt?: Date | string | null
+    trialEndsAt?: Date | string | null
+    currentPeriodEnd?: Date | string | null
+    mfaEnabled?: boolean
+    mfaSecret?: string | null
+    sessionVersion?: number
+    refreshTokenId?: string | null
+    sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
+    lastLoginIp?: string | null
+    lastLoginAt?: Date | string | null
+    deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
+    productos?: ProductoUncheckedCreateNestedManyWithoutEmpresaInput
+    clientes?: ClienteUncheckedCreateNestedManyWithoutEmpresaInput
+    facturas?: FacturaUncheckedCreateNestedManyWithoutUsuarioInput
+    cierresCaja?: CierreCajaUncheckedCreateNestedManyWithoutUsuarioInput
+    cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
+    solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    gestionesCobranza?: GestionCobranzaUncheckedCreateNestedManyWithoutUsuarioInput
+  }
+
+  export type UsuarioCreateOrConnectWithoutCuentasPorCobrarInput = {
+    where: UsuarioWhereUniqueInput
+    create: XOR<UsuarioCreateWithoutCuentasPorCobrarInput, UsuarioUncheckedCreateWithoutCuentasPorCobrarInput>
+  }
+
+  export type GestionCobranzaCreateWithoutCuentaPorCobrarInput = {
+    id?: string
+    empresaId: string
+    accion: string
+    notas?: string | null
+    fecha?: Date | string
+    createdAt?: Date | string
+    usuario?: UsuarioCreateNestedOneWithoutGestionesCobranzaInput
+  }
+
+  export type GestionCobranzaUncheckedCreateWithoutCuentaPorCobrarInput = {
+    id?: string
+    empresaId: string
+    usuarioId: string
+    accion: string
+    notas?: string | null
+    fecha?: Date | string
+    createdAt?: Date | string
+  }
+
+  export type GestionCobranzaCreateOrConnectWithoutCuentaPorCobrarInput = {
+    where: GestionCobranzaWhereUniqueInput
+    create: XOR<GestionCobranzaCreateWithoutCuentaPorCobrarInput, GestionCobranzaUncheckedCreateWithoutCuentaPorCobrarInput>
+  }
+
+  export type GestionCobranzaCreateManyCuentaPorCobrarInputEnvelope = {
+    data: GestionCobranzaCreateManyCuentaPorCobrarInput | GestionCobranzaCreateManyCuentaPorCobrarInput[]
+  }
+
+  export type EmpresaUpsertWithoutCuentasPorCobrarInput = {
+    update: XOR<EmpresaUpdateWithoutCuentasPorCobrarInput, EmpresaUncheckedUpdateWithoutCuentasPorCobrarInput>
+    create: XOR<EmpresaCreateWithoutCuentasPorCobrarInput, EmpresaUncheckedCreateWithoutCuentasPorCobrarInput>
+    where?: EmpresaWhereInput
+  }
+
+  export type EmpresaUpdateToOneWithWhereWithoutCuentasPorCobrarInput = {
+    where?: EmpresaWhereInput
+    data: XOR<EmpresaUpdateWithoutCuentasPorCobrarInput, EmpresaUncheckedUpdateWithoutCuentasPorCobrarInput>
+  }
+
+  export type EmpresaUpdateWithoutCuentasPorCobrarInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    nombre?: StringFieldUpdateOperationsInput | string
+    rif?: StringFieldUpdateOperationsInput | string
+    direccion?: NullableStringFieldUpdateOperationsInput | string | null
+    telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    activo?: BoolFieldUpdateOperationsInput | boolean
+    subscriptionStatus?: StringFieldUpdateOperationsInput | string
+    planType?: NullableStringFieldUpdateOperationsInput | string | null
+    trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    usuarios?: UsuarioUpdateManyWithoutEmpresaRefNestedInput
+    roles?: RolUpdateManyWithoutEmpresaNestedInput
+    facturas?: FacturaUpdateManyWithoutEmpresaNestedInput
+    cierresCaja?: CierreCajaUpdateManyWithoutEmpresaNestedInput
+    cotizaciones?: CotizacionUpdateManyWithoutEmpresaNestedInput
+    auditLogs?: AuditLogUpdateManyWithoutEmpresaNestedInput
+  }
+
+  export type EmpresaUncheckedUpdateWithoutCuentasPorCobrarInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    nombre?: StringFieldUpdateOperationsInput | string
+    rif?: StringFieldUpdateOperationsInput | string
+    direccion?: NullableStringFieldUpdateOperationsInput | string | null
+    telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaSimbolo?: NullableStringFieldUpdateOperationsInput | string | null
+    monedaCodigo?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaDolar?: NullableFloatFieldUpdateOperationsInput | number | null
+    tasaDolarModo?: StringFieldUpdateOperationsInput | string
+    tasaDolarActualizadaEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    activo?: BoolFieldUpdateOperationsInput | boolean
+    subscriptionStatus?: StringFieldUpdateOperationsInput | string
+    planType?: NullableStringFieldUpdateOperationsInput | string | null
+    trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    archivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    usuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaRefNestedInput
+    roles?: RolUncheckedUpdateManyWithoutEmpresaNestedInput
+    facturas?: FacturaUncheckedUpdateManyWithoutEmpresaNestedInput
+    cierresCaja?: CierreCajaUncheckedUpdateManyWithoutEmpresaNestedInput
+    cotizaciones?: CotizacionUncheckedUpdateManyWithoutEmpresaNestedInput
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutEmpresaNestedInput
+  }
+
+  export type FacturaUpsertWithoutCuentaPorCobrarInput = {
+    update: XOR<FacturaUpdateWithoutCuentaPorCobrarInput, FacturaUncheckedUpdateWithoutCuentaPorCobrarInput>
+    create: XOR<FacturaCreateWithoutCuentaPorCobrarInput, FacturaUncheckedCreateWithoutCuentaPorCobrarInput>
+    where?: FacturaWhereInput
+  }
+
+  export type FacturaUpdateToOneWithWhereWithoutCuentaPorCobrarInput = {
+    where?: FacturaWhereInput
+    data: XOR<FacturaUpdateWithoutCuentaPorCobrarInput, FacturaUncheckedUpdateWithoutCuentaPorCobrarInput>
+  }
+
+  export type FacturaUpdateWithoutCuentaPorCobrarInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    numeroFactura?: IntFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    subtotal?: FloatFieldUpdateOperationsInput | number
+    impuestoTotal?: FloatFieldUpdateOperationsInput | number
+    total?: FloatFieldUpdateOperationsInput | number
+    estado?: StringFieldUpdateOperationsInput | string
+    moneda?: StringFieldUpdateOperationsInput | string
+    tasaCambio?: FloatFieldUpdateOperationsInput | number
+    cuotasTotales?: IntFieldUpdateOperationsInput | number
+    observaciones?: NullableStringFieldUpdateOperationsInput | string | null
+    anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    cliente?: ClienteUpdateOneRequiredWithoutFacturasNestedInput
+    usuario?: UsuarioUpdateOneWithoutFacturasNestedInput
+    empresa?: EmpresaUpdateOneWithoutFacturasNestedInput
+    items?: ItemFacturaUpdateManyWithoutFacturaNestedInput
+    pagos?: PagoUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUpdateOneWithoutFacturaNestedInput
+  }
+
+  export type FacturaUncheckedUpdateWithoutCuentaPorCobrarInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    numeroFactura?: IntFieldUpdateOperationsInput | number
+    clienteId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: NullableStringFieldUpdateOperationsInput | string | null
+    empresaId?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    subtotal?: FloatFieldUpdateOperationsInput | number
+    impuestoTotal?: FloatFieldUpdateOperationsInput | number
+    total?: FloatFieldUpdateOperationsInput | number
+    estado?: StringFieldUpdateOperationsInput | string
+    moneda?: StringFieldUpdateOperationsInput | string
+    tasaCambio?: FloatFieldUpdateOperationsInput | number
+    cuotasTotales?: IntFieldUpdateOperationsInput | number
+    observaciones?: NullableStringFieldUpdateOperationsInput | string | null
+    anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    items?: ItemFacturaUncheckedUpdateManyWithoutFacturaNestedInput
+    pagos?: PagoUncheckedUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUncheckedUpdateOneWithoutFacturaNestedInput
+  }
+
+  export type ClienteUpsertWithoutCuentasPorCobrarInput = {
+    update: XOR<ClienteUpdateWithoutCuentasPorCobrarInput, ClienteUncheckedUpdateWithoutCuentasPorCobrarInput>
+    create: XOR<ClienteCreateWithoutCuentasPorCobrarInput, ClienteUncheckedCreateWithoutCuentasPorCobrarInput>
+    where?: ClienteWhereInput
+  }
+
+  export type ClienteUpdateToOneWithWhereWithoutCuentasPorCobrarInput = {
+    where?: ClienteWhereInput
+    data: XOR<ClienteUpdateWithoutCuentasPorCobrarInput, ClienteUncheckedUpdateWithoutCuentasPorCobrarInput>
+  }
+
+  export type ClienteUpdateWithoutCuentasPorCobrarInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    razonSocial?: StringFieldUpdateOperationsInput | string
+    rifCedula?: StringFieldUpdateOperationsInput | string
+    direccion?: NullableStringFieldUpdateOperationsInput | string | null
+    telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    correo?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    empresa?: UsuarioUpdateOneWithoutClientesNestedInput
+    facturas?: FacturaUpdateManyWithoutClienteNestedInput
+    cotizaciones?: CotizacionUpdateManyWithoutClienteNestedInput
+  }
+
+  export type ClienteUncheckedUpdateWithoutCuentasPorCobrarInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    razonSocial?: StringFieldUpdateOperationsInput | string
+    rifCedula?: StringFieldUpdateOperationsInput | string
+    direccion?: NullableStringFieldUpdateOperationsInput | string | null
+    telefono?: NullableStringFieldUpdateOperationsInput | string | null
+    correo?: NullableStringFieldUpdateOperationsInput | string | null
+    empresaId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    facturas?: FacturaUncheckedUpdateManyWithoutClienteNestedInput
+    cotizaciones?: CotizacionUncheckedUpdateManyWithoutClienteNestedInput
+  }
+
+  export type UsuarioUpsertWithoutCuentasPorCobrarInput = {
+    update: XOR<UsuarioUpdateWithoutCuentasPorCobrarInput, UsuarioUncheckedUpdateWithoutCuentasPorCobrarInput>
+    create: XOR<UsuarioCreateWithoutCuentasPorCobrarInput, UsuarioUncheckedCreateWithoutCuentasPorCobrarInput>
+    where?: UsuarioWhereInput
+  }
+
+  export type UsuarioUpdateToOneWithWhereWithoutCuentasPorCobrarInput = {
+    where?: UsuarioWhereInput
+    data: XOR<UsuarioUpdateWithoutCuentasPorCobrarInput, UsuarioUncheckedUpdateWithoutCuentasPorCobrarInput>
+  }
+
+  export type UsuarioUpdateWithoutCuentasPorCobrarInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    nombre?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    rol?: StringFieldUpdateOperationsInput | string
+    activo?: BoolFieldUpdateOperationsInput | boolean
+    subscriptionStatus?: StringFieldUpdateOperationsInput | string
+    planType?: NullableStringFieldUpdateOperationsInput | string | null
+    trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
+    mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
+    sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
+    empresaRef?: EmpresaUpdateOneWithoutUsuariosNestedInput
+    empresa?: UsuarioUpdateOneWithoutSubUsuariosNestedInput
+    subUsuarios?: UsuarioUpdateManyWithoutEmpresaNestedInput
+    productos?: ProductoUpdateManyWithoutEmpresaNestedInput
+    clientes?: ClienteUpdateManyWithoutEmpresaNestedInput
+    facturas?: FacturaUpdateManyWithoutUsuarioNestedInput
+    cierresCaja?: CierreCajaUpdateManyWithoutUsuarioNestedInput
+    cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
+    solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
+    auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
+  }
+
+  export type UsuarioUncheckedUpdateWithoutCuentasPorCobrarInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    nombre?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    rol?: StringFieldUpdateOperationsInput | string
+    rolId?: NullableStringFieldUpdateOperationsInput | string | null
+    activo?: BoolFieldUpdateOperationsInput | boolean
+    empresaId?: NullableStringFieldUpdateOperationsInput | string | null
+    empresaRefId?: NullableStringFieldUpdateOperationsInput | string | null
+    subscriptionStatus?: StringFieldUpdateOperationsInput | string
+    planType?: NullableStringFieldUpdateOperationsInput | string | null
+    trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
+    mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
+    sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
+    productos?: ProductoUncheckedUpdateManyWithoutEmpresaNestedInput
+    clientes?: ClienteUncheckedUpdateManyWithoutEmpresaNestedInput
+    facturas?: FacturaUncheckedUpdateManyWithoutUsuarioNestedInput
+    cierresCaja?: CierreCajaUncheckedUpdateManyWithoutUsuarioNestedInput
+    cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
+    solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
+  }
+
+  export type GestionCobranzaUpsertWithWhereUniqueWithoutCuentaPorCobrarInput = {
+    where: GestionCobranzaWhereUniqueInput
+    update: XOR<GestionCobranzaUpdateWithoutCuentaPorCobrarInput, GestionCobranzaUncheckedUpdateWithoutCuentaPorCobrarInput>
+    create: XOR<GestionCobranzaCreateWithoutCuentaPorCobrarInput, GestionCobranzaUncheckedCreateWithoutCuentaPorCobrarInput>
+  }
+
+  export type GestionCobranzaUpdateWithWhereUniqueWithoutCuentaPorCobrarInput = {
+    where: GestionCobranzaWhereUniqueInput
+    data: XOR<GestionCobranzaUpdateWithoutCuentaPorCobrarInput, GestionCobranzaUncheckedUpdateWithoutCuentaPorCobrarInput>
+  }
+
+  export type GestionCobranzaUpdateManyWithWhereWithoutCuentaPorCobrarInput = {
+    where: GestionCobranzaScalarWhereInput
+    data: XOR<GestionCobranzaUpdateManyMutationInput, GestionCobranzaUncheckedUpdateManyWithoutCuentaPorCobrarInput>
+  }
+
+  export type CuentaPorCobrarCreateWithoutGestionsInput = {
+    id?: string
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    empresa?: EmpresaCreateNestedOneWithoutCuentasPorCobrarInput
+    factura: FacturaCreateNestedOneWithoutCuentaPorCobrarInput
+    cliente: ClienteCreateNestedOneWithoutCuentasPorCobrarInput
+    usuario?: UsuarioCreateNestedOneWithoutCuentasPorCobrarInput
+  }
+
+  export type CuentaPorCobrarUncheckedCreateWithoutGestionsInput = {
+    id?: string
+    empresaId: string
+    facturaId: string
+    clienteId: string
+    usuarioId?: string | null
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type CuentaPorCobrarCreateOrConnectWithoutGestionsInput = {
+    where: CuentaPorCobrarWhereUniqueInput
+    create: XOR<CuentaPorCobrarCreateWithoutGestionsInput, CuentaPorCobrarUncheckedCreateWithoutGestionsInput>
+  }
+
+  export type UsuarioCreateWithoutGestionesCobranzaInput = {
+    id?: string
+    username: string
+    passwordHash: string
+    nombre?: string
+    email?: string | null
+    rol?: string
+    activo?: boolean
+    subscriptionStatus?: string
+    planType?: string | null
+    trialStartsAt?: Date | string | null
+    trialEndsAt?: Date | string | null
+    currentPeriodEnd?: Date | string | null
+    mfaEnabled?: boolean
+    mfaSecret?: string | null
+    sessionVersion?: number
+    refreshTokenId?: string | null
+    sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
+    lastLoginIp?: string | null
+    lastLoginAt?: Date | string | null
+    deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    rolDinamico?: RolCreateNestedOneWithoutUsuariosInput
+    empresaRef?: EmpresaCreateNestedOneWithoutUsuariosInput
+    empresa?: UsuarioCreateNestedOneWithoutSubUsuariosInput
+    subUsuarios?: UsuarioCreateNestedManyWithoutEmpresaInput
+    productos?: ProductoCreateNestedManyWithoutEmpresaInput
+    clientes?: ClienteCreateNestedManyWithoutEmpresaInput
+    facturas?: FacturaCreateNestedManyWithoutUsuarioInput
+    cierresCaja?: CierreCajaCreateNestedManyWithoutUsuarioInput
+    cotizaciones?: CotizacionCreateNestedManyWithoutUsuarioInput
+    solicitudesActivacion?: SolicitudActivacionCreateNestedManyWithoutUsuarioInput
+    auditLogs?: AuditLogCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarCreateNestedManyWithoutUsuarioInput
+  }
+
+  export type UsuarioUncheckedCreateWithoutGestionesCobranzaInput = {
+    id?: string
+    username: string
+    passwordHash: string
+    nombre?: string
+    email?: string | null
+    rol?: string
+    rolId?: string | null
+    activo?: boolean
+    empresaId?: string | null
+    empresaRefId?: string | null
+    subscriptionStatus?: string
+    planType?: string | null
+    trialStartsAt?: Date | string | null
+    trialEndsAt?: Date | string | null
+    currentPeriodEnd?: Date | string | null
+    mfaEnabled?: boolean
+    mfaSecret?: string | null
+    sessionVersion?: number
+    refreshTokenId?: string | null
+    sudoModeExpiresAt?: Date | string | null
+    registrationIp?: string | null
+    registrationLatitude?: number | null
+    registrationLongitude?: number | null
+    lastLoginIp?: string | null
+    lastLoginAt?: Date | string | null
+    deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    subUsuarios?: UsuarioUncheckedCreateNestedManyWithoutEmpresaInput
+    productos?: ProductoUncheckedCreateNestedManyWithoutEmpresaInput
+    clientes?: ClienteUncheckedCreateNestedManyWithoutEmpresaInput
+    facturas?: FacturaUncheckedCreateNestedManyWithoutUsuarioInput
+    cierresCaja?: CierreCajaUncheckedCreateNestedManyWithoutUsuarioInput
+    cotizaciones?: CotizacionUncheckedCreateNestedManyWithoutUsuarioInput
+    solicitudesActivacion?: SolicitudActivacionUncheckedCreateNestedManyWithoutUsuarioInput
+    auditLogs?: AuditLogUncheckedCreateNestedManyWithoutUsuarioInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedCreateNestedManyWithoutUsuarioInput
+  }
+
+  export type UsuarioCreateOrConnectWithoutGestionesCobranzaInput = {
+    where: UsuarioWhereUniqueInput
+    create: XOR<UsuarioCreateWithoutGestionesCobranzaInput, UsuarioUncheckedCreateWithoutGestionesCobranzaInput>
+  }
+
+  export type CuentaPorCobrarUpsertWithoutGestionsInput = {
+    update: XOR<CuentaPorCobrarUpdateWithoutGestionsInput, CuentaPorCobrarUncheckedUpdateWithoutGestionsInput>
+    create: XOR<CuentaPorCobrarCreateWithoutGestionsInput, CuentaPorCobrarUncheckedCreateWithoutGestionsInput>
+    where?: CuentaPorCobrarWhereInput
+  }
+
+  export type CuentaPorCobrarUpdateToOneWithWhereWithoutGestionsInput = {
+    where?: CuentaPorCobrarWhereInput
+    data: XOR<CuentaPorCobrarUpdateWithoutGestionsInput, CuentaPorCobrarUncheckedUpdateWithoutGestionsInput>
+  }
+
+  export type CuentaPorCobrarUpdateWithoutGestionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    empresa?: EmpresaUpdateOneWithoutCuentasPorCobrarNestedInput
+    factura?: FacturaUpdateOneRequiredWithoutCuentaPorCobrarNestedInput
+    cliente?: ClienteUpdateOneRequiredWithoutCuentasPorCobrarNestedInput
+    usuario?: UsuarioUpdateOneWithoutCuentasPorCobrarNestedInput
+  }
+
+  export type CuentaPorCobrarUncheckedUpdateWithoutGestionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    facturaId?: StringFieldUpdateOperationsInput | string
+    clienteId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: NullableStringFieldUpdateOperationsInput | string | null
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UsuarioUpsertWithoutGestionesCobranzaInput = {
+    update: XOR<UsuarioUpdateWithoutGestionesCobranzaInput, UsuarioUncheckedUpdateWithoutGestionesCobranzaInput>
+    create: XOR<UsuarioCreateWithoutGestionesCobranzaInput, UsuarioUncheckedCreateWithoutGestionesCobranzaInput>
+    where?: UsuarioWhereInput
+  }
+
+  export type UsuarioUpdateToOneWithWhereWithoutGestionesCobranzaInput = {
+    where?: UsuarioWhereInput
+    data: XOR<UsuarioUpdateWithoutGestionesCobranzaInput, UsuarioUncheckedUpdateWithoutGestionesCobranzaInput>
+  }
+
+  export type UsuarioUpdateWithoutGestionesCobranzaInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    nombre?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    rol?: StringFieldUpdateOperationsInput | string
+    activo?: BoolFieldUpdateOperationsInput | boolean
+    subscriptionStatus?: StringFieldUpdateOperationsInput | string
+    planType?: NullableStringFieldUpdateOperationsInput | string | null
+    trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
+    mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
+    sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
+    empresaRef?: EmpresaUpdateOneWithoutUsuariosNestedInput
+    empresa?: UsuarioUpdateOneWithoutSubUsuariosNestedInput
+    subUsuarios?: UsuarioUpdateManyWithoutEmpresaNestedInput
+    productos?: ProductoUpdateManyWithoutEmpresaNestedInput
+    clientes?: ClienteUpdateManyWithoutEmpresaNestedInput
+    facturas?: FacturaUpdateManyWithoutUsuarioNestedInput
+    cierresCaja?: CierreCajaUpdateManyWithoutUsuarioNestedInput
+    cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
+    solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
+    auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+  }
+
+  export type UsuarioUncheckedUpdateWithoutGestionesCobranzaInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    username?: StringFieldUpdateOperationsInput | string
+    passwordHash?: StringFieldUpdateOperationsInput | string
+    nombre?: StringFieldUpdateOperationsInput | string
+    email?: NullableStringFieldUpdateOperationsInput | string | null
+    rol?: StringFieldUpdateOperationsInput | string
+    rolId?: NullableStringFieldUpdateOperationsInput | string | null
+    activo?: BoolFieldUpdateOperationsInput | boolean
+    empresaId?: NullableStringFieldUpdateOperationsInput | string | null
+    empresaRefId?: NullableStringFieldUpdateOperationsInput | string | null
+    subscriptionStatus?: StringFieldUpdateOperationsInput | string
+    planType?: NullableStringFieldUpdateOperationsInput | string | null
+    trialStartsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    trialEndsAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    currentPeriodEnd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
+    mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
+    sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
+    sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
+    registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    registrationLongitude?: NullableFloatFieldUpdateOperationsInput | number | null
+    lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
+    lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
+    productos?: ProductoUncheckedUpdateManyWithoutEmpresaNestedInput
+    clientes?: ClienteUncheckedUpdateManyWithoutEmpresaNestedInput
+    facturas?: FacturaUncheckedUpdateManyWithoutUsuarioNestedInput
+    cierresCaja?: CierreCajaUncheckedUpdateManyWithoutUsuarioNestedInput
+    cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
+    solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
+    auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioCreateManyEmpresaRefInput = {
@@ -32834,6 +39437,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -32841,6 +39445,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -32869,6 +39474,10 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -32882,6 +39491,8 @@ export namespace Prisma {
     montoFinal?: number | null
     ingresosEfectivo?: number
     ingresosBanco?: number
+    ingresosEfectivoVES?: number | null
+    ingresosBancoVES?: number | null
     estado?: string
     observaciones?: string | null
     arqueoDetalle?: string | null
@@ -32901,6 +39512,7 @@ export namespace Prisma {
     total: number
     moneda?: string
     estado?: string
+    facturaId?: string | null
   }
 
   export type AuditLogCreateManyEmpresaInput = {
@@ -32914,6 +39526,24 @@ export namespace Prisma {
     ipAddress?: string | null
     userAgent?: string | null
     createdAt?: Date | string
+  }
+
+  export type CuentaPorCobrarCreateManyEmpresaInput = {
+    id?: string
+    facturaId: string
+    clienteId: string
+    usuarioId?: string | null
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type UsuarioUpdateWithoutEmpresaRefInput = {
@@ -32932,6 +39562,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -32939,6 +39570,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
@@ -32951,6 +39583,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateWithoutEmpresaRefInput = {
@@ -32971,6 +39605,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -32978,6 +39613,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -32988,6 +39624,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateManyWithoutEmpresaRefInput = {
@@ -33008,6 +39646,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -33015,6 +39654,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -33059,12 +39699,18 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cliente?: ClienteUpdateOneRequiredWithoutFacturasNestedInput
     usuario?: UsuarioUpdateOneWithoutFacturasNestedInput
     items?: ItemFacturaUpdateManyWithoutFacturaNestedInput
     pagos?: PagoUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUpdateOneWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUpdateOneWithoutFacturaNestedInput
   }
 
   export type FacturaUncheckedUpdateWithoutEmpresaInput = {
@@ -33084,10 +39730,16 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: ItemFacturaUncheckedUpdateManyWithoutFacturaNestedInput
     pagos?: PagoUncheckedUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUncheckedUpdateOneWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedUpdateOneWithoutFacturaNestedInput
   }
 
   export type FacturaUncheckedUpdateManyWithoutEmpresaInput = {
@@ -33107,6 +39759,10 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -33119,6 +39775,8 @@ export namespace Prisma {
     montoFinal?: NullableFloatFieldUpdateOperationsInput | number | null
     ingresosEfectivo?: FloatFieldUpdateOperationsInput | number
     ingresosBanco?: FloatFieldUpdateOperationsInput | number
+    ingresosEfectivoVES?: NullableFloatFieldUpdateOperationsInput | number | null
+    ingresosBancoVES?: NullableFloatFieldUpdateOperationsInput | number | null
     estado?: StringFieldUpdateOperationsInput | string
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     arqueoDetalle?: NullableStringFieldUpdateOperationsInput | string | null
@@ -33136,6 +39794,8 @@ export namespace Prisma {
     montoFinal?: NullableFloatFieldUpdateOperationsInput | number | null
     ingresosEfectivo?: FloatFieldUpdateOperationsInput | number
     ingresosBanco?: FloatFieldUpdateOperationsInput | number
+    ingresosEfectivoVES?: NullableFloatFieldUpdateOperationsInput | number | null
+    ingresosBancoVES?: NullableFloatFieldUpdateOperationsInput | number | null
     estado?: StringFieldUpdateOperationsInput | string
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     arqueoDetalle?: NullableStringFieldUpdateOperationsInput | string | null
@@ -33152,6 +39812,8 @@ export namespace Prisma {
     montoFinal?: NullableFloatFieldUpdateOperationsInput | number | null
     ingresosEfectivo?: FloatFieldUpdateOperationsInput | number
     ingresosBanco?: FloatFieldUpdateOperationsInput | number
+    ingresosEfectivoVES?: NullableFloatFieldUpdateOperationsInput | number | null
+    ingresosBancoVES?: NullableFloatFieldUpdateOperationsInput | number | null
     estado?: StringFieldUpdateOperationsInput | string
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     arqueoDetalle?: NullableStringFieldUpdateOperationsInput | string | null
@@ -33171,6 +39833,7 @@ export namespace Prisma {
     estado?: StringFieldUpdateOperationsInput | string
     cliente?: ClienteUpdateOneRequiredWithoutCotizacionesNestedInput
     usuario?: UsuarioUpdateOneWithoutCotizacionesNestedInput
+    factura?: FacturaUpdateOneWithoutCotizacionOrigenNestedInput
     items?: ItemCotizacionUpdateManyWithoutCotizacionNestedInput
   }
 
@@ -33186,6 +39849,7 @@ export namespace Prisma {
     total?: FloatFieldUpdateOperationsInput | number
     moneda?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    facturaId?: NullableStringFieldUpdateOperationsInput | string | null
     items?: ItemCotizacionUncheckedUpdateManyWithoutCotizacionNestedInput
   }
 
@@ -33201,6 +39865,7 @@ export namespace Prisma {
     total?: FloatFieldUpdateOperationsInput | number
     moneda?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    facturaId?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type AuditLogUpdateWithoutEmpresaInput = {
@@ -33242,6 +39907,62 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type CuentaPorCobrarUpdateWithoutEmpresaInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    factura?: FacturaUpdateOneRequiredWithoutCuentaPorCobrarNestedInput
+    cliente?: ClienteUpdateOneRequiredWithoutCuentasPorCobrarNestedInput
+    usuario?: UsuarioUpdateOneWithoutCuentasPorCobrarNestedInput
+    gestions?: GestionCobranzaUpdateManyWithoutCuentaPorCobrarNestedInput
+  }
+
+  export type CuentaPorCobrarUncheckedUpdateWithoutEmpresaInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    facturaId?: StringFieldUpdateOperationsInput | string
+    clienteId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: NullableStringFieldUpdateOperationsInput | string | null
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    gestions?: GestionCobranzaUncheckedUpdateManyWithoutCuentaPorCobrarNestedInput
+  }
+
+  export type CuentaPorCobrarUncheckedUpdateManyWithoutEmpresaInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    facturaId?: StringFieldUpdateOperationsInput | string
+    clienteId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: NullableStringFieldUpdateOperationsInput | string | null
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type UsuarioCreateManyRolDinamicoInput = {
     id?: string
     username: string
@@ -33260,6 +39981,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -33267,6 +39989,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -33291,6 +40014,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -33298,6 +40022,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     empresaRef?: EmpresaUpdateOneWithoutUsuariosNestedInput
@@ -33310,6 +40035,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateWithoutRolDinamicoInput = {
@@ -33330,6 +40057,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -33337,6 +40065,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -33347,6 +40076,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateManyWithoutRolDinamicoInput = {
@@ -33367,6 +40098,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -33374,6 +40106,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -33423,6 +40156,10 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -33439,6 +40176,25 @@ export namespace Prisma {
     total: number
     moneda?: string
     estado?: string
+    facturaId?: string | null
+  }
+
+  export type CuentaPorCobrarCreateManyClienteInput = {
+    id?: string
+    empresaId: string
+    facturaId: string
+    usuarioId?: string | null
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type FacturaUpdateWithoutClienteInput = {
@@ -33456,12 +40212,18 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     usuario?: UsuarioUpdateOneWithoutFacturasNestedInput
     empresa?: EmpresaUpdateOneWithoutFacturasNestedInput
     items?: ItemFacturaUpdateManyWithoutFacturaNestedInput
     pagos?: PagoUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUpdateOneWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUpdateOneWithoutFacturaNestedInput
   }
 
   export type FacturaUncheckedUpdateWithoutClienteInput = {
@@ -33481,10 +40243,16 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: ItemFacturaUncheckedUpdateManyWithoutFacturaNestedInput
     pagos?: PagoUncheckedUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUncheckedUpdateOneWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedUpdateOneWithoutFacturaNestedInput
   }
 
   export type FacturaUncheckedUpdateManyWithoutClienteInput = {
@@ -33504,6 +40272,10 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -33520,6 +40292,7 @@ export namespace Prisma {
     estado?: StringFieldUpdateOperationsInput | string
     usuario?: UsuarioUpdateOneWithoutCotizacionesNestedInput
     empresa?: EmpresaUpdateOneWithoutCotizacionesNestedInput
+    factura?: FacturaUpdateOneWithoutCotizacionOrigenNestedInput
     items?: ItemCotizacionUpdateManyWithoutCotizacionNestedInput
   }
 
@@ -33535,6 +40308,7 @@ export namespace Prisma {
     total?: FloatFieldUpdateOperationsInput | number
     moneda?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    facturaId?: NullableStringFieldUpdateOperationsInput | string | null
     items?: ItemCotizacionUncheckedUpdateManyWithoutCotizacionNestedInput
   }
 
@@ -33550,6 +40324,63 @@ export namespace Prisma {
     total?: FloatFieldUpdateOperationsInput | number
     moneda?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    facturaId?: NullableStringFieldUpdateOperationsInput | string | null
+  }
+
+  export type CuentaPorCobrarUpdateWithoutClienteInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    empresa?: EmpresaUpdateOneWithoutCuentasPorCobrarNestedInput
+    factura?: FacturaUpdateOneRequiredWithoutCuentaPorCobrarNestedInput
+    usuario?: UsuarioUpdateOneWithoutCuentasPorCobrarNestedInput
+    gestions?: GestionCobranzaUpdateManyWithoutCuentaPorCobrarNestedInput
+  }
+
+  export type CuentaPorCobrarUncheckedUpdateWithoutClienteInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    facturaId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: NullableStringFieldUpdateOperationsInput | string | null
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    gestions?: GestionCobranzaUncheckedUpdateManyWithoutCuentaPorCobrarNestedInput
+  }
+
+  export type CuentaPorCobrarUncheckedUpdateManyWithoutClienteInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    facturaId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: NullableStringFieldUpdateOperationsInput | string | null
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ItemFacturaCreateManyProductoInput = {
@@ -33566,6 +40397,15 @@ export namespace Prisma {
     impuestoLinea: number
     totalLinea: number
     createdAt?: Date | string
+  }
+
+  export type ItemCotizacionCreateManyProductoInput = {
+    id?: string
+    cotizacionId: string
+    descripcion: string
+    cantidad: number
+    precioUnitario: number
+    totalLinea: number
   }
 
   export type ItemFacturaUpdateWithoutProductoInput = {
@@ -33616,6 +40456,33 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type ItemCotizacionUpdateWithoutProductoInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    descripcion?: StringFieldUpdateOperationsInput | string
+    cantidad?: IntFieldUpdateOperationsInput | number
+    precioUnitario?: FloatFieldUpdateOperationsInput | number
+    totalLinea?: FloatFieldUpdateOperationsInput | number
+    cotizacion?: CotizacionUpdateOneRequiredWithoutItemsNestedInput
+  }
+
+  export type ItemCotizacionUncheckedUpdateWithoutProductoInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    cotizacionId?: StringFieldUpdateOperationsInput | string
+    descripcion?: StringFieldUpdateOperationsInput | string
+    cantidad?: IntFieldUpdateOperationsInput | number
+    precioUnitario?: FloatFieldUpdateOperationsInput | number
+    totalLinea?: FloatFieldUpdateOperationsInput | number
+  }
+
+  export type ItemCotizacionUncheckedUpdateManyWithoutProductoInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    cotizacionId?: StringFieldUpdateOperationsInput | string
+    descripcion?: StringFieldUpdateOperationsInput | string
+    cantidad?: IntFieldUpdateOperationsInput | number
+    precioUnitario?: FloatFieldUpdateOperationsInput | number
+    totalLinea?: FloatFieldUpdateOperationsInput | number
+  }
+
   export type ItemFacturaCreateManyFacturaInput = {
     id?: string
     productoId?: string | null
@@ -33640,6 +40507,12 @@ export namespace Prisma {
     referenciaTransaccion?: string | null
     fechaPago?: Date | string
     notas?: string | null
+    tasaBCV?: number | null
+    estado?: string
+    motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    anuladoPor?: string | null
+    fechaAnulacion?: Date | string | null
     createdAt?: Date | string
   }
 
@@ -33699,6 +40572,12 @@ export namespace Prisma {
     referenciaTransaccion?: NullableStringFieldUpdateOperationsInput | string | null
     fechaPago?: DateTimeFieldUpdateOperationsInput | Date | string
     notas?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaBCV?: NullableFloatFieldUpdateOperationsInput | number | null
+    estado?: StringFieldUpdateOperationsInput | string
+    motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -33710,6 +40589,12 @@ export namespace Prisma {
     referenciaTransaccion?: NullableStringFieldUpdateOperationsInput | string | null
     fechaPago?: DateTimeFieldUpdateOperationsInput | Date | string
     notas?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaBCV?: NullableFloatFieldUpdateOperationsInput | number | null
+    estado?: StringFieldUpdateOperationsInput | string
+    motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -33721,6 +40606,12 @@ export namespace Prisma {
     referenciaTransaccion?: NullableStringFieldUpdateOperationsInput | string | null
     fechaPago?: DateTimeFieldUpdateOperationsInput | Date | string
     notas?: NullableStringFieldUpdateOperationsInput | string | null
+    tasaBCV?: NullableFloatFieldUpdateOperationsInput | number | null
+    estado?: StringFieldUpdateOperationsInput | string
+    motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
@@ -33735,11 +40626,11 @@ export namespace Prisma {
 
   export type ItemCotizacionUpdateWithoutCotizacionInput = {
     id?: StringFieldUpdateOperationsInput | string
-    productoId?: NullableStringFieldUpdateOperationsInput | string | null
     descripcion?: StringFieldUpdateOperationsInput | string
     cantidad?: IntFieldUpdateOperationsInput | number
     precioUnitario?: FloatFieldUpdateOperationsInput | number
     totalLinea?: FloatFieldUpdateOperationsInput | number
+    producto?: ProductoUpdateOneWithoutItemsCotizacionNestedInput
   }
 
   export type ItemCotizacionUncheckedUpdateWithoutCotizacionInput = {
@@ -33778,6 +40669,7 @@ export namespace Prisma {
     mfaEnabled?: boolean
     mfaSecret?: string | null
     sessionVersion?: number
+    refreshTokenId?: string | null
     sudoModeExpiresAt?: Date | string | null
     registrationIp?: string | null
     registrationLatitude?: number | null
@@ -33785,6 +40677,7 @@ export namespace Prisma {
     lastLoginIp?: string | null
     lastLoginAt?: Date | string | null
     deletedAt?: Date | string | null
+    scheduledDeletionAt?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -33838,6 +40731,10 @@ export namespace Prisma {
     observaciones?: string | null
     anuladoPor?: string | null
     motivoAnulacion?: string | null
+    descripcionAnulacion?: string | null
+    fechaAnulacion?: Date | string | null
+    tasaAnulacion?: number | null
+    requestId?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -33851,6 +40748,8 @@ export namespace Prisma {
     montoFinal?: number | null
     ingresosEfectivo?: number
     ingresosBanco?: number
+    ingresosEfectivoVES?: number | null
+    ingresosBancoVES?: number | null
     estado?: string
     observaciones?: string | null
     arqueoDetalle?: string | null
@@ -33870,6 +40769,7 @@ export namespace Prisma {
     total: number
     moneda?: string
     estado?: string
+    facturaId?: string | null
   }
 
   export type SolicitudActivacionCreateManyUsuarioInput = {
@@ -33878,6 +40778,9 @@ export namespace Prisma {
     metodoPago: string
     referencia: string
     estado?: string
+    notas?: string | null
+    revisadoPor?: string | null
+    revisadoEn?: Date | string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -33892,6 +40795,34 @@ export namespace Prisma {
     datosNuevos?: string | null
     ipAddress?: string | null
     userAgent?: string | null
+    createdAt?: Date | string
+  }
+
+  export type CuentaPorCobrarCreateManyUsuarioInput = {
+    id?: string
+    empresaId: string
+    facturaId: string
+    clienteId: string
+    montoOriginal: number
+    montoCobrado?: number
+    montoPendiente: number
+    fechaEmision: Date | string
+    fechaVencimiento: Date | string
+    estado?: string
+    diasVencido?: number
+    ultimaGestion?: Date | string | null
+    notas?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type GestionCobranzaCreateManyUsuarioInput = {
+    id?: string
+    cuentaPorCobrarId: string
+    empresaId: string
+    accion: string
+    notas?: string | null
+    fecha?: Date | string
     createdAt?: Date | string
   }
 
@@ -33911,6 +40842,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -33918,6 +40850,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     rolDinamico?: RolUpdateOneWithoutUsuariosNestedInput
@@ -33930,6 +40863,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateWithoutEmpresaInput = {
@@ -33950,6 +40885,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -33957,6 +40893,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     subUsuarios?: UsuarioUncheckedUpdateManyWithoutEmpresaNestedInput
@@ -33967,6 +40904,8 @@ export namespace Prisma {
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutUsuarioNestedInput
     solicitudesActivacion?: SolicitudActivacionUncheckedUpdateManyWithoutUsuarioNestedInput
     auditLogs?: AuditLogUncheckedUpdateManyWithoutUsuarioNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioNestedInput
+    gestionesCobranza?: GestionCobranzaUncheckedUpdateManyWithoutUsuarioNestedInput
   }
 
   export type UsuarioUncheckedUpdateManyWithoutEmpresaInput = {
@@ -33987,6 +40926,7 @@ export namespace Prisma {
     mfaEnabled?: BoolFieldUpdateOperationsInput | boolean
     mfaSecret?: NullableStringFieldUpdateOperationsInput | string | null
     sessionVersion?: IntFieldUpdateOperationsInput | number
+    refreshTokenId?: NullableStringFieldUpdateOperationsInput | string | null
     sudoModeExpiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     registrationIp?: NullableStringFieldUpdateOperationsInput | string | null
     registrationLatitude?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -33994,6 +40934,7 @@ export namespace Prisma {
     lastLoginIp?: NullableStringFieldUpdateOperationsInput | string | null
     lastLoginAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     deletedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    scheduledDeletionAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -34018,6 +40959,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     itemsFactura?: ItemFacturaUpdateManyWithoutProductoNestedInput
+    itemsCotizacion?: ItemCotizacionUpdateManyWithoutProductoNestedInput
   }
 
   export type ProductoUncheckedUpdateWithoutEmpresaInput = {
@@ -34040,6 +40982,7 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     itemsFactura?: ItemFacturaUncheckedUpdateManyWithoutProductoNestedInput
+    itemsCotizacion?: ItemCotizacionUncheckedUpdateManyWithoutProductoNestedInput
   }
 
   export type ProductoUncheckedUpdateManyWithoutEmpresaInput = {
@@ -34074,6 +41017,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     facturas?: FacturaUpdateManyWithoutClienteNestedInput
     cotizaciones?: CotizacionUpdateManyWithoutClienteNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUpdateManyWithoutClienteNestedInput
   }
 
   export type ClienteUncheckedUpdateWithoutEmpresaInput = {
@@ -34087,6 +41031,7 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     facturas?: FacturaUncheckedUpdateManyWithoutClienteNestedInput
     cotizaciones?: CotizacionUncheckedUpdateManyWithoutClienteNestedInput
+    cuentasPorCobrar?: CuentaPorCobrarUncheckedUpdateManyWithoutClienteNestedInput
   }
 
   export type ClienteUncheckedUpdateManyWithoutEmpresaInput = {
@@ -34115,12 +41060,18 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cliente?: ClienteUpdateOneRequiredWithoutFacturasNestedInput
     empresa?: EmpresaUpdateOneWithoutFacturasNestedInput
     items?: ItemFacturaUpdateManyWithoutFacturaNestedInput
     pagos?: PagoUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUpdateOneWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUpdateOneWithoutFacturaNestedInput
   }
 
   export type FacturaUncheckedUpdateWithoutUsuarioInput = {
@@ -34140,10 +41091,16 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     items?: ItemFacturaUncheckedUpdateManyWithoutFacturaNestedInput
     pagos?: PagoUncheckedUpdateManyWithoutFacturaNestedInput
+    cotizacionOrigen?: CotizacionUncheckedUpdateOneWithoutFacturaNestedInput
+    cuentaPorCobrar?: CuentaPorCobrarUncheckedUpdateOneWithoutFacturaNestedInput
   }
 
   export type FacturaUncheckedUpdateManyWithoutUsuarioInput = {
@@ -34163,6 +41120,10 @@ export namespace Prisma {
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     anuladoPor?: NullableStringFieldUpdateOperationsInput | string | null
     motivoAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    descripcionAnulacion?: NullableStringFieldUpdateOperationsInput | string | null
+    fechaAnulacion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    tasaAnulacion?: NullableFloatFieldUpdateOperationsInput | number | null
+    requestId?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -34175,6 +41136,8 @@ export namespace Prisma {
     montoFinal?: NullableFloatFieldUpdateOperationsInput | number | null
     ingresosEfectivo?: FloatFieldUpdateOperationsInput | number
     ingresosBanco?: FloatFieldUpdateOperationsInput | number
+    ingresosEfectivoVES?: NullableFloatFieldUpdateOperationsInput | number | null
+    ingresosBancoVES?: NullableFloatFieldUpdateOperationsInput | number | null
     estado?: StringFieldUpdateOperationsInput | string
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     arqueoDetalle?: NullableStringFieldUpdateOperationsInput | string | null
@@ -34192,6 +41155,8 @@ export namespace Prisma {
     montoFinal?: NullableFloatFieldUpdateOperationsInput | number | null
     ingresosEfectivo?: FloatFieldUpdateOperationsInput | number
     ingresosBanco?: FloatFieldUpdateOperationsInput | number
+    ingresosEfectivoVES?: NullableFloatFieldUpdateOperationsInput | number | null
+    ingresosBancoVES?: NullableFloatFieldUpdateOperationsInput | number | null
     estado?: StringFieldUpdateOperationsInput | string
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     arqueoDetalle?: NullableStringFieldUpdateOperationsInput | string | null
@@ -34208,6 +41173,8 @@ export namespace Prisma {
     montoFinal?: NullableFloatFieldUpdateOperationsInput | number | null
     ingresosEfectivo?: FloatFieldUpdateOperationsInput | number
     ingresosBanco?: FloatFieldUpdateOperationsInput | number
+    ingresosEfectivoVES?: NullableFloatFieldUpdateOperationsInput | number | null
+    ingresosBancoVES?: NullableFloatFieldUpdateOperationsInput | number | null
     estado?: StringFieldUpdateOperationsInput | string
     observaciones?: NullableStringFieldUpdateOperationsInput | string | null
     arqueoDetalle?: NullableStringFieldUpdateOperationsInput | string | null
@@ -34227,6 +41194,7 @@ export namespace Prisma {
     estado?: StringFieldUpdateOperationsInput | string
     cliente?: ClienteUpdateOneRequiredWithoutCotizacionesNestedInput
     empresa?: EmpresaUpdateOneWithoutCotizacionesNestedInput
+    factura?: FacturaUpdateOneWithoutCotizacionOrigenNestedInput
     items?: ItemCotizacionUpdateManyWithoutCotizacionNestedInput
   }
 
@@ -34242,6 +41210,7 @@ export namespace Prisma {
     total?: FloatFieldUpdateOperationsInput | number
     moneda?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    facturaId?: NullableStringFieldUpdateOperationsInput | string | null
     items?: ItemCotizacionUncheckedUpdateManyWithoutCotizacionNestedInput
   }
 
@@ -34257,6 +41226,7 @@ export namespace Prisma {
     total?: FloatFieldUpdateOperationsInput | number
     moneda?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    facturaId?: NullableStringFieldUpdateOperationsInput | string | null
   }
 
   export type SolicitudActivacionUpdateWithoutUsuarioInput = {
@@ -34265,6 +41235,9 @@ export namespace Prisma {
     metodoPago?: StringFieldUpdateOperationsInput | string
     referencia?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -34275,6 +41248,9 @@ export namespace Prisma {
     metodoPago?: StringFieldUpdateOperationsInput | string
     referencia?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -34285,6 +41261,9 @@ export namespace Prisma {
     metodoPago?: StringFieldUpdateOperationsInput | string
     referencia?: StringFieldUpdateOperationsInput | string
     estado?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoPor?: NullableStringFieldUpdateOperationsInput | string | null
+    revisadoEn?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -34328,6 +41307,132 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type CuentaPorCobrarUpdateWithoutUsuarioInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    empresa?: EmpresaUpdateOneWithoutCuentasPorCobrarNestedInput
+    factura?: FacturaUpdateOneRequiredWithoutCuentaPorCobrarNestedInput
+    cliente?: ClienteUpdateOneRequiredWithoutCuentasPorCobrarNestedInput
+    gestions?: GestionCobranzaUpdateManyWithoutCuentaPorCobrarNestedInput
+  }
+
+  export type CuentaPorCobrarUncheckedUpdateWithoutUsuarioInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    facturaId?: StringFieldUpdateOperationsInput | string
+    clienteId?: StringFieldUpdateOperationsInput | string
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    gestions?: GestionCobranzaUncheckedUpdateManyWithoutCuentaPorCobrarNestedInput
+  }
+
+  export type CuentaPorCobrarUncheckedUpdateManyWithoutUsuarioInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    facturaId?: StringFieldUpdateOperationsInput | string
+    clienteId?: StringFieldUpdateOperationsInput | string
+    montoOriginal?: FloatFieldUpdateOperationsInput | number
+    montoCobrado?: FloatFieldUpdateOperationsInput | number
+    montoPendiente?: FloatFieldUpdateOperationsInput | number
+    fechaEmision?: DateTimeFieldUpdateOperationsInput | Date | string
+    fechaVencimiento?: DateTimeFieldUpdateOperationsInput | Date | string
+    estado?: StringFieldUpdateOperationsInput | string
+    diasVencido?: IntFieldUpdateOperationsInput | number
+    ultimaGestion?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GestionCobranzaUpdateWithoutUsuarioInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    accion?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    fecha?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    cuentaPorCobrar?: CuentaPorCobrarUpdateOneRequiredWithoutGestionsNestedInput
+  }
+
+  export type GestionCobranzaUncheckedUpdateWithoutUsuarioInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    cuentaPorCobrarId?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    accion?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    fecha?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GestionCobranzaUncheckedUpdateManyWithoutUsuarioInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    cuentaPorCobrarId?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    accion?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    fecha?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GestionCobranzaCreateManyCuentaPorCobrarInput = {
+    id?: string
+    empresaId: string
+    usuarioId: string
+    accion: string
+    notas?: string | null
+    fecha?: Date | string
+    createdAt?: Date | string
+  }
+
+  export type GestionCobranzaUpdateWithoutCuentaPorCobrarInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    accion?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    fecha?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    usuario?: UsuarioUpdateOneWithoutGestionesCobranzaNestedInput
+  }
+
+  export type GestionCobranzaUncheckedUpdateWithoutCuentaPorCobrarInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: StringFieldUpdateOperationsInput | string
+    accion?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    fecha?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type GestionCobranzaUncheckedUpdateManyWithoutCuentaPorCobrarInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    empresaId?: StringFieldUpdateOperationsInput | string
+    usuarioId?: StringFieldUpdateOperationsInput | string
+    accion?: StringFieldUpdateOperationsInput | string
+    notas?: NullableStringFieldUpdateOperationsInput | string | null
+    fecha?: DateTimeFieldUpdateOperationsInput | Date | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
 
 
   /**
@@ -34365,6 +41470,10 @@ export namespace Prisma {
      * @deprecated Use UsuarioCountOutputTypeDefaultArgs instead
      */
     export type UsuarioCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = UsuarioCountOutputTypeDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CuentaPorCobrarCountOutputTypeDefaultArgs instead
+     */
+    export type CuentaPorCobrarCountOutputTypeArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CuentaPorCobrarCountOutputTypeDefaultArgs<ExtArgs>
     /**
      * @deprecated Use EmpresaDefaultArgs instead
      */
@@ -34437,6 +41546,14 @@ export namespace Prisma {
      * @deprecated Use PromocionDefaultArgs instead
      */
     export type PromocionArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = PromocionDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use CuentaPorCobrarDefaultArgs instead
+     */
+    export type CuentaPorCobrarArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = CuentaPorCobrarDefaultArgs<ExtArgs>
+    /**
+     * @deprecated Use GestionCobranzaDefaultArgs instead
+     */
+    export type GestionCobranzaArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = GestionCobranzaDefaultArgs<ExtArgs>
 
   /**
    * Batch Payload for updateMany & deleteMany & createMany

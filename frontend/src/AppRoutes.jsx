@@ -37,6 +37,7 @@ import { GananciasReportPage } from './pages/GananciasReportPage';
 import { PruebasFacturasPage } from './pages/PruebasFacturasPage';
 import { CxcPage }            from './pages/CxcPage';
 import { CxcDetailPage }      from './pages/CxcDetailPage';
+import { PagosAnuladosPage }  from './pages/PagosAnuladosPage';
 
 export default function AppRoutes() {
   return (
@@ -127,6 +128,11 @@ export default function AppRoutes() {
         <Route path="/cxc/:id" element={
           <ProtectedRoute allowedRoles={ROLE_GROUPS.VENTAS}>
             <CxcDetailPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/pagos-anulados" element={
+          <ProtectedRoute allowedRoles={ROLE_GROUPS.VENTAS}>
+            <PagosAnuladosPage />
           </ProtectedRoute>
         } />
 

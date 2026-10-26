@@ -6,6 +6,7 @@ const prisma  = require('./db/prisma');
 const { tsFrag, monthTrunc } = require('./utils/sql');
 const { resolverEmpresaRefId } = require('./utils/empresaContext');
 const { tasaParaEmpresa } = require('./utils/tasaAPI');
+const { ESTADOS_PAGO } = require('./config/pagos');
 
 const clientesRouter   = require('./routes/clientes');
 const productosRouter  = require('./routes/productos');
@@ -28,6 +29,7 @@ const { authMiddleware, requireRole } = require('./middleware/auth');
 const { subscriptionGuard } = require('./middleware/subscriptionGuard');
 const { errorHandler } = require('./middleware/errorHandler');
 const { iniciarActualizacionDiaria } = require('./services/tasaDolar');
+const { iniciarPurgaArchivados } = require('./services/archivado');
 
 const app    = express();
 const PORT   = process.env.PORT || 3001;
@@ -243,6 +245,7 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
         FROM pagos p
         INNER JOIN facturas f ON f."id" = p."facturaId"
         WHERE p."fechaPago" >= ${inicioMes.toISOString()}::timestamp
+          AND p."estado" = ${ESTADOS_PAGO.ACTIVO}
           AND (f."usuarioId" = ${empresaId} OR f."usuarioId" IN (
             SELECT id FROM usuarios WHERE "empresaId" = ${empresaId}
           ))
@@ -306,6 +309,7 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
         FROM pagos p
         INNER JOIN facturas f ON f."id" = p."facturaId"
         WHERE p."fechaPago" >= ${tsFrag(new Date(hoy.getFullYear(), hoy.getMonth() - 5, 1))}
+          AND p."estado" = ${ESTADOS_PAGO.ACTIVO}
           AND (f."usuarioId" = ${empresaId} OR f."usuarioId" IN (
             SELECT id FROM usuarios WHERE "empresaId" = ${empresaId}
           ))
@@ -359,12 +363,28 @@ if (require('fs').existsSync(frontendDist)) {
 }
 
 // ─── Start ────────────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', async () => {
+  console.log(`\n🚀 Servidor corriendo en http://localhost:${PORT} (0.0.0.0)`);
   console.log(`   API base: http://localhost:${PORT}/api\n`);
+
+  // Verificación de conectividad a la base de datos con diagnóstico
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    const provider = (process.env.DATABASE_URL || '').startsWith('file:') || process.env.DB_PROVIDER === 'sqlite'
+      ? 'SQLite'
+      : 'PostgreSQL';
+    console.log(`✅ Base de datos conectada correctamente [${provider}]`);
+  } catch (err) {
+    console.error(`⚠️  ALERTA BD: No se pudo conectar a la base de datos: ${err.message}`);
+    console.error(`   Para desarrollo local con SQLite, puedes usar DB_PROVIDER=sqlite en backend/.env`);
+  }
+
   // Mantiene al día `Empresa.tasaDolar` (modo AUTOMATICO) sin depender de que
   // alguien use la app. Ver services/tasaDolar.js.
   iniciarActualizacionDiaria();
+  // Borra físicamente las empresas/usuarios cuya ventana de archivado venció.
+  // Ver services/archivado.js.
+  iniciarPurgaArchivados();
 });
 
 module.exports = { app, prisma };

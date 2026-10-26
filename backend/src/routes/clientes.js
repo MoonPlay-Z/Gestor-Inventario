@@ -4,6 +4,7 @@ const prisma = require('../db/prisma');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
 const { paginate } = require('../utils/pagination');
+const { containsInsensitive, extraerTerminosBusqueda } = require('../utils/textSearch');
 
 // SUPER_ADMIN no gestiona clientes
 router.use(requireRole('EMPRESA', 'CAJA', 'INVENTARIO'));
@@ -21,13 +22,13 @@ router.get('/', async (req, res, next) => {
     const empresaId = getEmpresaId(req);
 
     let where = { empresaId };
-    if (q) {
-      const terms = q.split(' ').filter(t => t.length > 0);
+    const terms = extraerTerminosBusqueda(q);
+    if (terms.length > 0) {
       where.AND = terms.map(term => ({
         OR: [
-          { razonSocial: { contains: term, mode: 'insensitive' } },
-          { rifCedula:   { contains: term, mode: 'insensitive' } },
-          { correo:      { contains: term, mode: 'insensitive' } },
+          { razonSocial: containsInsensitive(term) },
+          { rifCedula:   containsInsensitive(term) },
+          { correo:      containsInsensitive(term) },
         ]
       }));
     }
@@ -66,6 +67,40 @@ router.get('/', async (req, res, next) => {
     }));
 
     res.json({ data: clientesConCount, total, page, limit });
+  } catch (err) { next(err); }
+});
+
+// GET /api/clientes/buscar — Búsqueda ligera para autocompletar (POS, selectores)
+// IMPORTANTE: Debe declararse ANTES de `/:id` para que Express no capture "buscar" como un ID.
+router.get('/buscar', async (req, res, next) => {
+  try {
+    const { q = '', limit = 20 } = req.query;
+    const empresaId = getEmpresaId(req);
+
+    let where = { empresaId };
+    const terms = extraerTerminosBusqueda(q);
+    if (terms.length > 0) {
+      where.AND = terms.map(term => ({
+        OR: [
+          { razonSocial: containsInsensitive(term) },
+          { rifCedula: containsInsensitive(term) },
+        ]
+      }));
+    }
+
+    const take = Math.min(parseInt(limit) || 20, 50);
+    const clientes = await prisma.cliente.findMany({
+      where,
+      take,
+      orderBy: { razonSocial: 'asc' },
+      select: {
+        id: true,
+        razonSocial: true,
+        rifCedula: true,
+      },
+    });
+
+    res.json({ data: clientes });
   } catch (err) { next(err); }
 });
 

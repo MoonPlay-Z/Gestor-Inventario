@@ -6,7 +6,7 @@ Sistema POS y Gestor de Inventario (Venezuela). Backend: Node.js + Express + Pri
 
 - `backend/src/routes/` — 18 Express routers (auth, usuarios, roles, clientes, productos, facturas, facturasPruebas, pagos, config, backup, caja, cotizaciones, activaciones, b2b, fiscal, reportes, cxc); mounted in `backend/src/app.js`
 - `backend/src/middleware/` — `auth.js` (JWT), `subscriptionGuard.js` (SaaS subscription), `errorHandler.js` (Prisma codes → friendly), `rateLimiter.js` (login/register limiters)
-- `backend/src/utils/` — `pagination.js` (paginate + paginatedResponse), `sql.js` (tsFrag/monthTrunc for cross-db DateTime), `tasaAPI.js` (fachada única de tasa usada por todos los módulos), `paymentCurrency.js` (motor VES↔USD: `tasaCambioEfectiva`, `getTasaSistemaPorEmpresa`), `tasaEmpresaCache.js` (caché 60 s por empresa)
+- `backend/src/utils/` — `pagination.js` (paginate + paginatedResponse), `sql.js` (tsFrag/monthTrunc for cross-db DateTime), `tasaAPI.js` (fachada única de tasa usada por todos los módulos), `paymentCurrency.js` (motor VES↔USD: `tasaCambioEfectiva`, `getTasaSistemaPorEmpresa`), `tasaEmpresaCache.js` (caché 60 s por empresa), `empresaCascade.js` (borrado transaccional de todos los datos de una empresa)
 - `frontend/src/pages/` — one file per route; router in `AppRoutes.jsx`
 - `frontend/src/components/ui/` — shared primitives (`FieldError`, `FormError`, `Button`, etc.) with CSS Modules
 - `frontend/src/components/auth/` — `AuthLayout.jsx` (marco visual de login/registro: cabecera con estado real del server vía `/api/health`, tarjeta de marca y tarjeta del formulario; 1 columna en móvil, 2 desde `lg`) y `ProtectedRoute.jsx`
@@ -75,7 +75,19 @@ node scripts/verify-prisma-engines.js
 - Valid roles: `SUPER_ADMIN`, `EMPRESA`, `CAJA`, `INVENTARIO`, `VISOR`.
 - `sessionVersion` on tokens enables session invalidation (increment to revoke all user tokens).
 - B2B routes (`/api/v1/b2b`) use API key auth (`X-Api-Key` header), not JWT.
-- `subscriptionGuard` middleware blocks access when subscription is expired. Sub-users (`CAJA`, `INVENTARIO`, `VISOR`) bypass this check — they inherit access from their parent `EMPRESA` account.
+- `subscriptionGuard` middleware blocks access when the subscription or the company is suspended. Sub-users (`CAJA`, `INVENTARIO`, `VISOR`) inherit from their parent `EMPRESA`: the guard resolves `empresaId` → parent, rejects if the parent is inactive/deleted, and evaluates the parent/Empresa subscription. `SUPER_ADMIN` is exempt.
+- After login, `SUPER_ADMIN` lands on `/admin` (not `/dashboard`, which is EMPRESA-only). `ProtectedRoute` redirects using the same rule.
+
+## Panel Super Admin (activaciones y pagos)
+
+- **Suspensión real:** `PUT /api/activaciones/empresas/:id/estado` writes `Empresa.activo`, sets the owner `activo=false` and increments `sessionVersion` for the owner and every sub-account, so blocking cuts POS access immediately instead of leaving cajeros working.
+- **Bandeja de pagos:** `GET /api/activaciones` lists requests. `PUT /api/activaciones/:id/aprobar` activates the company (monthly 1–12 months, adding to any remaining period, or `lifetime`) and `PUT /api/activaciones/:id/rechazar` requires a reason. `SolicitudActivacion` persists `notas`, `revisadoPor`, `revisadoEn`. If a sub-account reports the payment, the request is stored against its `EMPRESA` parent.
+- **Auditoría:** `GET /api/activaciones/auditoria` (paginated) reads `AuditLog`. Activations, block/unblock, deletions, password resets and promo/news changes are recorded with actor, IP and user agent via `utils/auditLog.js`.
+- **Salud:** `GET /api/activaciones/salud` reports `Usuario`↔`Empresa` subscription drift and active sub-accounts under a blocked company.
+- **Eliminación en cascada:** `DELETE /api/activaciones/empresas/:id` y `DELETE /api/activaciones/usuarios/:id` (cuenta `EMPRESA`) usan `utils/empresaCascade.js`. En una sola transacción borran sub-cuentas, roles, productos, clientes, facturas, items, pagos, cotizaciones, CxC, gestiones, cierres, solicitudes y el registro `Empresa`. Ya no se ignora el error de `Empresa.delete`: si una FK bloquea, la transacción se revierte completa. `AuditLog` se conserva con `empresaId`/`usuarioId` en `NULL` (trazabilidad histórica); `Noticia`, `Promocion`, `Correlativo` y `Permiso` son globales y no se tocan. La respuesta incluye `eliminados` con el conteo por tabla.
+- **Migración:** `20261021120000_add_solicitud_activacion_revision` must be applied before deploying (the panel reads the new columns). `schema.sqlite.prisma` now includes `Usuario.refreshTokenId` so login also works on SQLite, and the CxC models (`CuentaPorCobrar`, `GestionCobranza`) to mirror PostgreSQL; run `npm run db:sqlite:push` on existing SQLite databases.
+- **Notificaciones:** `config/metodosPago.js` sends the payment notice through Resend when `RESEND_API_KEY` is set; otherwise it only logs it. `ADMIN_NOTIFICACION_EMAIL` and `ADMIN_EMAIL_FROM` are optional.
+- **Noticias:** `Noticia.imagenUrl` y `Noticia.videoUrl` son URLs externas (YouTube/Vimeo o un archivo directo `.mp4/.webm/.ogg`). No hay subida de archivos: el medio se aloja fuera y se pega el enlace. La landing pinta el video con prioridad sobre la imagen y muestra subtítulo/destacado. Migración `20261021130000_add_noticia_video_url` antes de desplegar.
 
 ## Multi-tenancy
 
@@ -186,13 +198,21 @@ No hay linter, formateador ni CI. El resto se verifica manualmente contra la app
 
 - **Modelos:** `CuentaPorCobrar` (1:1 con factura) + `GestionCobranza` (historial de cobranza).
 - **Roles:** EMPRESA ve/gestiona todas las CxC de sus cajas; CAJA solo ve/gestiona las suyas.
-- **Creación automática:** Al crear una factura (`POST /api/facturas`) se crea la CxC asociada en la misma transacción.
-- **Actualización automática:** Al registrar/eliminar pagos (`POST/DELETE /api/pagos`) se recalcula `montoCobrado`, `montoPendiente` y `estado`.
-- **Anulación:** Al anular una factura se elimina la CxC asociada.
-- **Abonos desde CxC:** `POST /api/cxc/:id/pago` permite abonar o completar el pago directamente.
+- **Creación exclusiva para financiamiento:** Al crear una factura (`POST /api/facturas`) se crea la CxC asociada únicamente si la venta es emitida con `FINANCIAMIENTO` o en cuotas (`cuotasTotales > 1`). Las ventas de contado inmediato no generan registro en CxC.
+- **Recuperación automática por fraude:** Si un pago de contado es anulado por motivo `FRAUDE` o inconsistencia y la factura vuelve a saldo deudor, se genera automáticamente su `CuentaPorCobrar` para gestión y cobranza.
+- **Actualización automática:** Al registrar pagos (`POST /api/pagos`, `POST /api/cxc/:id/pago`) o anularlos (`PATCH /api/pagos/:id/anular`), se recalculan atómicamente `montoCobrado`, `montoPendiente` y `estado`.
+- **Anulación de factura:** Al anular una factura se elimina la CxC asociada.
+- **Abonos desde CxC:** `POST /api/cxc/:id/pago` permite abonar o completar el pago directamente con cualquiera de los métodos de pago de abono.
 - **Gestiones:** `POST /api/cxc/:id/gestion` registra acciones de cobranza (LLAMADA, CORREO, WHATSAPP, VISITA, OTRO).
 - **Aging:** Calculado en tiempo real por rangos (0-30, 31-60, 61-90, 90+ días).
 - **Rutas:** `backend/src/routes/cxc.js` | **Páginas:** `frontend/src/pages/CxcPage.jsx`, `CxcDetailPage.jsx`.
+
+## Métodos de Pago y Anulaciones
+
+- **Catálogo oficial (10 métodos):** `TARJETA_DEBITO`, `TARJETA_CREDITO`, `EFECTIVO_VES`, `TRANSFERENCIA`, `PAGO_MOVIL`, `BIOPAGO`, `BINANCE`, `EFECTIVO_USD`, `CASHEA`, `FINANCIAMIENTO` (definidos en `backend/src/constants/metodosPago.js` y `frontend/src/constants/metodosPago.js`). Soporta retrocompatibilidad con variantes heredadas (`CASH`, `BANK_TRANSFER`, `CREDIT_CARD`, `MOBILE_PAYMENT`).
+- **Validación de referencias:** Tarjetas, transferencias, pago móvil, biopago, binance y cashea exigen número de referencia obligatorio.
+- **Anulación lógica de pagos:** `PATCH /api/pagos/:id/anular` exige motivo (`FRAUDE`, `ERROR_MONTO`, `COBRO_DUPLICADO`, `DEVOLUCION`, `OTRO`), descripción obligatoria (mínimo 10 caracteres, máximo 500) y código de supervisor para rol `CAJA`. Los pagos nunca se eliminan físicamente (`DELETE /api/pagos/:id` responde `405 Method Not Allowed`).
+- **Visualización de motivos y descripciones:** La justificación de anulación se expone en el detalle de la cuenta (`CxcDetailPage`), en la bandeja `/pagos-anulados` (`PagosAnuladosPage`) y con modal detallado en el historial de facturación (`VentasPage`).
 
 ## Conventions
 
@@ -259,4 +279,4 @@ Cada `Empresa` tiene su propia configuración: `tasaDolar` (Float), `monedaSimbo
 
 ## Env vars
 
-Required: `DATABASE_URL`, `JWT_SECRET` (app exits if missing). Optional: `PORT` (default 3001), `EMPRESA_NOMBRE`, `EMPRESA_RIF`, `EMPRESA_DIRECCION`, `EMPRESA_TELEFONO`, `EMPRESA_EMAIL`, `MONEDA_SIMBOLO`, `MONEDA_CODIGO`, `B2B_API_KEY`, `ALLOWED_ORIGINS`, `DB_PROVIDER`, `NODE_ENV`, `ELECTRON_ENV`, `TASA_DOLAR_AUTO_UPDATE` (poner `false` para desactivar el job diario de la tasa).
+Required: `DATABASE_URL`, `JWT_SECRET` (app exits if missing). Optional: `PORT` (default 3001), `EMPRESA_NOMBRE`, `EMPRESA_RIF`, `EMPRESA_DIRECCION`, `EMPRESA_TELEFONO`, `EMPRESA_EMAIL`, `MONEDA_SIMBOLO`, `MONEDA_CODIGO`, `B2B_API_KEY`, `ALLOWED_ORIGINS`, `DB_PROVIDER`, `NODE_ENV`, `ELECTRON_ENV`, `TASA_DOLAR_AUTO_UPDATE` (poner `false` para desactivar el job diario de la tasa), `RESEND_API_KEY` (activa el envío real de avisos de pago), `ADMIN_EMAIL_FROM` y `ADMIN_NOTIFICACION_EMAIL`.

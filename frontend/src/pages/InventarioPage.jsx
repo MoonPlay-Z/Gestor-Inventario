@@ -62,6 +62,7 @@ export function InventarioPage() {
   const [filtroIva, setFiltroIva] = useState(false);
   const [filtroCostoVenta, setFiltroCostoVenta] = useState(false);
   const debounceRef = useRef(null);
+  const loadRequestId = useRef(0);
   const LIMIT = 20;
 
   const loadAlertas = useCallback(async () => {
@@ -82,7 +83,17 @@ export function InventarioPage() {
     }
   }, []);
 
+  const loadCategorias = useCallback(async () => {
+    try {
+      const lista = await API.getCategoriasProductos();
+      if (Array.isArray(lista)) setCategorias(lista);
+    } catch {
+      // Sin endpoint, el selector se sigue llenando con las categorías visibles.
+    }
+  }, []);
+
   const loadProductos = useCallback(async (q, p, bajo, cat, iva, costoVenta) => {
+    const requestId = ++loadRequestId.current;
     setLoading(true);
     try {
       const params = { page: p, limit: LIMIT };
@@ -92,6 +103,9 @@ export function InventarioPage() {
       if (iva) params.alertaIva = 'true';
       if (costoVenta) params.alertaCostoVenta = 'true';
       const data = await API.getProductos(params);
+      // Ignorar respuestas viejas: al escribir y marcar un filtro a la vez,
+      // una respuesta lenta podía sobrescribir el resultado ya filtrado.
+      if (requestId !== loadRequestId.current) return;
       setProductos(data.data || []);
       setTotal(data.total || 0);
       setCategorias(prev => {
@@ -102,9 +116,11 @@ export function InventarioPage() {
         return Array.from(nuevas).sort();
       });
     } catch (err) {
-      showToast('Error al cargar productos: ' + err.message, 'error');
+      if (requestId === loadRequestId.current) {
+        showToast('Error al cargar productos: ' + err.message, 'error');
+      }
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestId.current) setLoading(false);
     }
   }, []);
 
@@ -112,13 +128,18 @@ export function InventarioPage() {
     loadProductos(search, page, soloStockBajo, categoriaFiltro, filtroIva, filtroCostoVenta);
     loadMetricas();
     loadAlertas();
-  }, [search, page, soloStockBajo, categoriaFiltro, filtroIva, filtroCostoVenta, loadProductos, loadMetricas, loadAlertas]);
+    loadCategorias();
+  }, [search, page, soloStockBajo, categoriaFiltro, filtroIva, filtroCostoVenta, loadProductos, loadMetricas, loadAlertas, loadCategorias]);
 
   useEffect(() => {
     loadProductos(search, page, soloStockBajo, categoriaFiltro, filtroIva, filtroCostoVenta);
     loadMetricas();
     loadAlertas();
   }, [page, soloStockBajo, categoriaFiltro, filtroIva, filtroCostoVenta]);
+
+  useEffect(() => {
+    loadCategorias();
+  }, [loadCategorias]);
 
   const handleSearchChange = (e) => {
     const val = e.target.value;

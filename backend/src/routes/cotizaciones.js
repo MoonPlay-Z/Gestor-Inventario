@@ -9,6 +9,11 @@ const { obtenerSiguienteNumeroCotizacion } = require('../utils/numeracionCotizac
 const { convertirMontoMoneda, tasaParaEmpresa } = require('../utils/tasaAPI');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
+const {
+  esMetodoPagoValido,
+  requiereReferenciaMetodo,
+  esMetodoFinanciado,
+} = require('../constants/metodosPago');
 
 const router = express.Router();
 
@@ -276,11 +281,10 @@ router.post('/:id/convert', async (req, res, next) => {
       throw createBusinessError('La cotización ya fue convertida a factura');
     }
 
-    const METODOS_VALIDOS = ['CASH', 'BANK_TRANSFER', 'CREDIT_CARD', 'MOBILE_PAYMENT', 'PAGO_MOVIL'];
-    if (metodoPago !== undefined && metodoPago !== null && !METODOS_VALIDOS.includes(metodoPago)) {
-      throw createValidationError(`Método de pago inválido. Valores permitidos: ${METODOS_VALIDOS.join(', ')}`);
+    if (metodoPago !== undefined && metodoPago !== null && !esMetodoPagoValido(metodoPago)) {
+      throw createValidationError('Método de pago inválido');
     }
-    if (metodoPago && metodoPago !== 'CASH' && !referenciaTransaccion?.trim()) {
+    if (metodoPago && requiereReferenciaMetodo(metodoPago) && !referenciaTransaccion?.trim()) {
       throw createValidationError('La referencia de transacción es obligatoria para este método de pago', {
         referenciaTransaccion: 'Campo requerido',
       });
@@ -430,34 +434,35 @@ router.post('/:id/convert', async (req, res, next) => {
         }
       });
 
-      // Crear CuentaPorCobrar asociada (montos siempre en USD normalizado).
-      // Sin esto la factura tampoco aparecería en el módulo de cobranza.
-      const estadoCxC = metodoPago ? 'PAID' : 'PENDING';
-      await tx.cuentaPorCobrar.create({
-        data: {
-          empresaId: empresaRefId,
-          facturaId: nuevaFactura.id,
-          clienteId: cotizacion.clienteId,
-          usuarioId: req.user?.id || null,
-          montoOriginal: totalFacturaUSD.toFixed(2),
-          montoCobrado: metodoPago ? totalFacturaUSD.toFixed(2) : '0.00',
-          montoPendiente: metodoPago ? '0.00' : totalFacturaUSD.toFixed(2),
-          fechaEmision: nuevaFactura.fechaEmision,
-          fechaVencimiento: fechaVencimiento.toISOString(),
-          estado: estadoCxC,
-          diasVencido: 0,
-        }
-      });
+      // Crear CuentaPorCobrar asociada EXCLUSIVAMENTE si no es pagada de contado
+      const esPagoContado = Boolean(metodoPago && !esMetodoFinanciado(metodoPago));
+      if (!esPagoContado) {
+        await tx.cuentaPorCobrar.create({
+          data: {
+            empresaId: empresaRefId,
+            facturaId: nuevaFactura.id,
+            clienteId: cotizacion.clienteId,
+            usuarioId: req.user?.id || null,
+            montoOriginal: totalFacturaUSD.toFixed(2),
+            montoCobrado: '0.00',
+            montoPendiente: totalFacturaUSD.toFixed(2),
+            fechaEmision: nuevaFactura.fechaEmision,
+            fechaVencimiento: fechaVencimiento.toISOString(),
+            estado: 'PENDING',
+            diasVencido: 0,
+          }
+        });
+      }
 
-      // Crear pago si se especificó método de pago
-      if (metodoPago) {
+      // Crear pago si se especificó método de pago de contado
+      if (esPagoContado) {
         await tx.pago.create({
           data: {
             facturaId: nuevaFactura.id,
             monto: nuevaFactura.total,
             monedaPago: cotizacion.moneda,
             metodoPago,
-            referenciaTransaccion: metodoPago === 'CASH' ? null : referenciaTransaccion,
+            referenciaTransaccion: requiereReferenciaMetodo(metodoPago) ? referenciaTransaccion.trim() : null,
             // Tasa BCV del día, igual que registra POST /api/pagos.
             tasaBCV: tasaBCV ? tasaBCV.toFixed(4) : null,
             notas: 'Pago recibido al convertir cotización en venta'

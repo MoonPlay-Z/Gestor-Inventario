@@ -15,6 +15,7 @@ const { Prisma } = require('../db/prisma');
 const IS_SQLITE = !!require('../db/prisma').IS_SQLITE;
 const { tsFrag } = require('../utils/sql');
 const Decimal = require('decimal.js').Decimal;
+const { METODOS_PAGO_INFO } = require('../constants/metodosPago');
 const { getFechasPeriodo, calcularComparacion } = require('../utils/reportesHelpers');
 const {
   cantidadEnKgSQL,
@@ -24,6 +25,7 @@ const {
 const { paginate, paginatedResponse } = require('../utils/pagination');
 const { tasaParaEmpresa } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
+const { ESTADOS_PAGO } = require('../config/pagos');
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CACHÉ EN MEMORIA
@@ -678,7 +680,7 @@ async function getDetalleVentasReporte(req) {
         moneda: true,
         tasaCambio: true,
         cliente: { select: { razonSocial: true } },
-        pagos: { select: { referenciaTransaccion: true } },
+        pagos: { select: { referenciaTransaccion: true, estado: true } },
         items: {
           select: {
             // productoId es necesario: el cálculo de ganancia lo consulta.
@@ -742,7 +744,10 @@ async function getDetalleVentasReporte(req) {
     }
 
     const referencias = [...new Set(
-      factura.pagos.map((pago) => pago.referenciaTransaccion?.trim()).filter(Boolean)
+      factura.pagos
+        .filter((pago) => pago.estado !== ESTADOS_PAGO.ANULADO)
+        .map((pago) => pago.referenciaTransaccion?.trim())
+        .filter(Boolean)
     )];
     const productos = [...new Set(
       factura.items.map((item) => item.descripcionHistorica || item.producto?.nombre).filter(Boolean)
@@ -1024,6 +1029,7 @@ async function getCajaReporte(req) {
     WHERE p."fechaPago" >= ${tsFrag(inicio)}
       AND p."fechaPago" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
+      AND p."estado" = ${ESTADOS_PAGO.ACTIVO}
       ${whereClause}
     GROUP BY p."metodoPago", p."monedaPago"
     ORDER BY total_usd DESC
@@ -1051,14 +1057,7 @@ async function getCajaReporte(req) {
 }
 
 function getMetodoLabel(metodo, moneda) {
-  const labels = {
-    CASH: 'Efectivo',
-    BANK_TRANSFER: 'Transferencia',
-    CREDIT_CARD: 'Tarjeta Crédito',
-    MOBILE_PAYMENT: 'Pago Móvil',
-    PAGO_MOVIL: 'Pago Móvil',
-  };
-  const label = labels[metodo] || metodo;
+  const label = METODOS_PAGO_INFO[metodo]?.label || metodo;
   return moneda ? `${label} (${moneda === 'VES' ? 'Bs.' : 'USD'})` : label;
 }
 

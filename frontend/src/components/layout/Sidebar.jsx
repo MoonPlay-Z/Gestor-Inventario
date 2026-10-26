@@ -20,6 +20,7 @@ import bellRingIcon from '@iconify/icons-mdi/bell-ring';
 import cogIcon from '@iconify/icons-mdi/cog';
 import chartBarIcon from '@iconify/icons-mdi/chart-bar';
 import cashCheckIcon from '@iconify/icons-mdi/cash-check';
+import closeCircleIcon from '@iconify/icons-mdi/close-circle-outline';
 import downloadIcon from '@iconify/icons-mdi/download';
 
 const ROL_LABEL = {
@@ -129,6 +130,8 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
               <NavItem to="/cxc" icon={cashCheckIcon} label="Cuentas por Cobrar"
                 roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false}
                 badge={cxCvencidas > 0 ? cxCvencidas : null} />
+              <NavItem to="/pagos-anulados" icon={closeCircleIcon} label="Pagos anulados"
+                roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false} />
               <NavItem to="/caja" icon={cashRegIcon} label="Cierre de Caja"
                 roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false} />
               <NavItem to="/reportes" icon={chartBarIcon} label="Reportes"

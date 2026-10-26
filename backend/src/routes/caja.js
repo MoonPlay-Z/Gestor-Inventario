@@ -9,6 +9,7 @@ const { paginate, paginatedResponse } = require('../utils/pagination');
 const { tasaParaEmpresa } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { toDecimalSeguro } = require('../utils/decimal');
+const { ESTADOS_PAGO, esMetodoEfectivo } = require('../config/pagos');
 
 const router = express.Router();
 
@@ -54,6 +55,7 @@ const buildPagosTurnoSql = ({ fechaApertura, usuarioId, tasaSistema }) => {
     INNER JOIN facturas f ON f."id" = p."facturaId"
     WHERE p."fechaPago" >= ${tsFrag(fechaApertura)}
       AND f."estado" != 'VOIDED'
+      AND p."estado" = ${ESTADOS_PAGO.ACTIVO}
       ${usuarioFilter}
     GROUP BY p."metodoPago", p."monedaPago"
   `;
@@ -240,16 +242,40 @@ router.get('/preview', async (req, res, next) => {
 
       switch (row.metodo) {
         case 'CASH':
+        case 'EFECTIVO_USD':
+        case 'EFECTIVO_VES':
           efectivoUSD = efectivoUSD.add(monto);
           efectivoVES = efectivoVES.add(montoVES);
           efectivoUSDRecibido = efectivoUSDRecibido.add(new Decimal(row.total_usd_orig || 0));
           efectivoVESRecibido = efectivoVESRecibido.add(montoVES);
           break;
-        case 'MOBILE_PAYMENT': pagoMovilUSD  = pagoMovilUSD.add(monto);  esVES ? pagoMovilVES = pagoMovilVES.add(montoVES) : null;  break;
-        case 'CREDIT_CARD':    puntoUSD      = puntoUSD.add(monto);      esVES ? puntoVES = puntoVES.add(montoVES) : null;      break;
-        case 'BANK_TRANSFER':  transferenciaUSD = transferenciaUSD.add(monto); esVES ? transferenciaVES = transferenciaVES.add(montoVES) : null; break;
-        case 'PAGO_MOVIL':     pagoMovilUSD  = pagoMovilUSD.add(monto);  esVES ? pagoMovilVES = pagoMovilVES.add(montoVES) : null;  break;
-        default:               efectivoUSD   = efectivoUSD.add(monto);   esVES ? efectivoVES = efectivoVES.add(montoVES) : null;
+        case 'MOBILE_PAYMENT':
+        case 'PAGO_MOVIL':
+          pagoMovilUSD = pagoMovilUSD.add(monto);
+          esVES ? pagoMovilVES = pagoMovilVES.add(montoVES) : null;
+          break;
+        case 'CREDIT_CARD':
+        case 'TARJETA_CREDITO':
+        case 'TARJETA_DEBITO':
+        case 'BIOPAGO':
+          puntoUSD = puntoUSD.add(monto);
+          esVES ? puntoVES = puntoVES.add(montoVES) : null;
+          break;
+        case 'BANK_TRANSFER':
+        case 'TRANSFERENCIA':
+        case 'BINANCE':
+        case 'CASHEA':
+          transferenciaUSD = transferenciaUSD.add(monto);
+          esVES ? transferenciaVES = transferenciaVES.add(montoVES) : null;
+          break;
+        default:
+          if (esMetodoEfectivo(row.metodo)) {
+            efectivoUSD = efectivoUSD.add(monto);
+            efectivoVES = efectivoVES.add(montoVES);
+          } else {
+            transferenciaUSD = transferenciaUSD.add(monto);
+            esVES ? transferenciaVES = transferenciaVES.add(montoVES) : null;
+          }
       }
     }
 
@@ -358,7 +384,7 @@ router.post('/close', async (req, res, next) => {
       for (const row of pagosAgregados) {
         const usd = new Decimal(row.total_usd || 0);
         const ves = new Decimal(row.total_ves || 0);
-        if (row.metodo === 'CASH') {
+        if (esMetodoEfectivo(row.metodo)) {
           ingresosEfectivoUSD = ingresosEfectivoUSD.add(usd);
           ingresosEfectivoVES = ingresosEfectivoVES.add(ves);
         } else {

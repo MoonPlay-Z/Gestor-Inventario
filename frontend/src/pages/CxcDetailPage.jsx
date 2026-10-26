@@ -10,7 +10,20 @@ import accountIcon from '@iconify/icons-mdi/account';
 import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { Button, FieldError } from '../components/ui';
+import {
+  ESTADOS_PAGO,
+  MOTIVOS_ANULACION_PAGO,
+  CONFIRMACION_ANULACION,
+  DESCRIPCION_ANULACION_MIN,
+  DESCRIPCION_ANULACION_MAX,
+  getMetodoPagoLabel,
+  getMotivoAnulacionLabel,
+  METODOS_PAGO,
+  METODOS_PAGO_CXC,
+  requiereReferencia,
+} from '../constants/pagos';
 
 const ESTADOS = {
   PENDING: { label: 'Pendiente', color: '#f59e0b' },
@@ -22,13 +35,22 @@ export function CxcDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { user } = useAuth();
   const [cuenta, setCuenta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPago, setShowPago] = useState(false);
   const [showGestion, setShowGestion] = useState(false);
   const [savingPago, setSavingPago] = useState(false);
   const [savingGestion, setSavingGestion] = useState(false);
-  const [pagoForm, setPagoForm] = useState({ monto: '', metodoPago: 'CASH', monedaPago: 'USD', referenciaTransaccion: '', notas: '' });
+  const [pagoAnular, setPagoAnular] = useState(null);
+  const [savingAnulacion, setSavingAnulacion] = useState(false);
+  const [anulacionForm, setAnulacionForm] = useState({
+    motivo: 'FRAUDE',
+    descripcion: '',
+    codigoAnulacion: '',
+    confirmacion: '',
+  });
+  const [pagoForm, setPagoForm] = useState({ monto: '', metodoPago: METODOS_PAGO.EFECTIVO_USD, monedaPago: 'USD', referenciaTransaccion: '', notas: '' });
   const [gestionForm, setGestionForm] = useState({ accion: 'LLAMADA', notas: '' });
   const [errors, setErrors] = useState({});
   // La conversión la hace el backend. Solo se guarda lo que devuelve para
@@ -80,7 +102,7 @@ export function CxcDetailPage() {
   const handlePago = async () => {
     const errs = {};
     if (!pagoForm.monto || Number(pagoForm.monto) <= 0) errs.monto = 'Ingrese un monto válido';
-    if (pagoForm.metodoPago !== 'CASH' && !pagoForm.referenciaTransaccion.trim()) errs.referencia = 'Referencia obligatoria';
+    if (requiereReferencia(pagoForm.metodoPago) && !pagoForm.referenciaTransaccion.trim()) errs.referencia = 'Referencia obligatoria';
     // El sobrepago lo valida el backend, que es quien conoce la tasa efectiva
     // de la cuenta. Si lo validáramos aquí con la tasa del login mostraríamos un
     // error equivocado (o dejaríamos pasar uno real).
@@ -93,7 +115,7 @@ export function CxcDetailPage() {
         monto: pagoForm.monto,
         metodoPago: pagoForm.metodoPago,
         monedaPago: pagoForm.monedaPago,
-        referenciaTransaccion: pagoForm.metodoPago === 'CASH' ? null : pagoForm.referenciaTransaccion,
+        referenciaTransaccion: requiereReferencia(pagoForm.metodoPago) ? pagoForm.referenciaTransaccion.trim() : null,
         notas: pagoForm.notas
       };
       await API.request(`/cxc/${id}/pago`, { method: 'POST', body });
@@ -104,6 +126,62 @@ export function CxcDetailPage() {
       showToast('Error al registrar pago: ' + err.message, 'error');
     } finally {
       setSavingPago(false);
+    }
+  };
+
+  const abrirAnulacion = (pago) => {
+    setPagoAnular(pago);
+    setAnulacionForm({
+      motivo: 'FRAUDE',
+      descripcion: '',
+      codigoAnulacion: '',
+      confirmacion: '',
+    });
+    setErrors({});
+    setShowPago(false);
+    setShowGestion(false);
+  };
+
+  const handleAnularPago = async () => {
+    if (!pagoAnular) return;
+
+    const errs = {};
+    const descripcion = anulacionForm.descripcion.trim();
+    if (descripcion.length < DESCRIPCION_ANULACION_MIN) {
+      errs.descripcionAnulacion = `Mínimo ${DESCRIPCION_ANULACION_MIN} caracteres`;
+    }
+    if (descripcion.length > DESCRIPCION_ANULACION_MAX) {
+      errs.descripcionAnulacion = `Máximo ${DESCRIPCION_ANULACION_MAX} caracteres`;
+    }
+    if (!anulacionForm.motivo) errs.motivoAnulacion = 'Seleccione un motivo';
+    if (anulacionForm.confirmacion.trim() !== CONFIRMACION_ANULACION) {
+      errs.confirmacionAnulacion = `Escribe "${CONFIRMACION_ANULACION}"`;
+    }
+    if (user?.rol === 'CAJA' && !anulacionForm.codigoAnulacion.trim()) {
+      errs.codigoAnulacion = 'El código del supervisor es obligatorio';
+    }
+
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
+
+    setSavingAnulacion(true);
+    try {
+      const resultado = await API.anularPago(pagoAnular.id, {
+        motivo: anulacionForm.motivo,
+        descripcion,
+        confirmacion: anulacionForm.confirmacion.trim(),
+        codigoAnulacion: user?.rol === 'CAJA' ? anulacionForm.codigoAnulacion.trim() : undefined,
+      });
+      showToast(
+        resultado?.yaAnulado ? 'El pago ya estaba anulado' : 'Pago anulado correctamente',
+        'success'
+      );
+      setPagoAnular(null);
+      await loadCuenta();
+    } catch (err) {
+      showToast('Error al anular pago: ' + err.message, 'error');
+    } finally {
+      setSavingAnulacion(false);
     }
   };
 
@@ -182,20 +260,57 @@ export function CxcDetailPage() {
                 <p className="text-gray-400 text-sm">Sin pagos registrados</p>
               ) : (
                 <div className="space-y-2">
-                  {cuenta.factura?.pagos?.map((pago) => (
-                    <div key={pago.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium">{Utils.formatMoney(pago.monto)} <span className="text-gray-500">({pago.monedaPago})</span></p>
-                        <p className="text-xs text-gray-500">{pago.metodoPago} - {Utils.formatDate(pago.fechaPago)}</p>
-                        {pago.tasaBCV && (
-                          <p className="text-xs text-blue-600 mt-0.5">
-                            Tasa BCV: {Number(pago.tasaBCV).toFixed(2)} Bs/USD
-                          </p>
+                  {cuenta.factura?.pagos?.map((pago) => {
+                    const anulado = pago.estado === ESTADOS_PAGO.ANULADO;
+                    return (
+                      <div
+                        key={pago.id}
+                        className={`p-3 rounded-lg border ${anulado ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-transparent'}`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className={`text-sm font-medium ${anulado ? 'line-through text-gray-500' : ''}`}>
+                              {Utils.formatMoney(pago.monto)} <span className="text-gray-500">({pago.monedaPago})</span>
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {getMetodoPagoLabel(pago.metodoPago)} · {Utils.formatDate(pago.fechaPago)}
+                            </p>
+                            {pago.tasaBCV && (
+                              <p className="text-xs text-blue-600 mt-0.5">
+                                Tasa BCV: {Number(pago.tasaBCV).toFixed(2)} Bs/USD
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            {anulado ? (
+                              <span className="badge badge-danger">ANULADO</span>
+                            ) : cuenta.factura?.estado !== 'VOIDED' ? (
+                              <button
+                                type="button"
+                                onClick={() => abrirAnulacion(pago)}
+                                className="text-xs font-semibold text-red-600 hover:text-red-700"
+                              >
+                                Anular pago
+                              </button>
+                            ) : null}
+                            {pago.referenciaTransaccion && (
+                              <p className="text-xs text-gray-400 break-all text-right">{pago.referenciaTransaccion}</p>
+                            )}
+                          </div>
+                        </div>
+                        {anulado && (
+                          <div className="mt-2 pt-2 border-t border-red-100 text-xs text-red-800 space-y-1">
+                            <p><strong>Motivo:</strong> {getMotivoAnulacionLabel(pago.motivoAnulacion)}</p>
+                            <p><strong>Descripción:</strong> {pago.descripcionAnulacion || '—'}</p>
+                            <p>
+                              <strong>Anulado por:</strong> {pago.anuladoPor || '—'}
+                              {pago.fechaAnulacion ? ` · ${Utils.formatDateTime(pago.fechaAnulacion)}` : ''}
+                            </p>
+                          </div>
                         )}
                       </div>
-                      {pago.referenciaTransaccion && <p className="text-xs text-gray-400">{pago.referenciaTransaccion}</p>}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -235,10 +350,10 @@ export function CxcDetailPage() {
               </div>
               {cuenta.estado !== 'PAID' && (
                 <div className="mt-4 space-y-2">
-                  <Button variant="primary" className="w-full" onClick={() => { setShowPago(true); setShowGestion(false); }}>
+                  <Button variant="primary" className="w-full" onClick={() => { setShowPago(true); setShowGestion(false); setPagoAnular(null); setErrors({}); }}>
                     <Icon icon={cashIcon} width={16} height={16} className="mr-2" /> Registrar Pago
                   </Button>
-                  <Button variant="secondary" className="w-full" onClick={() => { setShowGestion(true); setShowPago(false); }}>
+                  <Button variant="secondary" className="w-full" onClick={() => { setShowGestion(true); setShowPago(false); setPagoAnular(null); setErrors({}); }}>
                     <Icon icon={phoneIcon} width={16} height={16} className="mr-2" /> Registrar Gestion
                   </Button>
                 </div>
@@ -265,13 +380,23 @@ export function CxcDetailPage() {
                     {errors.monto && <FieldError message={errors.monto} />}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Metodo de Pago</label>
-                    <select value={pagoForm.metodoPago} onChange={(e) => setPagoForm({ ...pagoForm, metodoPago: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
-                      <option value="CASH">Efectivo</option>
-                      <option value="BANK_TRANSFER">Transferencia</option>
-                      <option value="CREDIT_CARD">Tarjeta de Credito</option>
-                      <option value="MOBILE_PAYMENT">Pago Movil</option>
-                      <option value="PAGO_MOVIL">Pago Movil (alternativo)</option>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
+                    <select
+                      value={pagoForm.metodoPago}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const metodoInfo = METODOS_PAGO_CXC.find(m => m.value === val);
+                        setPagoForm({
+                          ...pagoForm,
+                          metodoPago: val,
+                          monedaPago: metodoInfo?.moneda || pagoForm.monedaPago
+                        });
+                      }}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    >
+                      {METODOS_PAGO_CXC.map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -299,10 +424,16 @@ export function CxcDetailPage() {
                       <option value="VES">VES (Bs.)</option>
                     </select>
                   </div>
-                  {pagoForm.metodoPago !== 'CASH' && (
+                  {requiereReferencia(pagoForm.metodoPago) && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Referencia</label>
-                      <input type="text" value={pagoForm.referenciaTransaccion} onChange={(e) => setPagoForm({ ...pagoForm, referenciaTransaccion: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
+                      <input
+                        type="text"
+                        placeholder="Ej: 987654 / Nro. Operación"
+                        value={pagoForm.referenciaTransaccion}
+                        onChange={(e) => setPagoForm({ ...pagoForm, referenciaTransaccion: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg"
+                      />
                       {errors.referencia && <FieldError message={errors.referencia} />}
                     </div>
                   )}
@@ -340,6 +471,82 @@ export function CxcDetailPage() {
                   <div className="flex gap-2">
                     <Button variant="primary" onClick={handleGestion} disabled={savingGestion} className="flex-1">{savingGestion ? 'Guardando...' : 'Registrar'}</Button>
                     <Button variant="ghost" onClick={() => setShowGestion(false)}>Cancelar</Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {pagoAnular && (
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-red-200">
+                <h3 className="font-semibold text-gray-900 mb-1">Anular pago</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  {Utils.formatMoney(pagoAnular.monto, pagoAnular.monedaPago === 'VES' ? 'Bs.' : '$')}
+                  {' · '}
+                  {getMetodoPagoLabel(pagoAnular.metodoPago)}
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
+                    <select
+                      value={anulacionForm.motivo}
+                      onChange={(e) => setAnulacionForm({ ...anulacionForm, motivo: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    >
+                      {MOTIVOS_ANULACION_PAGO.map((motivo) => (
+                        <option key={motivo.value} value={motivo.value}>{motivo.label}</option>
+                      ))}
+                    </select>
+                    {errors.motivoAnulacion && <FieldError message={errors.motivoAnulacion} />}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                    <textarea
+                      value={anulacionForm.descripcion}
+                      onChange={(e) => setAnulacionForm({ ...anulacionForm, descripcion: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      rows={4}
+                      maxLength={DESCRIPCION_ANULACION_MAX}
+                      placeholder="Explica qué pasó con este pago. Esta descripción quedará en el historial y la auditoría."
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      {anulacionForm.descripcion.trim().length}/{DESCRIPCION_ANULACION_MAX} · mínimo {DESCRIPCION_ANULACION_MIN}
+                    </p>
+                    {errors.descripcionAnulacion && <FieldError message={errors.descripcionAnulacion} />}
+                  </div>
+                  {user?.rol === 'CAJA' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Código de autorización</label>
+                      <input
+                        type="password"
+                        value={anulacionForm.codigoAnulacion}
+                        onChange={(e) => setAnulacionForm({ ...anulacionForm, codigoAnulacion: e.target.value })}
+                        className="w-full px-3 py-2 border rounded-lg"
+                        placeholder="Código del supervisor"
+                      />
+                      {errors.codigoAnulacion && <FieldError message={errors.codigoAnulacion} />}
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Escribe "{CONFIRMACION_ANULACION}" para confirmar
+                    </label>
+                    <input
+                      type="text"
+                      value={anulacionForm.confirmacion}
+                      onChange={(e) => setAnulacionForm({ ...anulacionForm, confirmacion: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                      placeholder={CONFIRMACION_ANULACION}
+                    />
+                    {errors.confirmacionAnulacion && <FieldError message={errors.confirmacionAnulacion} />}
+                  </div>
+                  <p className="text-xs text-red-700 bg-red-50 border border-red-100 rounded-lg p-2">
+                    El pago no se borra. La factura y la cuenta por cobrar se recalculan con los pagos activos restantes.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button variant="danger" onClick={handleAnularPago} disabled={savingAnulacion} className="flex-1">
+                      {savingAnulacion ? 'Anulando...' : 'Anular pago'}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setPagoAnular(null)}>Cancelar</Button>
                   </div>
                 </div>
               </div>

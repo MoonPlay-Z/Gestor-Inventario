@@ -86,3 +86,4 @@ skills-lock.json
 
 # Bloqueo del script de publicación de la APK
 .publicar-apk.lock
+skills/

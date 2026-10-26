@@ -1,7 +1,6 @@
 const express = require('express');
 const router  = express.Router();
 const prisma = require('../db/prisma');
-const { Prisma } = require('../db/prisma');
 const { Decimal } = require('decimal.js');
 const { requireRole } = require('../middleware/auth');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
@@ -11,6 +10,34 @@ const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
 const { toDecimalSeguro } = require('../utils/decimal');
 const { lockFactura, lockCuenta } = require('../utils/locks');
+const { containsInsensitive, extraerTerminosBusqueda } = require('../utils/textSearch');
+const {
+  esMetodoPagoValido,
+  requiereReferenciaMetodo,
+  esMetodoFinanciado,
+} = require('../constants/metodosPago');
+
+// Filtro estricto: CxC solo muestra facturas hechas con financiamiento
+// (o cuentas con saldo pendiente reabiertas por anulación/fraude).
+// Excluye ventas de contado históricas que hayan tenido una CxC saldada en emisión.
+const FILTRO_FACTURA_FINANCIADA = {
+  OR: [
+    { montoPendiente: { gt: 0 } },
+    { factura: { cuotasTotales: { gt: 1 } } },
+    { factura: { pagos: { none: { notas: 'Pago de contado al momento de emisión' } } } },
+  ],
+};
+
+// Combina el filtro de aislamiento de tenant con el filtro de financiamiento
+// usando AND explícito para evitar que las propiedades `OR` se sobreescriban
+// mutuamente en el objeto where de Prisma.
+const combinarFiltrosCxc = (tenantFilter, extra = {}) => ({
+  AND: [
+    tenantFilter,
+    FILTRO_FACTURA_FINANCIADA,
+    extra,
+  ],
+});
 
 // Roles: EMPRESA ve todo, CAJA ve solo lo suyo
 router.use(requireRole('EMPRESA', 'CAJA'));
@@ -42,54 +69,45 @@ const cxcTenantFilter = (req) => {
 // con el leído por la otra.
 const pagoAUsd = pagoCxcAUsd;
 
-// Traduce `cxcTenantFilter` a SQL para las consultas crudas del resumen.
-// Debe mantenerse en espejo con esa función: si divergen, los totales y el
-// aging cuentan conjuntos distintos y el resumen se contradice.
-const buildCxcTenantSql = (tenantFilter) => {
-  if (tenantFilter.usuarioId) {
-    return Prisma.sql`c."usuarioId" = ${tenantFilter.usuarioId}`;
-  }
-  if (tenantFilter.OR?.length) {
-    const condiciones = [];
-    for (const cond of tenantFilter.OR) {
-      if (cond.usuarioId) {
-        condiciones.push(Prisma.sql`c."usuarioId" = ${cond.usuarioId}`);
-      }
-      if (cond.usuario?.empresaId) {
-        condiciones.push(Prisma.sql`c."usuarioId" IN (SELECT id FROM usuarios WHERE "empresaId" = ${cond.usuario.empresaId})`);
-      }
-    }
-    if (condiciones.length) return Prisma.sql`(${Prisma.join(condiciones, ' OR ')})`;
-  }
-  return Prisma.sql`TRUE`;
-};
+
+
+// Caché en memoria para el resumen de CxC (evita 4 agregaciones continuas
+// por cada pestaña o ciclo de 60s del badge del sidebar).
+const cxcResumenCache = new Map();
+const CXC_CACHE_TTL_MS = 20000;
 
 // ─── GET /api/cxc/resumen ──────────────────────────────────────────────────────
 router.get('/resumen', async (req, res, next) => {
   try {
     const tenantFilter = cxcTenantFilter(req);
+    const empresaId = getEmpresaId(req);
+    const cacheKey = `${req.user?.rol}_${empresaId}_${req.user?.id}`;
+    const cached = cxcResumenCache.get(cacheKey);
+    if (cached && (Date.now() - cached.ts) < CXC_CACHE_TTL_MS) {
+      return res.json(cached.data);
+    }
+
     const hoy = new Date();
 
     const [
       totalPendiente,
       totalVencido,
       porEstado,
-      aging
+      cuentasAging
     ] = await Promise.all([
       // Total pendiente global
       prisma.cuentaPorCobrar.aggregate({
-        where: { ...tenantFilter, estado: { in: ['PENDING', 'PARTIALLY_PAID'] } },
+        where: combinarFiltrosCxc(tenantFilter, { estado: { in: ['PENDING', 'PARTIALLY_PAID'] } }),
         _sum: { montoPendiente: true },
         _count: true
       }),
 
       // Total vencido
       prisma.cuentaPorCobrar.aggregate({
-        where: {
-          ...tenantFilter,
+        where: combinarFiltrosCxc(tenantFilter, {
           estado: { in: ['PENDING', 'PARTIALLY_PAID'] },
           fechaVencimiento: { lt: hoy.toISOString() }
-        },
+        }),
         _sum: { montoPendiente: true },
         _count: true
       }),
@@ -97,33 +115,40 @@ router.get('/resumen', async (req, res, next) => {
       // Por estado
       prisma.cuentaPorCobrar.groupBy({
         by: ['estado'],
-        where: tenantFilter,
+        where: combinarFiltrosCxc(tenantFilter),
         _sum: { montoPendiente: true },
         _count: true
       }),
 
-      // Aging: calculated on-the-fly from fechaVencimiento (not stored diasVencido)
-      prisma.$queryRaw`
-        SELECT
-          COALESCE(SUM(CASE
-            WHEN c."fechaVencimiento" >= NOW() AND c."estado" IN ('PENDING', 'PARTIALLY_PAID')
-            THEN c."montoPendiente" ELSE 0 END), 0) AS "0_30",
-          COALESCE(SUM(CASE
-            WHEN c."fechaVencimiento" < NOW() AND c."fechaVencimiento" >= NOW() - INTERVAL '30 days' AND c."estado" IN ('PENDING', 'PARTIALLY_PAID')
-            THEN c."montoPendiente" ELSE 0 END), 0) AS "31_60",
-          COALESCE(SUM(CASE
-            WHEN c."fechaVencimiento" < NOW() - INTERVAL '30 days' AND c."fechaVencimiento" >= NOW() - INTERVAL '60 days' AND c."estado" IN ('PENDING', 'PARTIALLY_PAID')
-            THEN c."montoPendiente" ELSE 0 END), 0) AS "61_90",
-          COALESCE(SUM(CASE
-            WHEN c."fechaVencimiento" < NOW() - INTERVAL '60 days' AND c."estado" IN ('PENDING', 'PARTIALLY_PAID')
-            THEN c."montoPendiente" ELSE 0 END), 0) AS "90plus"
-        FROM "cuentas_por_cobrar" c
-        WHERE ${buildCxcTenantSql(tenantFilter)}
-          AND c."estado" IN ('PENDING', 'PARTIALLY_PAID')
-      `
+      // Cuentas para cálculo de aging (100% compatible con PostgreSQL y SQLite)
+      prisma.cuentaPorCobrar.findMany({
+        where: combinarFiltrosCxc(tenantFilter, { estado: { in: ['PENDING', 'PARTIALLY_PAID'] } }),
+        select: { fechaVencimiento: true, montoPendiente: true }
+      })
     ]);
 
-    res.json({
+    // Aging calculado dinámicamente con límites exactos en días
+    let a0_30 = new Decimal(0);
+    let a31_60 = new Decimal(0);
+    let a61_90 = new Decimal(0);
+    let a90plus = new Decimal(0);
+    const msPorDia = 24 * 60 * 60 * 1000;
+    const ahoraMs = hoy.getTime();
+
+    for (const c of cuentasAging) {
+      const vencMs = new Date(c.fechaVencimiento).getTime();
+      const monto = new Decimal(c.montoPendiente.toString());
+      if (vencMs >= ahoraMs) {
+        a0_30 = a0_30.add(monto);
+      } else {
+        const dias = Math.floor((ahoraMs - vencMs) / msPorDia);
+        if (dias <= 30) a31_60 = a31_60.add(monto);
+        else if (dias <= 60) a61_90 = a61_90.add(monto);
+        else a90plus = a90plus.add(monto);
+      }
+    }
+
+    const respuesta = {
       totalPendiente: new Decimal(totalPendiente._sum.montoPendiente || 0).toFixed(2),
       cantidadPendientes: totalPendiente._count,
       totalVencido: new Decimal(totalVencido._sum.montoPendiente || 0).toFixed(2),
@@ -134,12 +159,15 @@ router.get('/resumen', async (req, res, next) => {
         cantidad: r._count
       })),
       aging: {
-        '0_30': new Decimal(aging[0]?.['0_30'] || 0).toFixed(2),
-        '31_60': new Decimal(aging[0]?.['31_60'] || 0).toFixed(2),
-        '61_90': new Decimal(aging[0]?.['61_90'] || 0).toFixed(2),
-        '90plus': new Decimal(aging[0]?.['90plus'] || 0).toFixed(2),
+        '0_30': a0_30.toFixed(2),
+        '31_60': a31_60.toFixed(2),
+        '61_90': a61_90.toFixed(2),
+        '90plus': a90plus.toFixed(2),
       }
-    });
+    };
+
+    cxcResumenCache.set(cacheKey, { ts: Date.now(), data: respuesta });
+    res.json(respuesta);
   } catch (err) { next(err); }
 });
 
@@ -178,24 +206,27 @@ router.get('/', async (req, res, next) => {
     const tenantFilter = cxcTenantFilter(req);
     const hoy = new Date();
 
-    let where = { ...tenantFilter };
-
-    if (estado) where.estado = estado;
-    if (clienteId) where.clienteId = clienteId;
+    let extra = {};
+    if (estado) extra.estado = estado;
+    if (clienteId) extra.clienteId = clienteId;
     if (vencidas === 'true') {
-      where.estado = { in: ['PENDING', 'PARTIALLY_PAID'] };
-      where.fechaVencimiento = { lt: hoy.toISOString() };
+      extra.estado = { in: ['PENDING', 'PARTIALLY_PAID'] };
+      extra.fechaVencimiento = { lt: hoy.toISOString() };
     }
     if (q) {
-      const terms = q.trim().split(/\s+/).filter(Boolean);
-      where.AND = terms.map(term => ({
-        OR: [
-          { cliente: { razonSocial: { contains: term, mode: 'insensitive' } } },
-          { cliente: { rifCedula: { contains: term, mode: 'insensitive' } } },
-          { factura: { numeroFactura: { equals: parseInt(term) || 0 } } }
-        ]
-      }));
+      const terms = extraerTerminosBusqueda(q);
+      if (terms.length > 0) {
+        extra.AND = terms.map(term => ({
+          OR: [
+            { cliente: { razonSocial: containsInsensitive(term) } },
+            { cliente: { rifCedula: containsInsensitive(term) } },
+            ...(/^\d+$/.test(term) ? [{ factura: { numeroFactura: parseInt(term, 10) } }] : [])
+          ]
+        }));
+      }
     }
+
+    const where = combinarFiltrosCxc(tenantFilter, extra);
 
     const total = await prisma.cuentaPorCobrar.count({ where });
 
@@ -252,7 +283,7 @@ router.get('/cliente/:clienteId', async (req, res, next) => {
     const hoy = new Date();
 
     const cuentas = await prisma.cuentaPorCobrar.findMany({
-      where: { ...tenantFilter, clienteId: req.params.clienteId },
+      where: combinarFiltrosCxc(tenantFilter, { clienteId: req.params.clienteId }),
       orderBy: { fechaVencimiento: 'asc' },
       include: {
         factura: { select: { id: true, numeroFactura: true, fechaEmision: true, moneda: true, tasaCambio: true } },
@@ -290,13 +321,15 @@ router.get('/export', async (req, res, next) => {
     const { estado, vencidas, clienteId, orden } = req.query;
     const hoy = new Date();
 
-    let where = { ...tenantFilter };
-    if (estado) where.estado = estado;
-    if (clienteId) where.clienteId = clienteId;
+    let extra = {};
+    if (estado) extra.estado = estado;
+    if (clienteId) extra.clienteId = clienteId;
     if (vencidas === 'true') {
-      where.estado = { in: ['PENDING', 'PARTIALLY_PAID'] };
-      where.fechaVencimiento = { lt: hoy.toISOString() };
+      extra.estado = { in: ['PENDING', 'PARTIALLY_PAID'] };
+      extra.fechaVencimiento = { lt: hoy.toISOString() };
     }
+
+    const where = combinarFiltrosCxc(tenantFilter, extra);
 
     const cuentas = await prisma.cuentaPorCobrar.findMany({
       where,
@@ -359,7 +392,24 @@ router.get('/:id', async (req, res, next) => {
             subtotal: true, impuestoTotal: true, total: true, estado: true,
             moneda: true, tasaCambio: true, observaciones: true,
             items: { select: { descripcionHistorica: true, cantidad: true, precioUnitarioHistorico: true, totalLinea: true } },
-            pagos: { orderBy: { fechaPago: 'asc' }, select: { id: true, monto: true, monedaPago: true, metodoPago: true, referenciaTransaccion: true, fechaPago: true, notas: true, tasaBCV: true } }
+            pagos: {
+              orderBy: { fechaPago: 'asc' },
+              select: {
+                id: true,
+                monto: true,
+                monedaPago: true,
+                metodoPago: true,
+                referenciaTransaccion: true,
+                fechaPago: true,
+                notas: true,
+                tasaBCV: true,
+                estado: true,
+                motivoAnulacion: true,
+                descripcionAnulacion: true,
+                anuladoPor: true,
+                fechaAnulacion: true,
+              },
+            }
           }
         },
         usuario: { select: { id: true, username: true, nombre: true } },
@@ -480,11 +530,11 @@ router.post('/:id/pago', async (req, res, next) => {
     const montoPagoRaw = toDecimalSeguro(monto, NaN);
     if (!montoPagoRaw.isFinite() || montoPagoRaw.lte(0)) throw createValidationError('El monto debe ser mayor a 0');
 
-    if (!metodoPago || !['CASH', 'BANK_TRANSFER', 'CREDIT_CARD', 'MOBILE_PAYMENT', 'PAGO_MOVIL'].includes(metodoPago)) {
-      throw createValidationError('Método de pago inválido');
+    if (!metodoPago || !esMetodoPagoValido(metodoPago) || esMetodoFinanciado(metodoPago)) {
+      throw createValidationError('Método de pago inválido para abono en CxC');
     }
-    if (metodoPago !== 'CASH' && !referenciaTransaccion?.trim()) {
-      throw createValidationError('La referencia es obligatoria para pagos electrónicos');
+    if (requiereReferenciaMetodo(metodoPago) && !referenciaTransaccion?.trim()) {
+      throw createValidationError('La referencia es obligatoria para este método de pago');
     }
 
     const empresaRefIdPago = await getEmpresaRefId(req);
@@ -559,7 +609,7 @@ router.post('/:id/pago', async (req, res, next) => {
           monto: montoPagoRaw.toFixed(2),
           monedaPago: monedaDelPago,
           metodoPago,
-          referenciaTransaccion: metodoPago === 'CASH' ? null : referenciaTransaccion?.trim(),
+          referenciaTransaccion: requiereReferenciaMetodo(metodoPago) ? referenciaTransaccion?.trim() : null,
           fechaPago: fechaPagoFinal.toISOString(),
           tasaBCV: tasaBCV ? tasaBCV.toFixed(4) : null,
           notas: notas?.trim() || `Abono desde CxC por ${req.user.nombre || req.user.username}`
@@ -604,6 +654,8 @@ router.post('/:id/pago', async (req, res, next) => {
         },
       };
     });
+
+    cxcResumenCache.clear();
 
     res.status(201).json({
       pago,
@@ -665,8 +717,12 @@ router.post('/:id/gestion', async (req, res, next) => {
       return nuevaGestion;
     });
 
+    cxcResumenCache.clear();
+
     res.status(201).json(gestion);
   } catch (err) { next(err); }
 });
+
+router.invalidarCacheCxcResumen = () => cxcResumenCache.clear();
 
 module.exports = router;

@@ -7,6 +7,7 @@
     "dev": "nodemon src/app.js",
     "start": "node src/app.js",
     "db:generate": "prisma generate",
+    "db:deploy": "prisma migrate deploy",
     "db:migrate": "prisma migrate dev --name init",
     "db:seed": "node prisma/seed.js",
     "db:sqlite:generate": "prisma generate --schema prisma/schema.sqlite.prisma",
@@ -20,6 +21,7 @@
     "lint:fix": "eslint src scripts --fix",
     "verify": "node scripts/verificar-request-id-facturas.js",
     "prisma_validate": "prisma validate",
+    "test:rutas": "node ../scripts/auditar-rutas-express.js",
     "test:unidades": "node scripts/test-invariante-venta-por-peso.js",
     "test:integridad": "node scripts/verificar-integridad-bd.js"
   },

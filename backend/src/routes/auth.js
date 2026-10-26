@@ -81,6 +81,19 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
+    // Las subcuentas heredan el acceso de su EMPRESA padre. Si el padre fue
+    // suspendido o eliminado, no debe poder iniciar sesión aunque su propia
+    // fila siga con `activo=true` (datos heredados de versiones anteriores).
+    if (['CAJA', 'INVENTARIO', 'VISOR'].includes(usuario.rol) && usuario.empresaId) {
+      const padre = await prisma.usuario.findUnique({
+        where: { id: usuario.empresaId },
+        select: { activo: true, deletedAt: true },
+      });
+      if (!padre || !padre.activo || padre.deletedAt) {
+        return res.status(401).json({ error: 'La cuenta principal de la empresa está suspendida. Contacta al administrador.' });
+      }
+    }
+
     // Identificador de empresa consistente: se usa en todo el flujo (token,
     // verificación de suscripción y respuesta) para evitar desincronización.
     // OJO: las sub-cuentas (CAJA/INVENTARIO/VISOR) tienen empresaRefId=NULL y su
@@ -106,6 +119,18 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       if (resolvedEmpresaId) {
         const emp = await prisma.empresa.findUnique({ where: { id: resolvedEmpresaId } });
         if (emp) {
+          if (emp.archivedAt) {
+            return res.status(403).json({
+              code: 'ACCOUNT_ARCHIVED',
+              error: 'La cuenta de la empresa está archivada. Contacta al administrador para restaurarla.',
+            });
+          }
+          if (emp.activo === false) {
+            return res.status(403).json({
+              code: 'ACCOUNT_SUSPENDED',
+              error: 'La cuenta de la empresa está suspendida. Contacta al administrador.',
+            });
+          }
           subSource = emp;
           empresaNombre = emp.nombre;
         }
@@ -228,7 +253,7 @@ router.post('/refresh', async (req, res, next) => {
 
     const usuario = await prisma.usuario.findUnique({
       where: { id: decoded.id },
-      select: { id: true, username: true, nombre: true, rol: true, empresaId: true, subscriptionStatus: true, activo: true, deletedAt: true, sessionVersion: true, refreshTokenId: true }
+      select: { id: true, username: true, nombre: true, rol: true, empresaId: true, empresaRefId: true, subscriptionStatus: true, activo: true, deletedAt: true, sessionVersion: true, refreshTokenId: true }
     });
 
     if (!usuario || !usuario.activo || usuario.deletedAt) {
@@ -236,6 +261,39 @@ router.post('/refresh', async (req, res, next) => {
     }
     if (decoded.sessionVersion !== undefined && decoded.sessionVersion !== usuario.sessionVersion) {
       return res.status(401).json({ error: 'Sesión invalidada. Por favor, inicia sesión nuevamente.' });
+    }
+
+    // Las subcuentas heredan el estado de su EMPRESA padre y de la empresa
+    // archivada. Sin esto, un refresh token de una subcuenta podría seguir
+    // renovando el acceso aunque la empresa esté archivada.
+    let empresaRefId = usuario.empresaRefId || null;
+    if (['CAJA', 'INVENTARIO', 'VISOR'].includes(usuario.rol) && usuario.empresaId) {
+      const padre = await prisma.usuario.findUnique({
+        where: { id: usuario.empresaId },
+        select: { activo: true, deletedAt: true, empresaRefId: true },
+      });
+      if (!padre || !padre.activo || padre.deletedAt) {
+        return res.status(401).json({ error: 'La cuenta principal de la empresa está suspendida. Contacta al administrador.' });
+      }
+      empresaRefId = empresaRefId || padre.empresaRefId;
+    }
+    if (empresaRefId) {
+      const empresa = await prisma.empresa.findUnique({
+        where: { id: empresaRefId },
+        select: { activo: true, archivedAt: true },
+      });
+      if (empresa?.archivedAt) {
+        return res.status(403).json({
+          code: 'ACCOUNT_ARCHIVED',
+          error: 'La cuenta de la empresa está archivada. Contacta al administrador para restaurarla.',
+        });
+      }
+      if (empresa && empresa.activo === false) {
+        return res.status(403).json({
+          code: 'ACCOUNT_SUSPENDED',
+          error: 'La cuenta de la empresa está suspendida. Contacta al administrador.',
+        });
+      }
     }
 
     // Rotación con detección de reuso: el jti presentado debe ser el vigente.
@@ -446,17 +504,26 @@ router.post('/reportar-pago', registerLimiter, authMiddleware, async (req, res, 
 
     const targetUser = await prisma.usuario.findUnique({
       where: { id: req.user.id },
-      include: { empresaRef: true }
+      include: {
+        empresaRef: true,
+        // Subcuenta → EMPRESA padre. El pago siempre activa a la empresa, no a
+        // la subcuenta que lo reportó (una CAJA no tiene suscripción propia).
+        empresa: { include: { empresaRef: true } },
+      }
     });
 
     if (!targetUser) {
       throw createValidationError('No se encontró ninguna cuenta asociada a esta sesión.');
     }
 
+    const titular = ['CAJA', 'INVENTARIO', 'VISOR'].includes(targetUser.rol) && targetUser.empresa
+      ? targetUser.empresa
+      : targetUser;
+
     // Registrar solicitud de activación en estado PENDIENTE
     const solicitud = await prisma.solicitudActivacion.create({
       data: {
-        usuarioId: targetUser.id,
+        usuarioId: titular.id,
         plan,
         metodoPago: metodoPago.trim(),
         referencia: referencia.trim(),
@@ -464,12 +531,14 @@ router.post('/reportar-pago', registerLimiter, authMiddleware, async (req, res, 
       }
     });
 
-    // Enviar notificación al correo de administración
+    // Enviar notificación al correo de administración (si RESEND_API_KEY está
+    // configurada; si no, queda registrada en el log sin bloquear la solicitud).
+    let notificacion = { enviado: false };
     try {
-      await enviarNotificacionPago({
-        usuarioId: targetUser.id,
-        username: targetUser.username,
-        nombreEmpresa: targetUser.empresaRef?.nombre || targetUser.nombre,
+      notificacion = await enviarNotificacionPago({
+        usuarioId: titular.id,
+        username: titular.username,
+        nombreEmpresa: titular.empresaRef?.nombre || titular.nombre,
         metodoPago: metodoPago.trim(),
         referencia: referencia.trim(),
         plan
@@ -481,7 +550,9 @@ router.post('/reportar-pago', registerLimiter, authMiddleware, async (req, res, 
     res.json({
       message: 'Pago reportado exitosamente. Tu solicitud está en proceso de verificación.',
       solicitudId: solicitud.id,
-      notificacion: `Comprobante enviado a ${METODOS_PAGO_SAAS.correoNotificacion}`
+      notificacion: notificacion?.enviado
+        ? `Comprobante enviado a ${METODOS_PAGO_SAAS.correoNotificacion}`
+        : 'Solicitud registrada. El administrador la revisará en el panel.'
     });
   } catch (err) {
     next(err);

@@ -21,26 +21,39 @@ datasource db {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model Empresa {
-  id                 String    @id @default(uuid())
-  nombre             String
-  rif                String    @unique
-  direccion          String?
-  telefono           String?
-  activo             Boolean   @default(true)
-  subscriptionStatus String    @default("trialing")
-  planType           String?
-  trialStartsAt      DateTime?
-  trialEndsAt        DateTime?
-  currentPeriodEnd   DateTime?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  id                     String    @id @default(uuid())
+  nombre                 String
+  rif                    String    @unique
+  direccion              String?
+  telefono               String?
+  email                  String?
+  monedaSimbolo          String?
+  monedaCodigo           String?
+  tasaDolar              Float?
+  // "AUTO": la tasa se refresca a diario con la del BCV. "MANUAL": solo cambia
+  // cuando el usuario la guarda. Se conserva la fecha del último cambio para
+  // saber si la tasa almacenada ya es la de hoy.
+  tasaDolarModo          String    @default("AUTO")
+  tasaDolarActualizadaEn DateTime?
+  activo                 Boolean   @default(true)
+  subscriptionStatus     String    @default("trialing")
+  planType               String?
+  trialStartsAt          DateTime?
+  trialEndsAt            DateTime?
+  currentPeriodEnd       DateTime?
+  // ── Archivado (borrado diferido) ──
+  archivedAt             DateTime?
+  scheduledDeletionAt    DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
-  usuarios     Usuario[]    @relation("EmpresaUsuarios")
-  roles        Rol[]
-  facturas     Factura[]
-  cierresCaja  CierreCaja[]
-  cotizaciones Cotizacion[]
-  auditLogs    AuditLog[]
+  usuarios         Usuario[]         @relation("EmpresaUsuarios")
+  roles            Rol[]
+  facturas         Factura[]
+  cierresCaja      CierreCaja[]
+  cotizaciones     Cotizacion[]
+  auditLogs        AuditLog[]
+  cuentasPorCobrar CuentaPorCobrar[]
 
   @@map("empresas")
 }
@@ -113,9 +126,10 @@ model Cliente {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  empresa      Usuario?     @relation("EmpresaClientes", fields: [empresaId], references: [id], onDelete: Cascade)
-  facturas     Factura[]
-  cotizaciones Cotizacion[]
+  empresa          Usuario?          @relation("EmpresaClientes", fields: [empresaId], references: [id], onDelete: Cascade)
+  facturas         Factura[]
+  cotizaciones     Cotizacion[]
+  cuentasPorCobrar CuentaPorCobrar[]
 
   @@unique([empresaId, rifCedula])
   @@index([empresaId])
@@ -152,8 +166,9 @@ model Producto {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  empresa      Usuario       @relation("EmpresaProductos", fields: [empresaId], references: [id])
-  itemsFactura ItemFactura[]
+  empresa         Usuario          @relation("EmpresaProductos", fields: [empresaId], references: [id])
+  itemsFactura    ItemFactura[]
+  itemsCotizacion ItemCotizacion[]
 
   @@unique([empresaId, sku])
   @@index([empresaId])
@@ -163,37 +178,44 @@ model Producto {
 }
 
 model Factura {
-  id               String   @id @default(uuid())
-  numeroFactura    Int      @unique
-  clienteId        String
-  cliente          Cliente  @relation(fields: [clienteId], references: [id])
-  usuarioId        String?
-  usuario          Usuario? @relation(fields: [usuarioId], references: [id])
-  empresaId        String?
-  empresa          Empresa? @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  fechaEmision     DateTime @default(now())
-  fechaVencimiento DateTime
-  subtotal         Float
-  impuestoTotal    Float
-  total            Float
-  estado           String   @default("PENDING")
-  moneda           String   @default("USD")
-  tasaCambio       Float    @default(1.0)
-  cuotasTotales    Int      @default(1)
-  observaciones    String?
-  anuladoPor       String?
-  motivoAnulacion  String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                   String    @id @default(uuid())
+  numeroFactura        Int       @unique
+  clienteId            String
+  cliente              Cliente   @relation(fields: [clienteId], references: [id])
+  usuarioId            String?
+  usuario              Usuario?  @relation(fields: [usuarioId], references: [id])
+  empresaId            String?
+  empresa              Empresa?  @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  fechaEmision         DateTime  @default(now())
+  fechaVencimiento     DateTime
+  subtotal             Float
+  impuestoTotal        Float
+  total                Float
+  estado               String    @default("PENDING")
+  moneda               String    @default("USD")
+  tasaCambio           Float     @default(1.0)
+  cuotasTotales        Int       @default(1)
+  observaciones        String?
+  anuladoPor           String?
+  motivoAnulacion      String?
+  descripcionAnulacion String?
+  fechaAnulacion       DateTime?
+  tasaAnulacion        Float?
+  requestId            String?   @unique
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  items ItemFactura[]
-  pagos Pago[]
+  items            ItemFactura[]
+  pagos            Pago[]
+  cotizacionOrigen Cotizacion?
+  cuentaPorCobrar  CuentaPorCobrar?
 
   @@index([fechaEmision])
   @@index([usuarioId])
   @@index([clienteId])
   @@index([estado])
   @@index([empresaId])
+  @@index([fechaAnulacion])
   @@map("facturas")
 }
 
@@ -220,19 +242,30 @@ model ItemFactura {
 }
 
 model Pago {
-  id                    String   @id @default(uuid())
+  id                    String    @id @default(uuid())
   facturaId             String
-  factura               Factura  @relation(fields: [facturaId], references: [id])
+  factura               Factura   @relation(fields: [facturaId], references: [id])
   monto                 Float
-  monedaPago            String   @default("USD")
+  monedaPago            String    @default("USD")
   metodoPago            String
   referenciaTransaccion String?
-  fechaPago             DateTime @default(now())
+  fechaPago             DateTime  @default(now())
   notas                 String?
-  createdAt             DateTime @default(now())
+  tasaBCV               Float?
+  // ── Anulación lógica ──
+  // Un pago nunca se borra: se marca ANULADO para conservar el rastro
+  // contable y la descripción del fraude/error que motivó la anulación.
+  estado                String    @default("ACTIVO")
+  motivoAnulacion       String?
+  descripcionAnulacion  String?
+  anuladoPor            String?
+  fechaAnulacion        DateTime?
+  createdAt             DateTime  @default(now())
 
   @@index([facturaId])
   @@index([fechaPago])
+  @@index([estado])
+  @@index([fechaAnulacion])
   @@map("pagos")
 }
 
@@ -245,22 +278,24 @@ model Correlativo {
 }
 
 model CierreCaja {
-  id               String    @id @default(uuid())
-  usuarioId        String?
-  usuario          Usuario?  @relation(fields: [usuarioId], references: [id])
-  empresaId        String?
-  empresa          Empresa?  @relation(fields: [empresaId], references: [id], onDelete: Restrict)
-  fechaApertura    DateTime  @default(now())
-  fechaCierre      DateTime?
-  montoInicial     Float
-  montoFinal       Float?
-  ingresosEfectivo Float     @default(0.00)
-  ingresosBanco    Float     @default(0.00)
-  estado           String    @default("OPEN")
-  observaciones    String?
-  arqueoDetalle    String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                  String    @id @default(uuid())
+  usuarioId           String?
+  usuario             Usuario?  @relation(fields: [usuarioId], references: [id])
+  empresaId           String?
+  empresa             Empresa?  @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  fechaApertura       DateTime  @default(now())
+  fechaCierre         DateTime?
+  montoInicial        Float
+  montoFinal          Float?
+  ingresosEfectivo    Float     @default(0.00)
+  ingresosBanco       Float     @default(0.00)
+  ingresosEfectivoVES Float?
+  ingresosBancoVES    Float?
+  estado              String    @default("OPEN")
+  observaciones       String?
+  arqueoDetalle       String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@index([usuarioId])
   @@index([empresaId])
@@ -285,6 +320,8 @@ model Cotizacion {
   total         Float
   moneda        String   @default("USD")
   estado        String   @default("PENDING")
+  facturaId     String?  @unique
+  factura       Factura? @relation(fields: [facturaId], references: [id])
 
   items ItemCotizacion[]
 
@@ -300,6 +337,7 @@ model ItemCotizacion {
   cotizacionId   String
   cotizacion     Cotizacion @relation(fields: [cotizacionId], references: [id], onDelete: Cascade)
   productoId     String?
+  producto       Producto?  @relation(fields: [productoId], references: [id])
   descripcion    String
   cantidad       Int
   precioUnitario Float
@@ -332,6 +370,7 @@ model Usuario {
   mfaEnabled            Boolean   @default(false)
   mfaSecret             String?
   sessionVersion        Int       @default(1)
+  refreshTokenId        String?
   sudoModeExpiresAt     DateTime?
   registrationIp        String?
   registrationLatitude  Float?
@@ -339,6 +378,7 @@ model Usuario {
   lastLoginIp           String?
   lastLoginAt           DateTime?
   deletedAt             DateTime?
+  scheduledDeletionAt   DateTime?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -351,20 +391,26 @@ model Usuario {
   cotizaciones          Cotizacion[]
   solicitudesActivacion SolicitudActivacion[]
   auditLogs             AuditLog[]
+  cuentasPorCobrar      CuentaPorCobrar[]
+  gestionesCobranza     GestionCobranza[]
 
   @@map("usuarios")
 }
 
 model SolicitudActivacion {
-  id         String   @id @default(uuid())
-  usuarioId  String
-  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
-  plan       String
-  metodoPago String
-  referencia String
-  estado     String   @default("PENDIENTE")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id          String    @id @default(uuid())
+  usuarioId   String
+  usuario     Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  plan        String
+  metodoPago  String
+  referencia  String
+  estado      String    @default("PENDIENTE")
+  // Revisión del Super Admin: notas internas, quién resolvió la solicitud y cuándo.
+  notas       String?
+  revisadoPor String?
+  revisadoEn  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([usuarioId])
   @@index([estado])
@@ -377,6 +423,7 @@ model Noticia {
   subtitulo String?
   contenido String
   imagenUrl String?
+  videoUrl  String?
   categoria String   @default("Anuncio")
   destacado Boolean  @default(false)
   publicado Boolean  @default(true)
@@ -402,4 +449,54 @@ model Promocion {
   updatedAt      DateTime  @updatedAt
 
   @@map("promociones")
+}
+
+model CuentaPorCobrar {
+  id               String    @id @default(uuid())
+  empresaId        String
+  empresa          Empresa?  @relation(fields: [empresaId], references: [id], onDelete: Cascade)
+  facturaId        String    @unique
+  factura          Factura   @relation(fields: [facturaId], references: [id], onDelete: Cascade)
+  clienteId        String
+  cliente          Cliente   @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  usuarioId        String?
+  usuario          Usuario?  @relation(fields: [usuarioId], references: [id])
+  montoOriginal    Float
+  montoCobrado     Float     @default(0.00)
+  montoPendiente   Float
+  fechaEmision     DateTime
+  fechaVencimiento DateTime
+  estado           String    @default("PENDING")
+  diasVencido      Int       @default(0)
+  ultimaGestion    DateTime?
+  notas            String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  gestions GestionCobranza[]
+
+  @@index([empresaId])
+  @@index([clienteId])
+  @@index([usuarioId])
+  @@index([estado])
+  @@index([fechaVencimiento])
+  @@map("cuentas_por_cobrar")
+}
+
+model GestionCobranza {
+  id                String          @id @default(uuid())
+  cuentaPorCobrarId String
+  cuentaPorCobrar   CuentaPorCobrar @relation(fields: [cuentaPorCobrarId], references: [id], onDelete: Cascade)
+  empresaId         String
+  usuarioId         String
+  usuario           Usuario?        @relation(fields: [usuarioId], references: [id])
+  accion            String
+  notas             String?
+  fecha             DateTime        @default(now())
+  createdAt         DateTime        @default(now())
+
+  @@index([cuentaPorCobrarId])
+  @@index([empresaId])
+  @@index([usuarioId])
+  @@map("gestiones_cobranza")
 }

@@ -23,7 +23,9 @@ function errorHandler(err, req, res, next) {
   if (err.code === 'P2003') {
     return res.status(400).json({
       error: 'Referencia inválida',
-      message: 'El ID de referencia proporcionado no existe',
+      message: req.method === 'DELETE'
+        ? 'No se puede eliminar porque existen registros relacionados. No se borró nada.'
+        : 'El ID de referencia proporcionado no existe',
     });
   }
 

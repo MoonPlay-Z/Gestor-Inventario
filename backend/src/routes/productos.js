@@ -1,6 +1,7 @@
 const express = require('express');
 const router  = express.Router();
 const prisma = require('../db/prisma');
+const { IS_SQLITE } = require('../db/prisma');
 const { Decimal } = require('decimal.js');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { requireRole } = require('../middleware/auth');
@@ -9,12 +10,19 @@ const { aUnidadBase } = require('../utils/unidades');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaParaEmpresa } = require('../utils/tasaAPI');
 const { paginate } = require('../utils/pagination');
+const { containsInsensitive, extraerTerminosBusqueda } = require('../utils/textSearch');
 
 const UNIDADES_VALIDAS = [
   'UNIDAD', 'KILOGRAMO', 'GRAMO', 'LITRO', 'MILILITRO',
   'METRO', 'CENTIMETRO', 'BULTO', 'PAQUETE', 'CAJA',
   'SACO', 'BOTELLA', 'LATA', 'DOCENA', 'MEDIA_DOCENA',
 ];
+
+// Fragmento de búsqueda de texto portable: PostgreSQL soporta ILIKE, SQLite
+// no (rompía con `near "ILIKE": syntax error` al filtrar stock bajo/costo).
+const likeFrag = (columna, indice) => IS_SQLITE
+  ? `LOWER(${columna}) LIKE LOWER($${indice})`
+  : `${columna} ILIKE $${indice}`;
 
 // SUPER_ADMIN no gestiona inventario
 router.use(requireRole('EMPRESA', 'CAJA', 'INVENTARIO'));
@@ -53,6 +61,340 @@ router.get('/metricas', async (req, res, next) => {
       productosConStock: Number(metricas[0]?.productos_con_stock || 0),
       productosSinStock: Number(metricas[0]?.productos_sin_stock || 0),
       productosStockBajo: Number(metricas[0]?.productos_stock_bajo || 0),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/productos/integridad — Validación de integridad del inventario
+router.get('/integridad', async (req, res, next) => {
+  try {
+    const empresaId = req.user.empresaId || req.user.id;
+
+    if (!empresaId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    // Ejecutar todas las validaciones en paralelo
+    const [
+      stockNegativo,
+      costoMayorVenta,
+      ivaSinTasa,
+      precioCero,
+      costoCero,
+      skuDuplicados,
+      sinCategoria,
+      sinUnidadMedida,
+      ventaPesoSinPrecioKilo,
+      stockMinimoInvalido,
+      productosInactivosConStock,
+      totalProductos,
+    ] = await Promise.all([
+      // 1. Productos con stock negativo
+      prisma.$queryRaw`
+        SELECT id, sku, nombre, "stockActual", "stockMinimo", "unidadMedida"
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+          AND "stockActual" < 0
+        ORDER BY "stockActual" ASC
+      `,
+
+      // 2. Productos con costo mayor a precio de venta (pérdida garantizada)
+      prisma.$queryRaw`
+        SELECT id, sku, nombre, "precioVenta", "costoCompra",
+               ("costoCompra" - "precioVenta") AS perdida_unitaria
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+          AND "costoCompra" > "precioVenta"
+        ORDER BY perdida_unitaria DESC
+      `,
+
+      // 3. Productos con IVA > 0 pero tasaImpuesto = 0 (inconsistencia)
+      prisma.$queryRaw`
+        SELECT id, sku, nombre, "tasaImpuesto"
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+          AND "tasaImpuesto" = 0
+          AND "precioVenta" > 0
+        ORDER BY nombre ASC
+      `,
+
+      // 4. Productos con precio de venta = 0 o NULL
+      prisma.$queryRaw`
+        SELECT id, sku, nombre, "precioVenta"
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+          AND ("precioVenta" IS NULL OR "precioVenta" <= 0)
+        ORDER BY nombre ASC
+      `,
+
+      // 5. Productos con costo = 0 (puede ser válido pero vale la pena revisar)
+      prisma.$queryRaw`
+        SELECT id, sku, nombre, "costoCompra", "precioVenta"
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+          AND ("costoCompra" IS NULL OR "costoCompra" = 0)
+        ORDER BY nombre ASC
+      `,
+
+      // 6. SKUs duplicados dentro de la misma empresa
+      prisma.$queryRaw`
+        SELECT sku, COUNT(*) as cantidad, array_agg(id) as ids, array_agg(nombre) as nombres
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+        GROUP BY sku
+        HAVING COUNT(*) > 1
+        ORDER BY cantidad DESC
+      `,
+
+      // 7. Productos sin categoría (NULL o vacío)
+      prisma.$queryRaw`
+        SELECT id, sku, nombre, categoria
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+          AND (categoria IS NULL OR categoria = '')
+        ORDER BY nombre ASC
+      `,
+
+      // 8. Productos sin unidad de medida
+      prisma.$queryRaw`
+        SELECT id, sku, nombre, "unidadMedida"
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+          AND ("unidadMedida" IS NULL OR "unidadMedida" = '')
+        ORDER BY nombre ASC
+      `,
+
+      // 9. Productos "venta por peso" sin precio por kilo
+      prisma.$queryRaw`
+        SELECT id, sku, nombre, "esVentaPorPeso", "precioPorKilo", "unidadMedida"
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+          AND "esVentaPorPeso" = true
+          AND ("precioPorKilo" IS NULL OR "precioPorKilo" <= 0)
+        ORDER BY nombre ASC
+      `,
+
+      // 10. Stock mínimo inválido (negativo)
+      prisma.$queryRaw`
+        SELECT id, sku, nombre, "stockActual", "stockMinimo"
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+          AND ("stockMinimo" < 0)
+        ORDER BY "stockMinimo" ASC
+      `,
+
+      // 11. Productos inactivos que aún tienen stock > 0
+      prisma.$queryRaw`
+        SELECT id, sku, nombre, "stockActual", "stockMinimo"
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = false
+          AND "stockActual" > 0
+        ORDER BY "stockActual" DESC
+      `,
+
+      // 12. Total de productos para estadísticas
+      prisma.$queryRaw`
+        SELECT
+          COUNT(*) as total,
+          COUNT(CASE WHEN activo = true THEN 1 END) as activos,
+          COUNT(CASE WHEN activo = false THEN 1 END) as inactivos
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+      `,
+    ]);
+
+    // Formatear resultados
+    const validaciones = [
+      {
+        codigo: 'STOCK_NEGATIVO',
+        titulo: 'Stock negativo',
+        descripcion: 'Productos con cantidad en inventario menor a cero',
+        severidad: 'critica',
+        cantidad: stockNegativo.length,
+        datos: stockNegativo.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          nombre: p.nombre,
+          stockActual: Number(p.stockActual),
+          stockMinimo: Number(p.stockMinimo),
+          unidadMedida: p.unidadMedida,
+        })),
+      },
+      {
+        codigo: 'COSTO_MAYOR_VENTA',
+        titulo: 'Costo mayor a precio de venta',
+        descripcion: 'Cada venta genera pérdida (costo > precio)',
+        severidad: 'alta',
+        cantidad: costoMayorVenta.length,
+        datos: costoMayorVenta.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          nombre: p.nombre,
+          precioVenta: Number(p.precioVenta),
+          costoCompra: Number(p.costoCompra),
+          perdidaUnitaria: Number(p.perdida_unitaria),
+        })),
+      },
+      {
+        codigo: 'IVA_SIN_TASA',
+        titulo: 'Productos con IVA pero tasa en 0%',
+        descripcion: 'Productos que deberían tener IVA pero la tasa está en 0',
+        severidad: 'media',
+        cantidad: ivaSinTasa.length,
+        datos: ivaSinTasa.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          nombre: p.nombre,
+          tasaImpuesto: Number(p.tasaImpuesto),
+        })),
+      },
+      {
+        codigo: 'PRECIO_CERO',
+        titulo: 'Precio de venta en cero o nulo',
+        descripcion: 'Productos que no pueden venderse por falta de precio',
+        severidad: 'critica',
+        cantidad: precioCero.length,
+        datos: precioCero.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          nombre: p.nombre,
+          precioVenta: Number(p.precioVenta || 0),
+        })),
+      },
+      {
+        codigo: 'COSTO_CERO',
+        titulo: 'Costo de compra en cero',
+        descripcion: 'Productos sin costo registrado (ganancia inflada en reportes)',
+        severidad: 'baja',
+        cantidad: costoCero.length,
+        datos: costoCero.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          nombre: p.nombre,
+          costoCompra: Number(p.costoCompra || 0),
+          precioVenta: Number(p.precioVenta),
+        })),
+      },
+      {
+        codigo: 'SKU_DUPLICADO',
+        titulo: 'SKUs duplicados',
+        descripcion: 'Mismo SKU asignado a múltiples productos',
+        severidad: 'critica',
+        cantidad: skuDuplicados.length,
+        datos: skuDuplicados.map(p => ({
+          sku: p.sku,
+          cantidad: Number(p.cantidad),
+          ids: p.ids,
+          nombres: p.nombres,
+        })),
+      },
+      {
+        codigo: 'SIN_CATEGORIA',
+        titulo: 'Productos sin categoría',
+        descripcion: 'Productos sin clasificar (dificulta reportes y filtros)',
+        severidad: 'baja',
+        cantidad: sinCategoria.length,
+        datos: sinCategoria.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          nombre: p.nombre,
+          categoria: p.categoria,
+        })),
+      },
+      {
+        codigo: 'SIN_UNIDAD_MEDIDA',
+        titulo: 'Productos sin unidad de medida',
+        descripcion: 'Falta unidad de medida (requerida para stock y ventas)',
+        severidad: 'media',
+        cantidad: sinUnidadMedida.length,
+        datos: sinUnidadMedida.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          nombre: p.nombre,
+          unidadMedida: p.unidadMedida,
+        })),
+      },
+      {
+        codigo: 'VENTA_PESO_SIN_PRECIO_KILO',
+        titulo: 'Venta por peso sin precio por kilo',
+        descripcion: 'Productos marcados como venta por peso pero sin precio/kg',
+        severidad: 'alta',
+        cantidad: ventaPesoSinPrecioKilo.length,
+        datos: ventaPesoSinPrecioKilo.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          nombre: p.nombre,
+          esVentaPorPeso: p.esVentaPorPeso,
+          precioPorKilo: Number(p.precioPorKilo || 0),
+          unidadMedida: p.unidadMedida,
+        })),
+      },
+      {
+        codigo: 'STOCK_MINIMO_INVALIDO',
+        titulo: 'Stock mínimo negativo',
+        descripcion: 'El stock mínimo no puede ser negativo',
+        severidad: 'media',
+        cantidad: stockMinimoInvalido.length,
+        datos: stockMinimoInvalido.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          nombre: p.nombre,
+          stockActual: Number(p.stockActual),
+          stockMinimo: Number(p.stockMinimo),
+        })),
+      },
+      {
+        codigo: 'INACTIVOS_CON_STOCK',
+        titulo: 'Productos inactivos con stock',
+        descripcion: 'Productos desactivados que aún tienen inventario',
+        severidad: 'baja',
+        cantidad: productosInactivosConStock.length,
+        datos: productosInactivosConStock.map(p => ({
+          id: p.id,
+          sku: p.sku,
+          nombre: p.nombre,
+          stockActual: Number(p.stockActual),
+          stockMinimo: Number(p.stockMinimo),
+        })),
+      },
+    ];
+
+    const resumen = {
+      totalProductos: Number(totalProductos[0]?.total || 0),
+      productosActivos: Number(totalProductos[0]?.activos || 0),
+      productosInactivos: Number(totalProductos[0]?.inactivos || 0),
+      totalAlertas: validaciones.reduce((sum, v) => sum + v.cantidad, 0),
+      porSeveridad: {
+        critica: validaciones.filter(v => v.severidad === 'critica').reduce((sum, v) => sum + v.cantidad, 0),
+        alta: validaciones.filter(v => v.severidad === 'alta').reduce((sum, v) => sum + v.cantidad, 0),
+        media: validaciones.filter(v => v.severidad === 'media').reduce((sum, v) => sum + v.cantidad, 0),
+        baja: validaciones.filter(v => v.severidad === 'baja').reduce((sum, v) => sum + v.cantidad, 0),
+      },
+      estadoGeneral: 'ok',
+    };
+
+    // Determinar estado general
+    if (resumen.porSeveridad.critica > 0) resumen.estadoGeneral = 'critico';
+    else if (resumen.porSeveridad.alta > 0) resumen.estadoGeneral = 'atencion';
+    else if (resumen.porSeveridad.media > 0) resumen.estadoGeneral = 'advertencia';
+
+    res.json({
+      resumen,
+      validaciones,
+      timestamp: new Date().toISOString(),
     });
   } catch (err) {
     next(err);
@@ -120,40 +462,85 @@ router.get('/', async (req, res, next) => {
     );
     const empresaId = req.user.empresaId || req.user.id;
 
-    const where = { empresaId };
-    if (soloActivos === 'true') where.activo = true;
-    if (categoria) where.categoria = categoria;
-    if (alertaIva === 'true') where.tasaImpuesto = { gt: 0 };
-    if (alertaCostoVenta === 'true') {
-      const productosRaw = await prisma.$queryRaw`
-        SELECT id, sku, nombre, descripcion, "imagenUrl", "unidadMedida", "esVentaPorPeso",
-          "precioPorKilo", "toleranciaPeso", "stockActual", "stockMinimo", "precioVenta",
-          "costoCompra", "tasaImpuesto", categoria, activo, "empresaId", "createdAt", "updatedAt"
-        FROM productos
-        WHERE "empresaId" = ${empresaId}
-          AND activo = true
-          AND "costoCompra" > "precioVenta"
-        ORDER BY nombre ASC
-        LIMIT ${take} OFFSET ${skip}
+    // Si se solicita alertaCostoVenta O stockBajo, usamos raw SQL para poder
+    // filtrar a nivel de BD (comparación campo-a-campo) con paginación correcta.
+    const necesitaRawSql = alertaCostoVenta === 'true' || stockBajo === 'true';
+
+    if (necesitaRawSql) {
+      // Construir WHERE dinámico
+      const condiciones = ['"empresaId" = $1'];
+      const params = [empresaId];
+      let paramIndex = 2;
+
+      if (soloActivos === 'true') {
+        condiciones.push('activo = true');
+      }
+      if (categoria) {
+        condiciones.push(`categoria = $${paramIndex++}`);
+        params.push(categoria);
+      }
+      if (alertaIva === 'true') {
+        condiciones.push('"tasaImpuesto" > 0');
+      }
+      if (alertaCostoVenta === 'true') {
+        condiciones.push('"costoCompra" > "precioVenta"');
+      }
+      if (stockBajo === 'true') {
+        condiciones.push('"stockActual" <= "stockMinimo"');
+      }
+      if (q) {
+        const terms = extraerTerminosBusqueda(q);
+        if (terms.length > 0) {
+          const orCondiciones = terms.map(() => {
+            const idx = paramIndex++;
+            return `(${likeFrag('sku', idx)} OR ${likeFrag('nombre', idx)} OR ${likeFrag('descripcion', idx)} OR ${likeFrag('categoria', idx)})`;
+          }).join(' AND ');
+          condiciones.push(`(${orCondiciones})`);
+          terms.forEach(t => params.push(`%${t}%`));
+        }
+      }
+
+      const whereSql = condiciones.join(' AND ');
+
+      const selectCols = `
+        id, sku, nombre, descripcion, "imagenUrl", "unidadMedida", "esVentaPorPeso",
+        "precioPorKilo", "toleranciaPeso", "stockActual", "stockMinimo", "precioVenta",
+        "costoCompra", "tasaImpuesto", categoria, activo, "empresaId", "createdAt", "updatedAt"
       `;
-      const totalRaw = await prisma.$queryRaw`
-        SELECT COUNT(*) AS count FROM productos
-        WHERE "empresaId" = ${empresaId} AND activo = true AND "costoCompra" > "precioVenta"
-      `;
+
+      const productosRaw = await prisma.$queryRawUnsafe(
+        `SELECT ${selectCols} FROM productos WHERE ${whereSql} ORDER BY nombre ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
+        ...params,
+        take,
+        skip
+      );
+
+      const totalRaw = await prisma.$queryRawUnsafe(
+        `SELECT COUNT(*) AS count FROM productos WHERE ${whereSql}`,
+        ...params
+      );
+
       const productos = productosRaw.map(p => ({
         ...p,
         stockBajoMinimo: Number(p.stockActual) <= Number(p.stockMinimo),
       }));
+
       return res.json({ data: productos, total: Number(totalRaw[0].count), page: pageNumber, limit: take });
     }
+
+    // Sin stockBajo ni alertaCostoVenta: usar Prisma ORM normal
+    const where = { empresaId };
+    if (soloActivos === 'true') where.activo = true;
+    if (categoria) where.categoria = categoria;
+    if (alertaIva === 'true') where.tasaImpuesto = { gt: 0 };
     if (q) {
-      const terms = q.split(' ').filter(t => t.length > 0);
+      const terms = extraerTerminosBusqueda(q);
       where.AND = terms.map(term => ({
         OR: [
-          { sku: { contains: term, mode: 'insensitive' } },
-          { nombre: { contains: term, mode: 'insensitive' } },
-          { descripcion: { contains: term, mode: 'insensitive' } },
-          { categoria: { contains: term, mode: 'insensitive' } },
+          { sku: containsInsensitive(term) },
+          { nombre: containsInsensitive(term) },
+          { descripcion: containsInsensitive(term) },
+          { categoria: containsInsensitive(term) },
         ]
       }));
     }
@@ -194,11 +581,6 @@ router.get('/', async (req, res, next) => {
       ...p,
       stockBajoMinimo: Number(p.stockActual) <= Number(p.stockMinimo),
     }));
-
-    if (stockBajo === 'true') {
-      productos = productos.filter(p => p.stockBajoMinimo);
-      total = productos.length;
-    }
 
     res.json({ data: productos, total, page: pageNumber, limit });
   } catch (err) { next(err); }
@@ -281,6 +663,23 @@ router.get('/next-sku', async (req, res, next) => {
     let corr = await prisma.correlativo.findUnique({ where: { nombre: 'SKU' } });
     const nextVal = corr ? corr.valor + 1 : 1;
     res.json({ sku: `PROD-${String(nextVal).padStart(5, '0')}` });
+  } catch (err) { next(err); }
+});
+
+// GET /api/productos/categorias — categorías reales de la empresa.
+// El selector de inventario solo veía las categorías de la página cargada,
+// así que las que quedaban fuera de los primeros 20 productos no se podían
+// filtrar.
+router.get('/categorias', async (req, res, next) => {
+  try {
+    const empresaId = req.user.empresaId || req.user.id;
+    const filas = await prisma.producto.findMany({
+      where: { empresaId, activo: true },
+      distinct: ['categoria'],
+      select: { categoria: true },
+      orderBy: { categoria: 'asc' },
+    });
+    res.json(filas.map(f => f.categoria).filter(Boolean));
   } catch (err) { next(err); }
 });
 
