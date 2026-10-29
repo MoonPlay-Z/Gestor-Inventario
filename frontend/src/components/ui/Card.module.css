@@ -1,5 +1,24 @@
-/* frontend/src/components/ui/Card.module.css */
+/* =========================================================================
+   Card.module.css — COMPONENTE <Card>
+   -------------------------------------------------------------------------
+   Uso:  import styles from './Card.module.css'
+         <div className={styles.card}>
+           <div className={styles.header}>
+             <h3 className={styles.title}>Facturas</h3>
+           </div>
+         </div>
 
+   CONTENIDO
+     01. .card   contenedor blanco
+     02. .header cabecera (título + acciones)
+     03. .title  título de la tarjeta
+
+   No necesita ajustes por dispositivo: el padding es fijo y el ancho lo
+   decide la rejilla que la contiene.
+   ========================================================================= */
+
+/* ── 01. Contenedor ───────────────────────────────────────────────────────
+   Superficie blanca con borde, esquinas grandes y sombra suave. */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -9,11 +28,14 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* Realce al pasar el ratón. */
 .card:hover {
   box-shadow: var(--shadow-md);
   border-color: rgba(37, 99, 235, 0.15);
 }
 
+/* ── 02. Cabecera ─────────────────────────────────────────────────────────
+   Título a la izquierda, acciones a la derecha; envuelve si no cabe. */
 .header {
   display: flex;
   align-items: center;
@@ -23,6 +45,7 @@
   margin-bottom: 16px;
 }
 
+/* ── 03. Título ─────────────────────────────────────────────────────────── */
 .title {
   margin: 0;
   font-size: 1.1rem;

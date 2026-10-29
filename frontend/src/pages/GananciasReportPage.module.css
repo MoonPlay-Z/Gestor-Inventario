@@ -1,6 +1,37 @@
-/* ═══════════════════════════════════════════════════════════════════════════
-   GANANCIAS REPORT — Soft Structuralism · Bento Grid · Linear-tier
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* =========================================================================
+   GananciasReportPage.module.css — REPORTE DE GANANCIAS
+   (`pages/GananciasReportPage.jsx`)
+   -------------------------------------------------------------------------
+   Estilo "Soft Structuralism · Bento Grid · Linear-tier": tarjetas de cristal
+   (blur), rejilla bento y tipografía grande. Tiene tema oscuro automático
+   (`prefers-color-scheme`) y se adapta a tablet y teléfono.
+
+   Uso:  import styles from './GananciasReportPage.module.css'
+         <div className={styles.container}>
+           <header className={styles.header}>…</header>
+           <div className={styles.bentoGrid}>…</div>
+         </div>
+
+   CONTENIDO (índice)
+     01. Contenedor
+     02. Cabecera (eyebrow, title, subtitle, periodBtn)
+     03. Filtros (segmented, segmentBtn, dateInput…, gananciaPositiva/Negativa)
+     04. Carga (loading, spinner)
+     05. Rejilla bento y tarjetas de indicador
+     06. Tarjetas y tablas de detalle
+     07. Mini barra de proporción
+     08. Fila de totales
+     09. Paginación
+     10. Aviso (alertCard)
+     11. Tema oscuro
+     12. ▓ TABLET (≤1024px)
+     13. ▓ TELÉFONO (≤640px)
+   ========================================================================= */
+
+
+/* =========================================================================
+   01. CONTENEDOR
+   ========================================================================= */
 
 .container {
   min-height: 100dvh;
@@ -10,8 +41,12 @@
   color: #1a1d2e;
 }
 
-/* ── Header ─────────────────────────────────────────────────────────────── */
 
+/* =========================================================================
+   02. CABECERA
+   ========================================================================= */
+
+/* Título a la izquierda, acciones (periodo) a la derecha. */
 .header {
   display: flex;
   justify-content: space-between;
@@ -21,6 +56,7 @@
   flex-wrap: wrap;
 }
 
+/* Etiqueta pequeña en mayúsculas sobre el título ("REPORTE FINANCIERO"). */
 .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -36,6 +72,7 @@
   margin-bottom: 12px;
 }
 
+/* Título grande con degradado de texto (recortado sobre el fondo). */
 .title {
   font-size: clamp(28px, 4vw, 40px);
   font-weight: 800;
@@ -48,6 +85,7 @@
   background-clip: text;
 }
 
+/* Subtítulo gris bajo el título. */
 .subtitle {
   margin: 6px 0 0;
   font-size: 14px;
@@ -55,11 +93,13 @@
   font-weight: 500;
 }
 
+/* Contenedor de los botones de periodo. */
 .headerActions {
   display: flex;
   gap: 10px;
 }
 
+/* Botón de periodo (píldora con blur). */
 .periodBtn {
   display: inline-flex;
   align-items: center;
@@ -83,6 +123,7 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
+/* Periodo seleccionado (aria-pressed="true"): índigo. */
 .periodBtn[aria-pressed="true"] {
   background: #6366f1;
   border-color: #6366f1;
@@ -90,8 +131,12 @@
   box-shadow: 0 4px 16px rgba(99, 102, 241, 0.35);
 }
 
-/* ── Filters ────────────────────────────────────────────────────────────── */
 
+/* =========================================================================
+   03. FILTROS
+   ========================================================================= */
+
+/* Fila de filtros (segmentado + fechas). */
 .filters {
   display: flex;
   align-items: center;
@@ -100,6 +145,7 @@
   flex-wrap: wrap;
 }
 
+/* Control segmentado (varias opciones en una píldora). */
 .segmented {
   display: inline-flex;
   background: rgba(255, 255, 255, 0.6);
@@ -109,6 +155,7 @@
   backdrop-filter: blur(8px);
 }
 
+/* Cada opción del segmentado. */
 .segmentBtn {
   padding: 7px 16px;
   border-radius: 999px;
@@ -125,12 +172,14 @@
   color: #1a1d2e;
 }
 
+/* Opción activa (blanca con sombra). */
 .segmentBtnActive {
   background: #ffffff;
   color: #1a1d2e;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
+/* Caja del selector de fecha. */
 .dateInputWrap {
   display: inline-flex;
   align-items: center;
@@ -142,10 +191,12 @@
   backdrop-filter: blur(8px);
 }
 
+/* Icono de calendario. */
 .dateIcon {
   color: #9ca3af;
 }
 
+/* Campo de fecha sin borde propio (el borde lo pone la caja). */
 .dateInput {
   border: none;
   background: transparent;
@@ -156,11 +207,13 @@
   font-family: inherit;
 }
 
+/* Icono nativo del selector de fecha, atenuado. */
 .dateInput::-webkit-calendar-picker-indicator {
   opacity: 0.5;
   cursor: pointer;
 }
 
+/* Cifra de ganancia positiva (verde sobre blanco). */
 .gananciaPositiva {
   color: #059669;
   font-weight: 900;
@@ -173,6 +226,7 @@
   letter-spacing: -0.02em;
 }
 
+/* Cifra de ganancia negativa (blanco sobre rojo). */
 .gananciaNegativa {
   color: #ffffff;
   font-weight: 900;
@@ -185,7 +239,10 @@
   letter-spacing: -0.02em;
 }
 
-/* ── Loading ────────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   04. CARGA
+   ========================================================================= */
 
 .loading {
   display: flex;
@@ -198,6 +255,7 @@
   color: #6b7280;
 }
 
+/* Spinner índigo. */
 .spinner {
   width: 20px;
   height: 20px;
@@ -211,8 +269,12 @@
   to { transform: rotate(360deg); }
 }
 
-/* ── Bento Grid ─────────────────────────────────────────────────────────── */
 
+/* =========================================================================
+   05. REJILLA BENTO Y TARJETAS DE INDICADOR
+   ========================================================================= */
+
+/* 4 columnas en escritorio; 2 en tablet y 1 en teléfono. */
 .bentoGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -220,6 +282,7 @@
   margin-bottom: 32px;
 }
 
+/* Tarjeta de cristal: fondo translúcido + blur. */
 .card {
   background: rgba(255, 255, 255, 0.75);
   border: 1px solid rgba(226, 230, 240, 0.8);
@@ -231,6 +294,7 @@
   overflow: hidden;
 }
 
+/* Brillo diagonal de la esquina superior (no captura clics). */
 .card::before {
   content: '';
   position: absolute;
@@ -246,11 +310,13 @@
   border-color: rgba(199, 205, 219, 0.9);
 }
 
+/* Tarjeta de ingresos: ocupa 2 columnas. */
 .cardIngresos {
   grid-column: span 2;
   background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(240,253,244,0.6) 100%);
 }
 
+/* Tarjeta de ganancia: 2 columnas, borde verde y sombra de color. */
 .cardGanancia {
   grid-column: span 2;
   background: #ffffff;
@@ -258,6 +324,7 @@
   box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
 }
 
+/* Variantes dentro de la tarjeta de ganancia. */
 .cardGanancia .cardValue {
   font-weight: 900;
   font-size: clamp(28px, 3.5vw, 36px);
@@ -287,6 +354,7 @@
   color: #059669;
 }
 
+/* Etiqueta de la tarjeta ("INGRESOS", "GANANCIA NETA"…). */
 .cardLabel {
   display: inline-flex;
   align-items: center;
@@ -299,6 +367,7 @@
   margin-bottom: 12px;
 }
 
+/* Cifra principal de la tarjeta. */
 .cardValue {
   font-size: clamp(24px, 3vw, 32px);
   font-weight: 800;
@@ -307,6 +376,7 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Aclaración bajo la cifra. */
 .cardSub {
   margin-top: 8px;
   font-size: 12px;
@@ -314,6 +384,7 @@
   font-weight: 500;
 }
 
+/* Variación respecto al periodo anterior (píldora). */
 .cardChange {
   display: inline-flex;
   align-items: center;
@@ -324,6 +395,7 @@
   border-radius: 999px;
 }
 
+/* Subió (verde) / bajó (rojo). */
 .changeUp {
   color: #059669;
   background: rgba(16, 185, 129, 0.1);
@@ -334,8 +406,12 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
-/* ── Tables ─────────────────────────────────────────────────────────────── */
 
+/* =========================================================================
+   06. TARJETAS Y TABLAS DE DETALLE
+   ========================================================================= */
+
+/* Tarjeta que envuelve una tabla. */
 .tableCard {
   background: rgba(255, 255, 255, 0.8);
   border: 1px solid rgba(226, 230, 240, 0.8);
@@ -346,11 +422,13 @@
   overflow: hidden;
 }
 
+/* Variante para la tabla de productos en pérdida. */
 .tableCardDanger {
   border-color: rgba(252, 165, 165, 0.5);
   background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,247,247,0.7) 100%);
 }
 
+/* Cabecera de la tarjeta: título + contador. */
 .tableHeader {
   display: flex;
   align-items: center;
@@ -367,6 +445,7 @@
   align-items: center;
 }
 
+/* Píldora con el número de filas. */
 .tableCount {
   font-size: 12px;
   font-weight: 600;
@@ -376,12 +455,14 @@
   border-radius: 999px;
 }
 
+/* Envoltorio con scroll horizontal (la tabla tiene 720px mínimos). */
 .tableWrap {
   overflow-x: auto;
   margin: 0 -4px;
   padding: 0 4px;
 }
 
+/* Tabla de detalle. */
 .table {
   width: 100%;
   border-collapse: separate;
@@ -421,6 +502,7 @@
   border-bottom: none;
 }
 
+/* Columnas numéricas alineadas a la derecha. */
 .thRight {
   text-align: right;
 }
@@ -431,6 +513,7 @@
   white-space: nowrap;
 }
 
+/* Columna de la barra de proporción. */
 .thBar {
   width: 120px;
 }
@@ -439,12 +522,14 @@
   width: 120px;
 }
 
+/* SKU en monoespaciada. */
 .skuCell {
   font-family: 'SF Mono', 'Fira Code', monospace;
   font-size: 12px;
   color: #6b7280;
 }
 
+/* Unidad de medida como etiqueta gris. */
 .unidadCell {
   font-size: 11px;
   font-weight: 600;
@@ -455,6 +540,7 @@
   display: inline-block;
 }
 
+/* Nombre del producto recortado a 240px. */
 .productName {
   font-weight: 600;
   max-width: 240px;
@@ -463,6 +549,7 @@
   white-space: nowrap;
 }
 
+/* Fila de venta sin producto asociado (ámbar). */
 .rowSinProducto {
   background: rgba(245, 158, 11, 0.04);
 }
@@ -472,6 +559,7 @@
   font-style: italic;
 }
 
+/* Cifra positiva destacada (verde sólido). */
 .textSuccess {
   color: #ffffff;
   background: #059669;
@@ -483,6 +571,7 @@
   letter-spacing: 0.02em;
 }
 
+/* Cifra negativa destacada (rojo sólido). */
 .textDanger {
   color: #ffffff;
   background: #dc2626;
@@ -494,8 +583,12 @@
   letter-spacing: 0.02em;
 }
 
-/* ── Mini Bar ───────────────────────────────────────────────────────────── */
 
+/* =========================================================================
+   07. MINI BARRA DE PROPORCIÓN
+   ========================================================================= */
+
+/* Canal gris. */
 .miniBarTrack {
   width: 100%;
   height: 6px;
@@ -504,13 +597,17 @@
   overflow: hidden;
 }
 
+/* Relleno (color y ancho por estilo en línea). */
 .miniBarFill {
   height: 100%;
   border-radius: 999px;
   transition: width 800ms cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-/* ── Totals ─────────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   08. FILA DE TOTALES
+   ========================================================================= */
 
 .totalRow td {
   border-top: 2px solid #e2e6f0;
@@ -520,7 +617,10 @@
   padding-top: 14px;
 }
 
-/* ── Pagination ─────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   09. PAGINACIÓN
+   ========================================================================= */
 
 .pagination {
   display: flex;
@@ -532,6 +632,7 @@
   border-top: 1px solid rgba(226, 230, 240, 0.6);
 }
 
+/* Botón Anterior / Siguiente. */
 .pageBtn {
   padding: 6px 14px;
   border-radius: 999px;
@@ -556,13 +657,17 @@
   cursor: not-allowed;
 }
 
+/* "Página 1 de 4". */
 .pageInfo {
   font-size: 12px;
   font-weight: 500;
   color: #9ca3af;
 }
 
-/* ── Alert ──────────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   10. AVISO
+   ========================================================================= */
 
 .alertCard {
   display: flex;
@@ -582,14 +687,22 @@
   margin-top: 1px;
 }
 
-/* ── Dark mode ─────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   11. TEMA OSCURO (automático, según el sistema operativo)
+   -------------------------------------------------------------------------
+   Repite las superficies claras en tonos azul-grafito. Si añades una clase
+   nueva arriba, añádela aquí también para que el modo oscuro no se rompa.
+   ========================================================================= */
 
 @media (prefers-color-scheme: dark) {
+  /* Fondo de la página. */
   .container {
     background: linear-gradient(180deg, #0a0b14 0%, #0f1120 100%);
     color: #e8eaf6;
   }
 
+  /* Título con degradado claro. */
   .title {
     background: linear-gradient(135deg, #e8eaf6 0%, #9099c4 100%);
     -webkit-background-clip: text;
@@ -599,6 +712,7 @@
 
   .subtitle { color: #9099c4; }
 
+  /* Tarjetas de cristal oscuras. */
   .card {
     background: rgba(20, 22, 40, 0.7);
     border-color: rgba(45, 49, 80, 0.6);
@@ -621,6 +735,7 @@
   .cardLabel { color: #9099c4; }
   .cardSub { color: #6b7280; }
 
+  /* Botones de periodo. */
   .periodBtn {
     background: rgba(20,22,40,0.6);
     border-color: rgba(45,49,80,0.6);
@@ -638,6 +753,7 @@
     color: #fff;
   }
 
+  /* Filtros. */
   .segmented {
     background: rgba(20,22,40,0.5);
     border-color: rgba(45,49,80,0.6);
@@ -658,11 +774,14 @@
   }
 
   .dateInput { color: #e8eaf6; }
+  /* El icono nativo del calendario es negro: se invierte. */
   .dateInput::-webkit-calendar-picker-indicator { filter: invert(1); }
 
+  /* Carga. */
   .loading { color: #9099c4; }
   .spinner { border-color: rgba(45,49,80,0.6); border-top-color: #6366f1; }
 
+  /* Tarjetas de tabla. */
   .tableCard {
     background: rgba(20,22,40,0.6);
     border-color: rgba(45,49,80,0.6);
@@ -709,7 +828,13 @@
   }
 }
 
-/* ── Responsive ─────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   ▓▓ 12. TABLET (≤1024px)
+   -------------------------------------------------------------------------
+   La rejilla bento pasa de 4 a 2 columnas; las tarjetas anchas siguen
+   ocupando las dos.
+   ========================================================================= */
 
 @media (max-width: 1024px) {
   .bentoGrid {
@@ -721,17 +846,27 @@
   }
 }
 
+
+/* =========================================================================
+   ▓▓ 13. TELÉFONO (≤640px)
+   -------------------------------------------------------------------------
+   Todo a una columna, filtros apilados y tablas desplazables en horizontal.
+   ========================================================================= */
+
 @media (max-width: 640px) {
+  /* Menos aire lateral y algo más de margen inferior. */
   .container { padding: 20px 16px 48px; }
   .bentoGrid { grid-template-columns: 1fr; gap: 16px; }
   .cardIngresos,
   .cardGanancia {
     grid-column: span 1;
   }
+  /* Filtros en columna y controles centrados. */
   .filters { flex-direction: column; align-items: stretch; }
   .segmented { justify-content: center; }
   .dateInputWrap { justify-content: center; }
   .tableCard { padding: 20px 16px; border-radius: 18px; }
+  /* Cabecera apilada con las acciones a todo el ancho. */
   .header { flex-direction: column; align-items: flex-start; }
   .headerActions { width: 100%; }
 }

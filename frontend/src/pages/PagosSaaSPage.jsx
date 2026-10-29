@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import arrowLeftIcon from '@iconify/icons-mdi/arrow-left';
-import emailIcon from '@iconify/icons-mdi/email-outline';
+import bankIcon from '@iconify/icons-mdi/bank';
 import whatsappIcon from '@iconify/icons-mdi/whatsapp';
 import globeIcon from '@iconify/icons-mdi/earth';
 import sendIcon from '@iconify/icons-mdi/send';
@@ -60,8 +60,8 @@ export function PagosSaaSPage() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justify: 'center',
-      padding: '30px 16px',
+      justifyContent: 'center',
+      padding: '30px clamp(12px, 4vw, 16px)',
       fontFamily: "'Inter', system-ui, sans-serif"
     }}>
       {/* Top Left Navigation Link */}
@@ -98,7 +98,7 @@ export function PagosSaaSPage() {
         <div className="auth-brand" style={{
           background: 'linear-gradient(180deg, #1d4ed8 0%, #1e1b4b 100%)',
           color: '#ffffff',
-          padding: '40px 32px',
+          padding: 'clamp(22px, 4.5vw, 40px) clamp(18px, 3.5vw, 32px)',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -136,9 +136,11 @@ export function PagosSaaSPage() {
                   justifyContent: 'center',
                   flexShrink: 0
                 }}>
-                  <Icon icon={emailIcon} className="h-6 w-6 text-white" />
+                  <Icon icon={bankIcon} className="h-6 w-6 text-white" />
                 </div>
-                <div>
+                {/* `minWidth: 0` deja que el texto largo (bancos) envuelva
+                    dentro de la fila flex en vez de desbordarla. */}
+                <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 500 }}>Pago Móvil Venezuela</div>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '2px' }}>
                     Banesco | Venezuela | Bancamiga
@@ -172,7 +174,7 @@ export function PagosSaaSPage() {
                 }}>
                   <Icon icon={whatsappIcon} className="h-6 w-6 text-white" />
                 </div>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 500 }}>Atención & Soporte WhatsApp</div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 700, marginTop: '2px' }}>
                     +58 412-7723148
@@ -203,7 +205,7 @@ export function PagosSaaSPage() {
                 }}>
                   <Icon icon={globeIcon} className="h-6 w-6 text-white" />
                 </div>
-                <div>
+                <div style={{ minWidth: 0 }}>
                   <div style={{ fontSize: '0.75rem', opacity: 0.8, fontWeight: 500 }}>Resto del Mundo (Internacional)</div>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, marginTop: '2px' }}>
                     PayPal, Binance Pay, Zinly, Wally
@@ -220,7 +222,7 @@ export function PagosSaaSPage() {
         </div>
 
         {/* RIGHT PANEL: Form */}
-        <div style={{ padding: '44px 40px', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ padding: 'clamp(24px, 5vw, 44px) clamp(16px, 4vw, 40px)', backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           {enviado ? (
             <div style={{ textAlign: 'center', padding: '20px 10px' }}>
               <Icon icon={checkCircleIcon} className="mx-auto mb-4 h-16 w-16 text-[#10b981]" />

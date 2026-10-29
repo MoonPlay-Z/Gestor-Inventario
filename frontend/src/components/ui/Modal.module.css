@@ -1,5 +1,31 @@
-/* frontend/src/components/ui/Modal.module.css */
+/* =========================================================================
+   Modal.module.css — COMPONENTE <Modal>
+   -------------------------------------------------------------------------
+   Uso:  import styles from './Modal.module.css'
+         <div className={`${styles.overlay} ${open ? styles.overlayOpen : ''}`}>
+           <div className={`${styles.modal} ${styles.modalLg}`}>
+             <div className={styles.header}>
+               <h3 className={styles.title}>Título</h3>
+               <button className={styles.close}>×</button>
+             </div>
+             …
+             <div className={styles.footer}>…botones…</div>
+           </div>
+         </div>
 
+   CONTENIDO
+     01. Fondo (overlay) y estado abierto
+     02. Caja del modal y variante ancha
+     03. Cabecera, título y botón de cerrar
+     04. Pie de botones
+
+   El ajuste a teléfono (pie que envuelve, alto máximo) está en
+   `css/movil.css`, que actúa sobre estas mismas clases con hash.
+   ========================================================================= */
+
+/* ── 01. Fondo ────────────────────────────────────────────────────────────
+   Capa fija oscura con desenfoque. Nace oculta y sin capturar clics; con
+   .overlayOpen se muestra. */
 .overlay {
   position: fixed;
   inset: 0;
@@ -15,11 +41,14 @@
   transition: opacity var(--transition);
 }
 
+/* Modal visible y clicable. */
 .overlayOpen {
   opacity: 1;
   pointer-events: all;
 }
 
+/* ── 02. Caja del modal ───────────────────────────────────────────────────
+   Blanca, con scroll interno si el contenido es alto. */
 .modal {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -34,14 +63,18 @@
   box-shadow: var(--shadow-lg);
 }
 
+/* Animación de entrada (sube y crece al abrir). */
 .overlayOpen .modal {
   transform: translateY(0) scale(1);
 }
 
+/* Variante ancha para formularios de varias columnas. */
 .modalLg {
   max-width: 760px;
 }
 
+/* ── 03. Cabecera ─────────────────────────────────────────────────────────
+   Título a la izquierda, botón de cerrar a la derecha. */
 .header {
   display: flex;
   align-items: center;
@@ -54,6 +87,7 @@
   font-weight: 700;
 }
 
+/* Botón × de cerrar (cuadrado de 32px). */
 .close {
   color: var(--text-secondary);
   font-size: 1.25rem;
@@ -73,6 +107,8 @@
   color: var(--text-primary);
 }
 
+/* ── 04. Pie ──────────────────────────────────────────────────────────────
+   Botones a la derecha, separados del cuerpo por una línea. */
 .footer {
   display: flex;
   gap: 10px;

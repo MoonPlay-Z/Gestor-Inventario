@@ -14,6 +14,7 @@ const INICIAL = { tipo: 'cargando', datos: null, error: '' };
 export function useDashboardStats(periodo, { alFallar } = {}) {
   const [estado, setEstado] = useState(INICIAL);
   const [moneda, setMoneda] = useState('$');
+  const solicitudActualRef = useRef(0);
 
   // El callback puede cambiar de identidad en cada render del consumidor;
   // se guarda en una ref para no reiniciar la carga en bucle.
@@ -23,6 +24,7 @@ export function useDashboardStats(periodo, { alFallar } = {}) {
   }, [alFallar]);
 
   const cargar = useCallback(async () => {
+    const solicitudActual = ++solicitudActualRef.current;
     setEstado((previo) => ({ ...previo, tipo: 'cargando', error: '' }));
 
     // La configuración de moneda es accesoria: si falla, las métricas se
@@ -31,6 +33,8 @@ export function useDashboardStats(periodo, { alFallar } = {}) {
       API.getConfig(),
       API.getDashboardStats(periodo),
     ]);
+
+    if (solicitudActual !== solicitudActualRef.current) return;
 
     if (config.status === 'fulfilled' && config.value?.moneda?.simbolo) {
       setMoneda(config.value.moneda.simbolo);
@@ -48,6 +52,9 @@ export function useDashboardStats(periodo, { alFallar } = {}) {
 
   useEffect(() => {
     cargar();
+    return () => {
+      solicitudActualRef.current += 1;
+    };
   }, [cargar]);
 
   return { estado, moneda, recargar: cargar };

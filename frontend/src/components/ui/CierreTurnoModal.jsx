@@ -107,13 +107,10 @@ export function CierreTurnoModal({ preview, submitting, onCancel, onConfirm }) {
   // Tasa manual de la empresa (desde AuthContext, cargada al login)
   const tasa = Number(empresa?.tasaDolar) || 0;
   const esperadoUSD = useMemo(() => {
-    // Fondo inicial viene en USD (montoInicial). Ventas en efectivo USD + VES convertido a USD - vueltos - retiros
     const fondo = Number(preview?.caja?.montoInicial || 0);
-    const ventasUSD = Number(preview?.desglose?.efectivo || 0);
-    const ventasVES_USD = tasa > 0 ? Number(preview?.desgloseVES?.efectivo || 0) / tasa : 0;
-    // El esperado en caja físico USD ya viene normalizado; usamos montoEsperadoCajaUSD y restamos vueltos/retiros
-    return fondo + Number(preview?.desglose?.efectivo || 0) - (parseFloat(vueltosUSD) || 0) - (parseFloat(retirosUSD) || 0);
-  }, [preview, vueltosUSD, retirosUSD, tasa]);
+    const ventasUSD = Number(preview?.efectivoRecibido?.USD || 0);
+    return fondo + ventasUSD - (parseFloat(vueltosUSD) || 0) - (parseFloat(retirosUSD) || 0);
+  }, [preview, vueltosUSD, retirosUSD]);
 
   const esperadoVES = useMemo(() => {
     // Fondo inicial VES no se captura: asumimos parte del fondo inicial en VES si la tasa aplica? No: fondo inicial en VES = 0 salvo que se registre.
@@ -147,7 +144,7 @@ export function CierreTurnoModal({ preview, submitting, onCancel, onConfirm }) {
           <div>
             <h4 style={{ margin: '0 0 10px' }}>Arqueo Físico en Gaveta por Moneda <small style={{ color: 'var(--text-secondary)', fontWeight: 400 }}>Regla contable: Arqueo estricto e independiente sin compensación cruzada</small></h4>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 12 }}>
-              <ArqueoCard moneda="USD" simbolo="$" color="#16a34a" fondoInicial={Number(preview?.caja?.montoInicial || 0)} ventas={Number(preview?.desglose?.efectivo || 0)} esVES={false} vueltos={vueltosUSD} setVueltos={setVueltosUSD} retiros={retirosUSD} setRetiros={setRetirosUSD} esperado={esperadoUSD} contado={contadoUSD} setContado={setContadoUSD} />
+              <ArqueoCard moneda="USD" simbolo="$" color="#16a34a" fondoInicial={Number(preview?.caja?.montoInicial || 0)} ventas={Number(preview?.efectivoRecibido?.USD || 0)} esVES={false} vueltos={vueltosUSD} setVueltos={setVueltosUSD} retiros={retirosUSD} setRetiros={setRetirosUSD} esperado={esperadoUSD} contado={contadoUSD} setContado={setContadoUSD} />
               <ArqueoCard moneda="VES" simbolo="Bs" color="#2563eb" fondoInicial={0} ventas={Number(preview?.desgloseVES?.efectivo || 0)} esVES={true} vueltos={vueltosVES} setVueltos={setVueltosVES} gastos={gastosVES} setGastos={setGastosVES} esperado={esperadoVES} contado={contadoVES} setContado={setContadoVES} />
             </div>
           </div>
@@ -173,7 +170,7 @@ export function CierreTurnoModal({ preview, submitting, onCancel, onConfirm }) {
                   transferencia: { comprobantes: Number(lotesTr) || 0, verificadoUSD: parseFloat(verTr) || 0 },
                 },
                 arqueo: {
-                  usd: { fondoInicial: Number(preview?.caja?.montoInicial || 0), ventasEfectivo: Number(preview?.desglose?.efectivo || 0), vueltos: parseFloat(vueltosUSD) || 0, retiros: parseFloat(retirosUSD) || 0, esperado: esperadoUSD, contado: parseFloat(contadoUSD) || 0 },
+                  usd: { fondoInicial: Number(preview?.caja?.montoInicial || 0), ventasEfectivo: Number(preview?.efectivoRecibido?.USD || 0), vueltos: parseFloat(vueltosUSD) || 0, retiros: parseFloat(retirosUSD) || 0, esperado: esperadoUSD, contado: parseFloat(contadoUSD) || 0 },
                   ves: { ventasEfectivo: Number(preview?.desgloseVES?.efectivo || 0), vueltos: parseFloat(vueltosVES) || 0, gastos: parseFloat(gastosVES) || 0, esperado: esperadoVES, contado: parseFloat(contadoVES) || 0 },
                 },
               };

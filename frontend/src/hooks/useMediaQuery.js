@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 
 /**
- * Condición de "teléfono": pantallas estrechas o teléfonos en horizontal
- * (alto muy corto). Así el giroscopio no expulsa al usuario al diseño de
- * escritorio, que no cabe en 392 px de alto.
+ * La navegación compacta aplica a teléfonos y tablets; desde 1024 px se
+ * conserva el sidebar fijo de escritorio.
  */
-export const QUERY_TELEFONO =
-  '(max-width: 767px), (max-width: 1023px) and (max-height: 520px) and (orientation: landscape)';
+export const QUERY_NAVEGACION_MOVIL = '(max-width: 1023px)';
 
 /**
  * Devuelve `true` si la media query se cumple, y se mantiene reactivo a los

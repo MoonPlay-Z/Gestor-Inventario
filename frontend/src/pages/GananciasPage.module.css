@@ -1,9 +1,42 @@
+/* =========================================================================
+   GananciasPage.module.css — PÁGINA DE GANANCIAS (versión simple)
+   (`pages/GananciasPage.jsx`)
+   -------------------------------------------------------------------------
+   Uso:  import styles from './GananciasPage.module.css'
+         <div className={styles.container}>…</div>
+
+   ⚠ OJO AL EDITAR: este archivo usa tokens de diseño que NO están definidos
+   en `css/main.css` (`--spacing-*`, `--font-size-*`, `--color-*`,
+   `--radius-*`). Una variable inexistente invalida la propiedad, así que esos
+   valores se están perdiendo (padding, tamaños de letra, colores). Si quieres
+   que la página se vea como el resto de la app, cambia esos `var(...)` por
+   los tokens reales (`--bg-card`, `--text-primary`, `--accent`,
+   `--radius-md`, etc.) o define los que faltan.
+
+   CONTENIDO (índice)
+     01. Contenedor y título
+     02. Filtros y controles
+     03. Rejilla de tarjetas de resumen
+     04. Bloque comparativo y secciones
+     05. Tabla
+     06. Colores de resultado (.profit / .loss) y carga
+
+   No tiene ajustes por dispositivo: usa `auto-fit` en las rejillas y
+   `overflow-x` en la tabla, así que se adapta sola.
+   ========================================================================= */
+
+/* =========================================================================
+   01. CONTENEDOR Y TÍTULO
+   ========================================================================= */
+
+/* Centra el contenido y limita el ancho a 1200px. */
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: var(--spacing-lg);
 }
 
+/* Título de la página. */
 .title {
   font-size: var(--font-size-2xl);
   font-weight: 700;
@@ -11,6 +44,12 @@
   color: var(--color-text-primary);
 }
 
+
+/* =========================================================================
+   02. FILTROS Y CONTROLES
+   ========================================================================= */
+
+/* Fila de filtros (fechas, sucursal, comparar…). */
 .filters {
   display: flex;
   gap: var(--spacing-md);
@@ -19,6 +58,7 @@
   flex-wrap: wrap;
 }
 
+/* Controles de selección y entrada. */
 .select, .input {
   padding: var(--spacing-sm) var(--spacing-md);
   border: 1px solid var(--color-border);
@@ -28,6 +68,7 @@
   color: var(--color-text-primary);
 }
 
+/* Casilla con su etiqueta. */
 .checkbox {
   display: flex;
   align-items: center;
@@ -36,6 +77,12 @@
   color: var(--color-text-secondary);
 }
 
+
+/* =========================================================================
+   03. REJILLA DE TARJETAS DE RESUMEN
+   ========================================================================= */
+
+/* Rejilla autoajustable: tantas columnas como quepan (mínimo 200px). */
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -43,6 +90,7 @@
   margin-bottom: var(--spacing-xl);
 }
 
+/* Tarjeta de indicador. */
 .card {
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
@@ -53,27 +101,37 @@
   gap: var(--spacing-xs);
 }
 
+/* Tarjeta destacada (el total de ganancia). */
 .cardHighlight {
   background: var(--color-accent-subtle);
   border-color: var(--color-accent);
 }
 
+/* Etiqueta pequeña de la tarjeta. */
 .cardLabel {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
+/* Cifra principal de la tarjeta. */
 .cardValue {
   font-size: var(--font-size-xl);
   font-weight: 700;
   color: var(--color-text-primary);
 }
 
+/* Aclaración bajo la cifra. */
 .cardSub {
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
 }
 
+
+/* =========================================================================
+   04. BLOQUE COMPARATIVO Y SECCIONES
+   ========================================================================= */
+
+/* Caja de comparación con el periodo anterior. */
 .comparison {
   background: var(--color-bg-secondary);
   border: 1px solid var(--color-border);
@@ -87,6 +145,7 @@
   margin-bottom: var(--spacing-sm);
 }
 
+/* Sección con título + tabla. */
 .section {
   margin-top: var(--spacing-xl);
 }
@@ -96,6 +155,12 @@
   margin-bottom: var(--spacing-md);
 }
 
+
+/* =========================================================================
+   05. TABLA
+   ========================================================================= */
+
+/* Envoltorio con scroll horizontal (en teléfono la tabla no cabe). */
 .tableWrapper {
   overflow-x: auto;
 }
@@ -106,27 +171,37 @@
   font-size: var(--font-size-sm);
 }
 
+/* Celdas: alineadas a la izquierda con línea inferior. */
 .table th, .table td {
   padding: var(--spacing-sm) var(--spacing-md);
   text-align: left;
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Encabezado con fondo gris claro. */
 .table th {
   background: var(--color-bg-secondary);
   font-weight: 600;
 }
 
+
+/* =========================================================================
+   06. COLORES DE RESULTADO Y CARGA
+   ========================================================================= */
+
+/* Pérdida (rojo). */
 .loss {
   color: var(--color-error);
   font-weight: 600;
 }
 
+/* Ganancia (verde). */
 .profit {
   color: var(--color-success);
   font-weight: 600;
 }
 
+/* Mensaje de carga. */
 .loading {
   text-align: center;
   padding: var(--spacing-xl);

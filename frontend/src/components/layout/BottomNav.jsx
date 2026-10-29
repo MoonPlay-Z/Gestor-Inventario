@@ -25,7 +25,7 @@ const ITEMS = [
   { to: '/caja', label: 'Caja', icon: cashRegIcon },
 ];
 
-export function BottomNav({ setIsMobileOpen, visible = true }) {
+export function BottomNav({ setIsMobileOpen, visible = true, isMenuOpen = false }) {
   return (
     <nav
       className={`fixed bottom-0 left-0 right-0 z-40 bg-[var(--surface)] border-t border-[var(--border)] ${visible ? '' : 'hidden'}`}
@@ -67,11 +67,15 @@ export function BottomNav({ setIsMobileOpen, visible = true }) {
         <button
           type="button"
           onClick={() => setIsMobileOpen((prev) => !prev)}
-          className="flex-1 flex flex-col items-center justify-center gap-1 py-2 min-h-[56px] text-[#93c5fd] hover:text-[#2563eb] transition-colors"
+          className={`flex-1 flex flex-col items-center justify-center gap-1 py-2 min-h-[56px] transition-colors ${
+            isMenuOpen ? 'text-[#2563eb]' : 'text-[#93c5fd] hover:text-[#2563eb]'
+          }`}
           aria-label="Abrir menú"
+          aria-expanded={isMenuOpen}
+          aria-controls="sidebar"
         >
           <Icon icon={menuIcon} className="h-6 w-6" />
-          <span className="text-[0.7rem] leading-none font-medium text-[#334155]">Menú</span>
+          <span className={`text-[0.7rem] leading-none ${isMenuOpen ? 'font-bold text-[#1e40af]' : 'font-medium text-[#334155]'}`}>Menú</span>
         </button>
       </div>
     </nav>

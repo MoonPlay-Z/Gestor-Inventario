@@ -1,5 +1,37 @@
-/* Aviso de actualización de la APK. Azul royal, legible en teléfono. */
+/* =========================================================================
+   ActualizarApk.module.css — AVISO DE ACTUALIZACIÓN DE LA APK
+   (componente `components/app/ActualizarApk.jsx`)
+   -------------------------------------------------------------------------
+   Es un diálogo modal que sólo se ve en la app Android. Azul royal, legible
+   en teléfono y con los botones a 44px de alto (objetivo táctil).
 
+   Uso:  import styles from './ActualizarApk.module.css'
+         <div className={styles.overlay}>
+           <div className={styles.card}>
+             <div className={styles.head}>…</div>
+             <div className={styles.cuerpo}>…</div>
+             <div className={styles.pie}>…</div>
+           </div>
+         </div>
+
+   CONTENIDO
+     01. Fondo y tarjeta (overlay, card)
+     02. Cabecera (head, icono, titulo, version)
+     03. Cuerpo (cuerpo, texto, notas, avisoForzado, seguridad)
+     04. Progreso de descarga (progreso, barra, barraRelleno, porcentaje)
+     05. Error (error)
+     06. Pie y botones (pie, pista, primario, secundario, cerrar)
+     07. ▓ TELÉFONO MUY ANGOSTO (≤380px)
+
+   Las áreas seguras (notch, gesto inferior) se suman al padding del overlay
+   con `--safe-*`, definidas en `css/movil.css`.
+   ========================================================================= */
+
+/* =========================================================================
+   01. FONDO Y TARJETA
+   ========================================================================= */
+
+/* Velo oscuro a pantalla completa, centrado, respetando las áreas seguras. */
 .overlay {
   position: fixed;
   inset: 0;
@@ -15,6 +47,7 @@
   -webkit-backdrop-filter: blur(3px);
 }
 
+/* Tarjeta: ancho máximo 430px y scroll si las notas son largas. */
 .card {
   position: relative;
   width: min(430px, 100%);
@@ -26,6 +59,12 @@
   box-shadow: 0 26px 70px rgba(2, 6, 23, 0.5);
 }
 
+
+/* =========================================================================
+   02. CABECERA
+   ========================================================================= */
+
+/* Franja azul con icono, título y versión. */
 .head {
   display: flex;
   align-items: center;
@@ -35,6 +74,7 @@
   background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 55%, #3b82f6 100%);
 }
 
+/* Cuadro translúcido del icono de descarga. */
 .icono {
   display: grid;
   place-items: center;
@@ -46,6 +86,7 @@
   border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
+/* Título "Actualización disponible". */
 .titulo {
   margin: 0;
   font-size: 1.06rem;
@@ -53,6 +94,7 @@
   line-height: 1.2;
 }
 
+/* "Versión 1.4.2 · 8,4 MB". */
 .version {
   margin: 3px 0 0;
   font-size: 0.8rem;
@@ -60,12 +102,19 @@
   font-variant-numeric: tabular-nums;
 }
 
+
+/* =========================================================================
+   03. CUERPO
+   ========================================================================= */
+
+/* Zona de contenido con separación uniforme entre bloques. */
 .cuerpo {
   padding: 18px;
   display: grid;
   gap: 12px;
 }
 
+/* Párrafo explicativo. */
 .texto {
   margin: 0;
   font-size: 0.9rem;
@@ -77,6 +126,7 @@
   color: var(--text-primary);
 }
 
+/* Lista de novedades de la versión. */
 .notas {
   margin: 0;
   padding: 0;
@@ -93,6 +143,7 @@
   color: var(--text-primary);
 }
 
+/* Punto azul de cada novedad (sin viñeta nativa). */
 .notas li::before {
   content: '';
   position: absolute;
@@ -104,6 +155,7 @@
   background: var(--accent, #2563eb);
 }
 
+/* Aviso de actualización obligatoria (no se puede posponer). */
 .avisoForzado {
   display: flex;
   align-items: flex-start;
@@ -123,6 +175,7 @@
   margin-top: 1px;
 }
 
+/* Nota de seguridad (verificación de firma SHA-256). */
 .seguridad {
   display: flex;
   align-items: center;
@@ -137,11 +190,17 @@
   color: #16a34a;
 }
 
+
+/* =========================================================================
+   04. PROGRESO DE DESCARGA
+   ========================================================================= */
+
 .progreso {
   display: grid;
   gap: 8px;
 }
 
+/* Canal de la barra. */
 .barra {
   position: relative;
   height: 8px;
@@ -150,6 +209,7 @@
   background: #e2e8f0;
 }
 
+/* Relleno; el ancho lo pone el componente en línea. */
 .barraRelleno {
   display: block;
   height: 100%;
@@ -158,6 +218,7 @@
   transition: width 0.25s ease;
 }
 
+/* Porcentaje descargado. */
 .porcentaje {
   font-size: 0.78rem;
   font-weight: 700;
@@ -165,6 +226,12 @@
   font-variant-numeric: tabular-nums;
 }
 
+
+/* =========================================================================
+   05. ERROR
+   ========================================================================= */
+
+/* Fallo de descarga o de verificación (firma, tamaño…). */
 .error {
   margin: 0;
   padding: 10px 12px;
@@ -176,6 +243,12 @@
   border: 1px solid #fecaca;
 }
 
+
+/* =========================================================================
+   06. PIE Y BOTONES
+   ========================================================================= */
+
+/* Fila inferior: pista a la izquierda, botones a la derecha. */
 .pie {
   display: flex;
   align-items: center;
@@ -184,12 +257,14 @@
   padding: 0 18px 18px;
 }
 
+/* Texto pequeño de ayuda ("se instalará sin cerrar sesión"). */
 .pista {
   margin-right: auto;
   font-size: 0.75rem;
   color: var(--text-secondary);
 }
 
+/* Base común de los dos botones (44px de alto = objetivo táctil). */
 .primario,
 .secundario {
   min-height: 44px;
@@ -201,6 +276,7 @@
   transition: transform 0.12s ease, background 0.15s ease;
 }
 
+/* Botón principal (descargar / instalar). */
 .primario {
   color: #fff;
   border: none;
@@ -212,6 +288,7 @@
   transform: translateY(1px);
 }
 
+/* Botón secundario (más tarde / cancelar descarga). */
 .secundario {
   color: var(--text-primary);
   background: transparent;
@@ -222,6 +299,7 @@
   background: var(--bg-hover, #f1f5f9);
 }
 
+/* Botón × de cerrar, sobre la cabecera azul. */
 .cerrar {
   position: absolute;
   top: 8px;
@@ -242,6 +320,13 @@
 .cerrar:hover {
   background: rgba(255, 255, 255, 0.28);
 }
+
+
+/* =========================================================================
+   ▓▓ 07. TELÉFONO MUY ANGOSTO (≤380px)
+   -------------------------------------------------------------------------
+   iPhone SE / Android pequeños: los dos botones no caben en una fila.
+   ========================================================================= */
 
 @media (max-width: 380px) {
   .pie {

@@ -1,11 +1,38 @@
-/* frontend/src/components/ui/Table.module.css */
+/* =========================================================================
+   Table.module.css — COMPONENTE <Table>
+   -------------------------------------------------------------------------
+   Uso:  import styles from './Table.module.css'
+         <div className={styles.wrapper}>
+           <table className={styles.table}>
+             <thead className={styles.thead}>
+               <tr><th className={styles.th}>Cliente</th></tr>
+             </thead>
+             <tbody className={styles.tbody}>
+               <tr><td className={styles.td}>…</td></tr>
+             </tbody>
+           </table>
+         </div>
 
+   CONTENIDO
+     01. Contenedor con scroll (.wrapper)
+     02. Tabla (.table) y cabecera (.thead)
+     03. Celdas (.th, .td)
+     04. Filas (.tbody tr): transición, hover y último borde
+
+   OJO: en teléfono las tablas se convierten en tarjetas con
+   `ResponsiveTables.jsx` + `css/movil.css` (selector `table.rt-cards`).
+   ========================================================================= */
+
+/* ── 01. Contenedor ───────────────────────────────────────────────────────
+   Aporta el scroll horizontal cuando la tabla no cabe. */
 .wrapper {
   overflow-x: auto;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--surface);
 }
+
+/* ── 02. Tabla y cabecera ───────────────────────────────────────────────── */
 
 .table {
   width: 100%;
@@ -14,10 +41,14 @@
   font-size: 0.875rem;
 }
 
+/* Franja de encabezados (gris muy claro). */
 .thead {
   background: var(--bg-secondary);
 }
 
+/* ── 03. Celdas ─────────────────────────────────────────────────────────── */
+
+/* Encabezado: mayúsculas pequeñas, gris y sin salto de línea. */
 .th {
   padding: 14px 16px;
   text-align: left;
@@ -30,20 +61,25 @@
   white-space: nowrap;
 }
 
+/* Celda de datos. */
 .td {
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
 
+/* ── 04. Filas ──────────────────────────────────────────────────────────── */
+
 .tbody tr {
   transition: background var(--transition);
 }
 
+/* La última fila no lleva línea inferior. */
 .tbody tr:last-child .td {
   border-bottom: none;
 }
 
+/* Resaltado al pasar el ratón. */
 .tbody tr:hover {
   background: var(--bg-hover);
 }

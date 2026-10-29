@@ -465,16 +465,18 @@ export function BlogArticlePage() {
       <header style={{
         backgroundColor: '#0b0f17',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '16px 32px',
+        padding: '16px clamp(16px, 4vw, 32px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '10px',
         position: 'sticky',
         top: 0,
         zIndex: 100,
         backdropFilter: 'blur(10px)'
       }}>
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', minWidth: 0 }}>
           <img
             src="/favicon.png"
             alt=""
@@ -482,17 +484,17 @@ export function BlogArticlePage() {
             height="36"
             style={{ width: '36px', height: '36px', borderRadius: '8px', display: 'block', flexShrink: 0 }}
           />
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
+          <span style={{ fontSize: 'clamp(1.05rem, 4vw, 1.25rem)', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
             GestorPOS<span style={{ color: '#38bdf8' }}>.dev</span>
           </span>
         </Link>
-        <Link to="/blog" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none' }}>
+        <Link to="/blog" style={{ color: '#94a3b8', fontSize: 'clamp(0.8rem, 3.2vw, 0.9rem)', fontWeight: 500, textDecoration: 'none', whiteSpace: 'nowrap' }}>
           ← Volver al blog
         </Link>
       </header>
 
       {/* Article */}
-      <article style={{ padding: '60px 32px', maxWidth: '800px', margin: '0 auto' }}>
+      <article style={{ padding: '60px clamp(16px, 4vw, 32px)', maxWidth: '800px', margin: '0 auto' }}>
         <div style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
             <span style={{
@@ -536,7 +538,7 @@ export function BlogArticlePage() {
           marginTop: '48px',
           backgroundColor: '#1e293b',
           borderRadius: '16px',
-          padding: '32px',
+          padding: 'clamp(20px, 5vw, 32px)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           textAlign: 'center'
         }}>
@@ -567,7 +569,7 @@ export function BlogArticlePage() {
       </article>
 
       {/* Footer */}
-      <footer style={{ padding: '40px 32px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center' }}>
+      <footer style={{ padding: '40px clamp(16px, 4vw, 32px)', borderTop: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center' }}>
         <p style={{ color: '#64748b', fontSize: '0.85rem' }}>
           © {new Date().getFullYear()} GestorPOS — Sistema POS para comercios en Venezuela
         </p>

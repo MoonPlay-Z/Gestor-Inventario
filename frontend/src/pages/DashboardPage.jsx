@@ -3,7 +3,7 @@ import { Icon } from '@iconify/react';
 import refreshIcon from '@iconify/icons-mdi/refresh';
 import alertIcon from '@iconify/icons-mdi/alert-circle-outline';
 import cashCheckIcon from '@iconify/icons-mdi/cash-check';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { DolarWidget } from '../components/widgets/DolarWidget';
 import { MetricasDashboard } from '../components/dashboard/MetricasDashboard';
@@ -49,11 +49,17 @@ const PERIODOS = [
 const ResumenCxc = ({ resumen, moneda }) => {
   if (!resumen) return null;
 
+  // Los tramos del backend NO se llaman como parecen: `0_30` es lo que aún no
+  // vence, `31_60` es 1-30 días vencido, `61_90` es 31-60 y `90plus` es 61+.
+  // Etiquetarlos al pie de la letra mostraba el saldo por vencer como "0-30
+  // días" y dejaba fuera del total los tramos de más de 60 días.
   const tarjetas = [
     { etiqueta: 'Total Pendiente', valor: resumen.totalPendiente, detalle: `${resumen.cantidadPendientes} facturas`, color: 'var(--text-primary)' },
     { etiqueta: 'Vencido', valor: resumen.totalVencido, detalle: `${resumen.cantidadVencidas} facturas`, color: '#ef4444' },
-    { etiqueta: '0-30 días', valor: resumen.aging?.['0_30'], detalle: '', color: '#10b981' },
-    { etiqueta: '61+ días', valor: resumen.aging?.['61_90'], detalle: '', color: '#f59e0b' },
+    { etiqueta: 'Por vencer', valor: resumen.aging?.['0_30'], detalle: '', color: '#10b981' },
+    { etiqueta: '1-30 días', valor: resumen.aging?.['31_60'], detalle: '', color: '#f59e0b' },
+    { etiqueta: '31-60 días', valor: resumen.aging?.['61_90'], detalle: '', color: '#f97316' },
+    { etiqueta: '61+ días', valor: resumen.aging?.['90plus'], detalle: '', color: '#dc2626' },
   ];
 
   return (
@@ -63,9 +69,10 @@ const ResumenCxc = ({ resumen, moneda }) => {
           <Icon icon={cashCheckIcon} style={{ color: 'var(--accent)' }} className="h-5 w-5" />
           <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>Cuentas por Cobrar</h3>
         </div>
-        <a href="/cxc" style={{ fontSize: '0.8rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
+        {/* `Link` y no `<a href>`: un href provoca recarga completa de la SPA. */}
+        <Link to="/cxc" style={{ fontSize: '0.8rem', color: 'var(--accent)', textDecoration: 'none', fontWeight: 600 }}>
           Ver todas →
-        </a>
+        </Link>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
         {tarjetas.map(({ etiqueta, valor, detalle, color }) => (
@@ -92,8 +99,16 @@ export function DashboardPage() {
     [showToast],
   );
 
-  const { estado, moneda, recargar } = useDashboardStats(periodo, { alFallar });
-  const cxcResumen = useCxcResumen();
+  const { estado, moneda, recargar: recargarMetricas } = useDashboardStats(periodo, { alFallar });
+  const { resumen: cxcResumen, recargar: recargarCxc } = useCxcResumen();
+
+  // «Recargar» y «Reintentar» refrescan las dos consultas de la página: antes
+  // solo se recargaban las métricas y el widget de CxC se quedaba con datos
+  // viejos (o vacío si había fallado la primera vez).
+  const recargar = useCallback(() => {
+    recargarMetricas();
+    recargarCxc();
+  }, [recargarMetricas, recargarCxc]);
 
   const datos = estado.datos;
   const cargando = estado.tipo === 'cargando' && !datos;
@@ -159,7 +174,10 @@ export function DashboardPage() {
                     {PERIODOS.map(({ key, label }) => (
                       <button
                         key={key}
+                        type="button"
                         onClick={() => setPeriodo(key)}
+                        aria-pressed={periodo === key}
+                        title={`Ver ${label.toLowerCase()}`}
                         style={{
                           padding: '8px 16px',
                           borderRadius: '8px',

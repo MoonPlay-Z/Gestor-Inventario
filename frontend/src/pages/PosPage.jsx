@@ -300,6 +300,12 @@ export function PosPage() {
     if (!searchTerm.trim() || searchResultsTerm !== searchTerm.trim()) return [];
     return searchResults;
   }, [searchTerm, searchResults, searchResultsTerm]);
+  const categoriasRapidas = useMemo(
+    () => [...new Set(productos.map(p => p.categoria?.trim()).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b, 'es'))
+      .slice(0, 5),
+    [productos]
+  );
 
   const addToCart = (product) => {
     const stockActual = Number(product.stockActual);
@@ -308,14 +314,17 @@ export function PosPage() {
       return;
     }
 
+    const existente = cart.find(item => item.productoId === product.id);
+    if (existente && existente.cantidad + 1 > stockActual) {
+      showToast(`Stock insuficiente. Disponible: ${stockActual}`, 'warning');
+      return;
+    }
+
     setCart(prev => {
       const exists = prev.find(item => item.productoId === product.id);
       if (exists) {
         const nuevaCantidad = exists.cantidad + 1;
-        if (nuevaCantidad > stockActual) {
-          showToast(`Stock insuficiente. Disponible: ${stockActual}`, 'warning');
-          return prev;
-        }
+        if (nuevaCantidad > stockActual) return prev;
         return prev.map(item => item.productoId === product.id ? { ...item, cantidad: nuevaCantidad } : item);
       }
       return [...prev, {
@@ -395,18 +404,22 @@ export function PosPage() {
     if (qty <= 0) {
       return;
     }
+
+    const item = cart.find(current => current.productoId === productoId);
+    if (!item) return;
+
+    const cantidadEnKg = item.unidadPeso === 'g' ? qty / 1000 : qty;
+    if (cantidadEnKg > item.stockMax) {
+      showToast(`Stock máximo disponible: ${item.stockMax} kg`, 'warning');
+      setCart(prev => prev.map(current => current.productoId === productoId
+        ? { ...current, cantidad: current.stockMax, unidadPeso: 'kg' }
+        : current));
+      return;
+    }
+
+    const cantidadFinal = item.esVentaPorPeso ? Math.round(qty * 1000) / 1000 : Math.round(qty);
     setCart(prev => prev.map(item => {
-      if (item.productoId === productoId) {
-        // Convertir a kg para validar stock
-        const cantidadEnKg = item.unidadPeso === 'g' ? qty / 1000 : qty;
-        if (cantidadEnKg > item.stockMax) {
-          showToast(`Stock máximo disponible: ${item.stockMax} kg`, 'warning');
-          return { ...item, cantidad: item.stockMax, unidadPeso: 'kg' };
-        }
-        // Para productos por peso, redondear a 3 decimales; para unidades, a enteros
-        const cantidadFinal = item.esVentaPorPeso ? Math.round(qty * 1000) / 1000 : Math.round(qty);
-        return { ...item, cantidad: cantidadFinal };
-      }
+      if (item.productoId === productoId) return { ...item, cantidad: cantidadFinal };
       return item;
     }));
   };
@@ -577,7 +590,14 @@ export function PosPage() {
   return (
     <>
       <Header
-        title="Nueva Factura (POS)"
+        title={(
+          <span className="pos-page-title">
+            Nueva Factura (POS)
+            <span className={`pos-caja-badge${cajaStatus === 'OPEN' ? ' abierta' : ''}`}>
+              {cajaLoading ? 'Verificando caja' : cajaStatus === 'OPEN' ? 'Caja activa' : 'Caja cerrada'}
+            </span>
+          </span>
+        )}
         subtitle="Venta rápida multitasa en dólares y bolívares"
         toggleSidebar={toggleSidebar}
       />
@@ -744,11 +764,11 @@ export function PosPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
+        <div className="pos-layout grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
           {/* Panel Izquierdo: Selección de Cliente y Buscador de Productos */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="pos-catalog-stack" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Buscador de Clientes */}
-            <div className="card">
+            <div className="card pos-client-card">
               <div className="form-group" style={{ position: 'relative' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label className="form-label" style={{ margin: 0 }}>Buscar Cliente</label>
@@ -831,7 +851,7 @@ export function PosPage() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center'
-                  }}>
+                  }} className="pos-cliente-seleccionado">
                     <div>
                       <div style={{ fontWeight: 700, fontSize: '0.875rem', color: 'var(--text-primary)' }}>
                         ✓ {selectedCliente.razonSocial}
@@ -846,6 +866,7 @@ export function PosPage() {
                       onClick={() => { setSelectedClienteId(''); setSelectedCliente(null); }}
                       className="btn btn-ghost btn-xs text-danger"
                       title="Quitar cliente seleccionado"
+                      aria-label="Quitar cliente seleccionado"
                       style={{ padding: '4px 6px' }}
                     >
                       <Icon icon="mdi:close" className="h-4 w-4" />
@@ -856,7 +877,7 @@ export function PosPage() {
             </div>
 
             {/* Buscador de Productos */}
-            <div className="card">
+            <div className="card pos-product-card">
               <div className="form-group" style={{ position: 'relative' }}>
                 <label className="form-label">Buscar Producto (Código o Nombre)</label>
                 <input
@@ -888,20 +909,37 @@ export function PosPage() {
                 Escanear con cámara
               </Button>
 
+              {categoriasRapidas.length > 0 && (
+                <div className="pos-product-quick-categories" aria-label="Categorías rápidas">
+                  <span>Rápidos:</span>
+                  {categoriasRapidas.map(categoria => (
+                    <button
+                      key={categoria}
+                      type="button"
+                      className={searchTerm.trim() === categoria ? 'activa' : ''}
+                      aria-pressed={searchTerm.trim() === categoria}
+                      onClick={() => setSearchTerm(categoria)}
+                    >
+                      {categoria}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {filteredProducts.length > 0 && (
-                <div style={{ marginTop: '12px', maxHeight: '280px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)' }}>
+                <div className="pos-product-results" style={{ marginTop: '12px', maxHeight: '280px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)' }}>
                   {filteredProducts.map(p => (
                     <div
                       key={p.id}
                       onClick={() => addToCart(p)}
                       style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}
-                      className="nav-item hover:bg-[var(--surface3)]"
+                      className="pos-product-result nav-item hover:bg-[var(--surface3)]"
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div className="pos-product-result-info" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         {p.imagenUrl ? (
-                          <img src={p.imagenUrl} alt={p.nombre} style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #cbd5e1' }} onError={e => { e.target.style.display = 'none'; }} />
+                          <img className="pos-product-result-image" src={p.imagenUrl} alt={p.nombre} style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #cbd5e1' }} onError={e => { e.target.style.display = 'none'; }} />
                         ) : (
-                          <div style={{ width: '48px', height: '48px', borderRadius: '8px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                          <div className="pos-product-result-image" style={{ width: '48px', height: '48px', borderRadius: '8px', backgroundColor: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
                             <Icon icon="mdi:package-variant" className="h-5 w-5" />
                           </div>
                         )}
@@ -928,7 +966,7 @@ export function PosPage() {
                           </div>
                         </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', minWidth: '140px' }}>
+                      <div className="pos-product-result-price" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px', minWidth: '140px' }}>
                         <div style={{ fontWeight: 700, color: 'var(--accent)', fontSize: '1rem' }}>
                             {Utils.formatMoney(p.esVentaPorPeso ? p.precioPorKilo : p.precioVenta, '$')}
                         </div>
@@ -959,7 +997,7 @@ export function PosPage() {
             </div>
 
             {/* Tabla del Carrito */}
-            <div className="card">
+            <div className="card pos-cart-card">
               <div className="card-header">
                 <h3 className="card-title">Detalle de la Venta ({cart.length} ítems)</h3>
                 {cart.length > 0 && (
@@ -970,7 +1008,7 @@ export function PosPage() {
               </div>
 
               <div className="table-wrapper">
-                <table>
+                <table className="pos-cart-table">
                   <thead>
                     <tr>
                       <th>Producto</th>
@@ -988,7 +1026,7 @@ export function PosPage() {
                     ) : (
                       cart.map(item => (
                         <tr key={item.productoId}>
-                          <td>
+                          <td data-label="Producto">
                             <div style={{ fontWeight: 600 }}>{item.nombre}</div>
                             {item.esVentaPorPeso && (
                               <div style={{ fontSize: '0.7rem', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -997,7 +1035,7 @@ export function PosPage() {
                               </div>
                             )}
                           </td>
-                          <td>
+                          <td data-label="Precio unit.">
                             <div style={{ fontWeight: 600 }}>{Utils.formatMoney(item.precioUnitario, '$')}</div>
                             <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
                               {Utils.formatMoney(item.precioUnitario * tasaDolar, 'Bs.')}
@@ -1008,7 +1046,7 @@ export function PosPage() {
                               </div>
                             )}
                           </td>
-                          <td>
+                          <td data-label="Cantidad">
                             {item.esVentaPorPeso ? (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1059,13 +1097,13 @@ export function PosPage() {
                               </div>
                             )}
                           </td>
-                          <td style={{ fontWeight: 700, color: 'var(--accent)' }}>
+                          <td data-label="Subtotal" style={{ fontWeight: 700, color: 'var(--accent)' }}>
                             <div>{Utils.formatMoney(calcularSubtotal(item), '$')}</div>
                             <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
                               {Utils.formatMoney(calcularSubtotal(item) * tasaDolar, 'Bs.')}
                             </div>
                           </td>
-                          <td>
+                          <td data-label="Acción">
                             <button
                               onClick={() => removeFromCart(item.productoId)}
                               className="btn btn-ghost btn-sm inline-flex items-center justify-center"

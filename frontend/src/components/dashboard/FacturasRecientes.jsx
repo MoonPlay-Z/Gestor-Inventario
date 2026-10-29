@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Utils } from '../../services/api';
 
 const badgeEstado = (estado) => {
@@ -24,7 +25,9 @@ export function FacturasRecientes({ facturas, moneda }) {
           <h3 className="dash-h3">Facturas Recientes</h3>
           <p className="dash-sub">Últimos comprobantes emitidos</p>
         </div>
-        <a href="/facturas" className="dash-link">Ver todas →</a>
+        {/* La ruta real del listado de facturas es /ventas; /facturas no existe
+            y el enlace dejaba al usuario en una pantalla en blanco. */}
+        <Link to="/ventas" className="dash-link">Ver todas →</Link>
       </div>
 
       {lista.length === 0 ? (

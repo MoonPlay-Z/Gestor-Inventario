@@ -9,16 +9,18 @@ export function PrivacyPolicyPage() {
       <header style={{
         backgroundColor: '#0b0f17',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '16px 32px',
+        padding: '16px clamp(16px, 4vw, 32px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '10px',
         position: 'sticky',
         top: 0,
         zIndex: 100,
         backdropFilter: 'blur(10px)'
       }}>
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', minWidth: 0 }}>
           <img
             src="/favicon.png"
             alt=""
@@ -26,18 +28,18 @@ export function PrivacyPolicyPage() {
             height="36"
             style={{ width: '36px', height: '36px', borderRadius: '8px', display: 'block', flexShrink: 0 }}
           />
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
+          <span style={{ fontSize: 'clamp(1.05rem, 4vw, 1.25rem)', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
             GestorPOS<span style={{ color: '#38bdf8' }}>.dev</span>
           </span>
         </Link>
-        <Link to="/" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none' }}>
+        <Link to="/" style={{ color: '#94a3b8', fontSize: 'clamp(0.8rem, 3.2vw, 0.9rem)', fontWeight: 500, textDecoration: 'none', whiteSpace: 'nowrap' }}>
           ← Volver al inicio
         </Link>
       </header>
 
       {/* Content */}
-      <article style={{ padding: '60px 32px', maxWidth: '800px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, marginBottom: '8px' }}>
+      <article style={{ padding: '60px clamp(16px, 4vw, 32px)', maxWidth: '800px', margin: '0 auto' }}>
+        <h1 style={{ fontSize: 'clamp(1.6rem, 6vw, 2.2rem)', fontWeight: 900, marginBottom: '8px' }}>
           Política de Privacidad
         </h1>
         <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '40px' }}>
@@ -47,13 +49,13 @@ export function PrivacyPolicyPage() {
         <div style={{
           backgroundColor: '#1e293b',
           borderRadius: '16px',
-          padding: '40px',
+          padding: 'clamp(20px, 5vw, 40px)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           lineHeight: 1.8,
           fontSize: '1rem',
           color: '#cbd5e1'
         }}>
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem', marginTop: '0' }}>1. Responsable del tratamiento</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)', marginTop: '0' }}>1. Responsable del tratamiento</h2>
           <p>
             El responsable del tratamiento de tus datos personales es:
           </p>
@@ -64,7 +66,7 @@ export function PrivacyPolicyPage() {
             <li><strong>WhatsApp:</strong> +58 412-7723148</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>2. Datos que recopilamos</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>2. Datos que recopilamos</h2>
           <p>Para proporcionarte nuestro servicio, recopilamos los siguientes datos:</p>
           
           <h3 style={{ color: '#38bdf8', fontSize: '1.1rem' }}>2.1 Datos de registro</h3>
@@ -97,7 +99,7 @@ export function PrivacyPolicyPage() {
             <li>Ubicación precisa del dispositivo desde el que se crea una cuenta, solo si autorizas el permiso del navegador</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>3. Finalidad del tratamiento</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>3. Finalidad del tratamiento</h2>
           <p>Utilizamos tus datos personales para las siguientes finalidades:</p>
           <ul>
             <li><strong>Gestión del servicio:</strong> Crear y administrar tu cuenta, proporcionar acceso al sistema POS</li>
@@ -108,7 +110,7 @@ export function PrivacyPolicyPage() {
             <li><strong>Cumplimiento legal:</strong> Cumplir con obligaciones fiscales y legales</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>4. Base legal</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>4. Base legal</h2>
           <p>
             El tratamiento de tus datos se basa en:
           </p>
@@ -118,7 +120,7 @@ export function PrivacyPolicyPage() {
             <li><strong>Obligación legal:</strong> Para cumplir con regulaciones fiscales y contables</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>5. Destinatarios</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>5. Destinatarios</h2>
           <p>
             No vendemos, alquilamos ni cedemos tus datos personales a terceros. Solo compartimos datos con:
           </p>
@@ -128,7 +130,7 @@ export function PrivacyPolicyPage() {
             <li><strong>Autoridades competentes:</strong> Cuando sea requerido por ley</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>6. Plazo de conservación</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>6. Plazo de conservación</h2>
           <p>
             Conservaremos tus datos personales durante:
           </p>
@@ -137,7 +139,7 @@ export function PrivacyPolicyPage() {
             <li><strong>Después de la cancelación:</strong> 5 años adicionales para cumplir con obligaciones legales</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>7. Tus derechos</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>7. Tus derechos</h2>
           <p>
             Como titular de los datos, tienes derecho a:
           </p>
@@ -153,7 +155,7 @@ export function PrivacyPolicyPage() {
             Para ejercer estos derechos, contáctanos a través de arcila.juan10@gmail.com o +58 412-7723148.
           </p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>8. Medidas de seguridad</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>8. Medidas de seguridad</h2>
           <p>
             Implementamos medidas de seguridad para proteger tus datos:
           </p>
@@ -164,22 +166,22 @@ export function PrivacyPolicyPage() {
             <li><strong>HTTPS:</strong> Todas las comunicaciones están cifradas</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>9. Menores de edad</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>9. Menores de edad</h2>
           <p>
             Nuestro servicio no está dirigido a menores de 18 años. No recopilamos conscientemente datos de menores. Si eres padre/madre o tutor y crees que tu hijo ha proporcionado datos personales, contáctanos para eliminarlos.
           </p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>10. Desarrollo y mantenimiento con IA</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>10. Desarrollo y mantenimiento con IA</h2>
           <p>
             Este sitio web ha sido desarrollado y es mantenido con asistencia de inteligencia artificial. Las decisiones finales sobre el tratamiento de datos son tomadas por el responsable del tratamiento indicado en esta política.
           </p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>11. Actualizaciones de esta política</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>11. Actualizaciones de esta política</h2>
           <p>
             Podemos actualizar esta Política de Privacidad periódicamente. Te notificaremos cualquier cambio significativo por email o mediante un aviso en nuestro sitio web. La fecha de última actualización se indica al inicio de este documento.
           </p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>12. Contacto</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>12. Contacto</h2>
           <p>
             Si tienes preguntas sobre esta Política de Privacidad o sobre el tratamiento de tus datos, puedes contactarnos:
           </p>
@@ -191,7 +193,7 @@ export function PrivacyPolicyPage() {
       </article>
 
       {/* Footer */}
-      <footer style={{ padding: '40px 32px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center' }}>
+      <footer style={{ padding: '40px clamp(16px, 4vw, 32px)', borderTop: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center' }}>
         <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '8px' }}>
           © 2026 GestorPOS — Sistema POS para comercios en Venezuela
         </p>

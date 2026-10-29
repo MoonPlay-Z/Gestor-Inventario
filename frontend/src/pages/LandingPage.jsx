@@ -16,10 +16,31 @@ import checkDecagramIcon from '@iconify/icons-mdi/check-decagram';
 import alertCircleIcon from '@iconify/icons-mdi/alert-circle-outline';
 import menuIcon from '@iconify/icons-mdi/menu';
 import closeIcon from '@iconify/icons-mdi/close';
+import plusIcon from '@iconify/icons-mdi/plus';
 import { API } from '../services/api';
 import { parseVideoUrl } from '../utils/media';
+import '../css/landing.css';
 
 const trialWhatsAppUrl = 'https://wa.me/584127723148?text=Hola%2C%20quiero%20solicitar%20la%20activaci%C3%B3n%20del%20mes%20de%20prueba%20gratis%20para%20mi%20negocio.';
+
+const preguntasFrecuentes = [
+  {
+    pregunta: '¿Qué incluye la prueba gratuita?',
+    respuesta: 'La prueba gratuita es por un mes. Escríbenos por WhatsApp para solicitar y coordinar la activación.',
+  },
+  {
+    pregunta: '¿Puedo vender en dólares y bolívares?',
+    respuesta: 'Sí. El sistema maneja precios y ventas en USD y VES. La tasa de cambio se define en la configuración del negocio.',
+  },
+  {
+    pregunta: '¿Puedo dar acceso a mi equipo?',
+    respuesta: 'Sí. Puedes crear usuarios y asignar roles para tareas de caja, inventario o consulta de precios.',
+  },
+  {
+    pregunta: '¿Cómo consulto los planes y precios?',
+    respuesta: 'Escríbenos por WhatsApp para conocer las opciones y condiciones vigentes para tu negocio.',
+  },
+];
 
 const mediaContenedorStyle = {
   position: 'relative',
@@ -106,29 +127,14 @@ export function LandingPage() {
   return (
     <div className="landing-root" style={{ backgroundColor: '#0b0f17', color: '#f8fafc', minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif" }}>
 
-      {/* ─── 1. NAVBAR (Dark Header) ───────────────────────────────────────── */}
-      <header className="landing-header" style={{
-        backgroundColor: '#0b0f17',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '16px 32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        backdropFilter: 'blur(10px)'
-      }}>
-        <div className="landing-logo" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img
-            src="/favicon.png"
-            alt=""
-            width="36"
-            height="36"
-            style={{ width: '36px', height: '36px', borderRadius: '8px', display: 'block', flexShrink: 0 }}
-          />
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
-            GestorPOS<span style={{ color: '#38bdf8' }}>.dev</span>
+      {/* ─── 1. NAVBAR (cabecera oscura) ─────────────────────────────────────
+          Estilos en `css/landing.css`: PC, ≤1023px (menú plegable) y ≤767px
+          (lista vertical y botones a ancho completo). */}
+      <header className="landing-header">
+        <div className="landing-header-logo">
+          <img src="/favicon.png" alt="" width="36" height="36" />
+          <span className="landing-header-logo-text">
+            GestorPOS<span>.dev</span>
           </span>
         </div>
 
@@ -143,52 +149,40 @@ export function LandingPage() {
           <Icon icon={menuAbierto ? closeIcon : menuIcon} className="h-6 w-6" />
         </button>
 
-        <nav id="landing-nav-movil" className="landing-nav" data-open={menuAbierto ? 'true' : 'false'} style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <a href="#beneficios" onClick={cerrarMenu} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Beneficios</a>
-          <a href="#modulos" onClick={cerrarMenu} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Módulos</a>
-          <Link to="/blog" onClick={cerrarMenu} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Blog</Link>
-          <Link to="/descargar" onClick={cerrarMenu} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Descargar</Link>
-          <a href="#preguntas" onClick={cerrarMenu} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Preguntas</a>
-          <a href="#contacto" onClick={cerrarMenu} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.2s' }}>Contacto</a>
+        <nav id="landing-nav-movil" className="landing-nav" data-open={menuAbierto ? 'true' : 'false'}>
+          <a href="#beneficios" onClick={cerrarMenu}>Beneficios</a>
+          <a href="#modulos" onClick={cerrarMenu}>Módulos</a>
+          <Link to="/blog" onClick={cerrarMenu}>Blog</Link>
+          <Link to="/descargar" onClick={cerrarMenu}>Descargar</Link>
+          <a href="#preguntas" onClick={cerrarMenu}>Preguntas</a>
+          <a href="#contacto" onClick={cerrarMenu}>Contacto</a>
         </nav>
 
-        <div className="landing-header-actions" data-open={menuAbierto ? 'true' : 'false'} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Link to="/login" style={{
-            color: '#ffffff',
-            fontSize: '0.88rem',
-            fontWeight: 600,
-            textDecoration: 'none',
-            padding: '8px 16px',
-            borderRadius: '8px',
-            border: '1px solid rgba(255, 255, 255, 0.2)'
-          }}>
-            Iniciar Sesión
-          </Link>
-          <Link to="/registro" style={{
-            backgroundColor: '#2563eb',
-            color: '#ffffff',
-            fontSize: '0.88rem',
-            fontWeight: 700,
-            textDecoration: 'none',
-            padding: '9px 18px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)'
-          }}>
-            Registrar
-          </Link>
+        <div className="landing-header-actions" data-open={menuAbierto ? 'true' : 'false'}>
+          <Link to="/login" className="landing-header-login">Iniciar Sesión</Link>
+          <Link to="/registro" className="landing-header-register">Registrar</Link>
         </div>
       </header>
 
 
-      {/* ─── 2. HERO SECTION (Dark Code Backdrop & Hero Banner) ────────────── */}
-      <section id="inicio" className="landing-hero" style={{
-        position: 'relative',
-        padding: '80px 32px 100px',
-        maxWidth: '1200px',
-        margin: '0 auto',
-        backgroundImage: 'radial-gradient(circle at 70% 30%, rgba(37, 99, 235, 0.15) 0%, transparent 60%)'
-      }}>
-        <div style={{ maxWidth: '850px' }}>
+      {/* ─── 2. HERO SECTION (foto de comercio a sangre + velo navy) ───────── */}
+      <section id="inicio" className="landing-hero">
+        {/* Foto de fondo: carrito de compras (ver `css/landing.css`).
+            Es decorativa; el texto va encima con un velo para el contraste. */}
+        <img
+          className="landing-hero-bg"
+          src="/banner-landing-page.webp"
+          alt=""
+          aria-hidden="true"
+          width="2752"
+          height="1536"
+          fetchpriority="high"
+          decoding="async"
+        />
+        <div className="landing-hero-veil" aria-hidden="true" />
+
+        <div className="landing-hero-inner">
+        <div className="landing-hero-content">
           <h1 className="landing-hero-title" style={{ fontSize: '2.7rem', fontWeight: 900, lineHeight: 1.12, color: '#ffffff', marginBottom: '12px' }}>
             Sistema POS e inventario para comercios venezolanos
           </h1>
@@ -286,11 +280,12 @@ export function LandingPage() {
             </a>
           </div>
         </div>
+        </div>
       </section>
 
 
       {/* ─── 3. SECTION 1: ARCHITECTURE & STATUS (White Container Split) ──── */}
-      <section id="beneficios" className="landing-section landing-section-white" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '80px 32px' }}>
+      <section id="beneficios" className="landing-section landing-section-white" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '80px clamp(16px, 4vw, 32px)' }}>
         <div className="landing-split" style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr minmax(320px, 400px)', gap: '48px', alignItems: 'start' }}>
           
           {/* Left Column: Specs & Features */}
@@ -394,7 +389,7 @@ export function LandingPage() {
 
 
       {/* ─── 4. SECTION 2: PROYECTOS DESTACADOS / MÓDULOS (Light Grey) ─────── */}
-      <section id="modulos" className="landing-section" style={{ backgroundColor: '#f8fafc', color: '#0f172a', padding: '80px 32px' }}>
+      <section id="modulos" className="landing-section" style={{ backgroundColor: '#f8fafc', color: '#0f172a', padding: '80px clamp(16px, 4vw, 32px)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           
           <div className="landing-head" style={{ textAlign: 'center', marginBottom: '56px' }}>
@@ -406,7 +401,7 @@ export function LandingPage() {
             </p>
           </div>
 
-          <div className="landing-grid landing-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
+          <div className="landing-grid landing-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: '24px' }}>
             
             {/* Card 1 */}
             <div style={{
@@ -609,10 +604,10 @@ export function LandingPage() {
       </section>
 
 
-      <section className="landing-section landing-section-white" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '72px 32px' }}>
+      <section className="landing-section landing-section-white" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '72px clamp(16px, 4vw, 32px)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '28px' }}>Más herramientas para administrar tu comercio</h2>
-          <div className="landing-grid landing-grid-tools" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '28px' }}>
+          <div className="landing-grid landing-grid-tools" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: '28px' }}>
             <div style={{ borderTop: '3px solid #0f766e', paddingTop: '16px' }}>
               <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 8px' }}>Reportes del negocio</h3>
               <p style={{ color: '#475569', lineHeight: 1.6, margin: 0 }}>Consulta ventas, ganancias, impuestos, productos destacados y valor del inventario por período.</p>
@@ -629,38 +624,42 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="preguntas" className="landing-section" style={{ backgroundColor: '#f1f5f9', color: '#0f172a', padding: '72px 32px' }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px' }}>Preguntas frecuentes</h2>
-          <p style={{ color: '#475569', margin: '0 0 28px' }}>Lo que necesitas saber antes de comenzar.</p>
-          <div style={{ display: 'grid', gap: '12px' }}>
-            <details style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px 18px' }}>
-              <summary style={{ cursor: 'pointer', fontWeight: 800 }}>¿Qué incluye la prueba gratuita?</summary>
-              <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>La prueba gratuita es por un mes. Escríbenos por WhatsApp para solicitar y coordinar la activación.</p>
-            </details>
-            <details style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px 18px' }}>
-              <summary style={{ cursor: 'pointer', fontWeight: 800 }}>¿Puedo vender en dólares y bolívares?</summary>
-              <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>Sí. El sistema maneja precios y ventas en USD y VES. La tasa de cambio se define en la configuración del negocio.</p>
-            </details>
-            <details style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px 18px' }}>
-              <summary style={{ cursor: 'pointer', fontWeight: 800 }}>¿Puedo dar acceso a mi equipo?</summary>
-              <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>Sí. Puedes crear usuarios y asignar roles para tareas de caja, inventario o consulta de precios.</p>
-            </details>
-            <details style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '16px 18px' }}>
-              <summary style={{ cursor: 'pointer', fontWeight: 800 }}>¿Cómo consulto los planes y precios?</summary>
-              <p style={{ color: '#475569', lineHeight: 1.6, marginBottom: 0 }}>Escríbenos por WhatsApp para conocer las opciones y condiciones vigentes para tu negocio.</p>
-            </details>
+      {/* ─── 4. PREGUNTAS FRECUENTES (acordeón) ─────────────────────────────
+          Diseño de referencia: "GestorPOS Rediseño · 04 FAQ y Footer".
+          Los estilos viven en `css/landing.css` (bloque 07). */}
+      <section id="preguntas" className="landing-faq">
+        <div className="landing-faq-inner">
+          <header className="landing-faq-head">
+            <h2 className="landing-faq-title">Preguntas frecuentes</h2>
+            <p className="landing-faq-sub">Lo que necesitas saber antes de comenzar.</p>
+          </header>
+
+          <div className="landing-faq-list">
+            {preguntasFrecuentes.map(({ pregunta, respuesta }) => (
+              <details key={pregunta} className="landing-faq-item">
+                <summary className="landing-faq-question">
+                  <span>{pregunta}</span>
+                  <Icon icon={plusIcon} className="landing-faq-icon" aria-hidden="true" />
+                </summary>
+                <p className="landing-faq-answer">{respuesta}</p>
+              </details>
+            ))}
           </div>
-          <div className="landing-cta-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px', marginTop: '28px' }}>
-            <Link to={trialWhatsAppUrl} target="_blank" rel="noreferrer" style={{ backgroundColor: '#1d4ed8', color: '#ffffff', fontWeight: 800, padding: '12px 18px', borderRadius: '8px', textDecoration: 'none' }}>Solicitar mes gratis por WhatsApp</Link>
-            <a href="https://wa.me/584127723148" target="_blank" rel="noreferrer" style={{ color: '#0f766e', fontWeight: 800, textDecoration: 'none' }}>Consultar por WhatsApp</a>
+
+          <div className="landing-faq-cta">
+            <Link to={trialWhatsAppUrl} target="_blank" rel="noreferrer" className="landing-faq-cta-primary">
+              Solicitar mes gratis por WhatsApp
+            </Link>
+            <a href="https://wa.me/584127723148" target="_blank" rel="noreferrer" className="landing-faq-cta-link">
+              Consultar por WhatsApp
+            </a>
           </div>
         </div>
       </section>
 
       {/* ─── 5. SECTION 3: NOTICIAS & ANUNCIOS ────────────────────────────── */}
       {noticias.length > 0 && (
-        <section id="noticias" className="landing-section landing-section-white" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '80px 32px', borderTop: '1px solid #e2e8f0' }}>
+        <section id="noticias" className="landing-section landing-section-white" style={{ backgroundColor: '#ffffff', color: '#0f172a', padding: '80px clamp(16px, 4vw, 32px)', borderTop: '1px solid #e2e8f0' }}>
           <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
             <div className="landing-head" style={{ textAlign: 'center', marginBottom: '48px' }}>
               <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '8px' }}>
@@ -669,7 +668,7 @@ export function LandingPage() {
               <p style={{ color: '#64748b' }}>Actualizaciones recientes y novedades de la versión SaaS.</p>
             </div>
 
-            <div className="landing-grid landing-grid-news" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+            <div className="landing-grid landing-grid-news" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '24px' }}>
               {noticias.map(noticia => {
                 const video = parseVideoUrl(noticia.videoUrl);
                 return (
@@ -714,53 +713,82 @@ export function LandingPage() {
 
 
       {/* ─── 6. FOOTER (Deep Navy Footer) ─────────────────────────────────── */}
-      <footer id="contacto" className="landing-footer" style={{ backgroundColor: '#0b0f17', color: '#94a3b8', borderTop: '1px solid rgba(255, 255, 255, 0.1)', padding: '60px 32px 30px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '32px', marginBottom: '40px' }}>
-          <div style={{ maxWidth: '380px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-              <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#ffffff' }}>
-                JA<span style={{ color: '#38bdf8' }}>.dev</span> — Gestor POS
-              </span>
+      {/* Diseño de referencia: "GestorPOS Rediseño · 04 FAQ y Footer".
+          Los estilos viven en `css/landing.css` (base, tablet y teléfono). */}
+      <footer id="contacto" className="landing-footer">
+        <div className="landing-footer-inner">
+
+          <div className="landing-footer-grid">
+
+            {/* Marca: logo, descripción y redes */}
+            <div className="landing-footer-brand">
+              <Link to="/" className="landing-footer-logo" aria-label="GestorPOS, ir al inicio">
+                <img src="/favicon.png" alt="" width="36" height="36" />
+                <span className="landing-footer-logo-text">
+                  GestorPOS<span>.dev</span>
+                </span>
+              </Link>
+              <p className="landing-footer-desc">
+                Sistema administrativo y caja para ayudar a comercios a llevar su operación diaria con más claridad.
+              </p>
+              <div className="landing-footer-social">
+                <a href="https://github.com/MoonPlay-Z/Gestor-Inventario" target="_blank" rel="noreferrer" aria-label="Proyecto GestorPOS en GitHub">
+                  <Icon icon={githubIcon} aria-hidden="true" />
+                </a>
+                <a href="https://www.linkedin.com/in/jadeveloper/" target="_blank" rel="noreferrer" aria-label="Perfil de Juan Arcila en LinkedIn">
+                  <Icon icon={linkedinIcon} aria-hidden="true" />
+                </a>
+                <a href="mailto:arcila.juan10@gmail.com" aria-label="Enviar correo a soporte">
+                  <Icon icon={emailIcon} aria-hidden="true" />
+                </a>
+                <a href="https://wa.me/584127723148" target="_blank" rel="noreferrer" aria-label="Contactar por WhatsApp">
+                  <Icon icon={whatsappIcon} aria-hidden="true" />
+                </a>
+              </div>
             </div>
-            <p style={{ fontSize: '0.88rem', lineHeight: '1.6', color: '#64748b' }}>
-              Ventas, inventario y caja para ayudar a comercios a llevar su operación diaria con más claridad.
-            </p>
+
+            {/* Producto */}
+            <nav className="landing-footer-col" aria-label="Producto">
+              <h2 className="landing-footer-title">Producto</h2>
+              <ul className="landing-footer-links">
+                <li><a href="#inicio">Inicio</a></li>
+                <li><a href="#beneficios">Beneficios</a></li>
+                <li><a href="#modulos">Módulos</a></li>
+                <li><Link to="/blog">Blog</Link></li>
+                <li><Link to="/descargar">Descargar</Link></li>
+              </ul>
+            </nav>
+
+            {/* Soporte */}
+            <nav className="landing-footer-col" aria-label="Soporte">
+              <h2 className="landing-footer-title">Soporte</h2>
+              <ul className="landing-footer-links">
+                <li><a href="https://wa.me/584127723148" target="_blank" rel="noreferrer">Soporte por WhatsApp</a></li>
+                <li><a href="#preguntas">Preguntas frecuentes</a></li>
+                <li><a href={trialWhatsAppUrl} target="_blank" rel="noreferrer">Solicitar mes de prueba</a></li>
+                <li><Link to="/pagos-saas">Pagos de suscripción</Link></li>
+                <li><Link to="/login">Iniciar sesión</Link></li>
+              </ul>
+            </nav>
+
+            {/* Legal */}
+            <nav className="landing-footer-col" aria-label="Legal">
+              <h2 className="landing-footer-title">Legal</h2>
+              <ul className="landing-footer-links">
+                <li><Link to="/politica-cookies">Política de Cookies</Link></li>
+                <li><Link to="/politica-privacidad">Política de Privacidad</Link></li>
+                <li><Link to="/terminos">Términos y Condiciones</Link></li>
+              </ul>
+            </nav>
+
           </div>
 
-          <div>
-            <h2 style={{ color: '#ffffff', fontWeight: 700, fontSize: '0.9rem', marginBottom: '14px' }}>Síguenos & Contacto</h2>
-            <nav aria-label="Enlaces del sitio" style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', marginBottom: '16px', fontSize: '0.85rem' }}>
-              <a href="#inicio" style={{ color: '#cbd5e1' }}>Inicio</a>
-              <a href="#beneficios" style={{ color: '#cbd5e1' }}>Beneficios</a>
-              <a href="#modulos" style={{ color: '#cbd5e1' }}>Módulos</a>
-              <Link to="/blog" style={{ color: '#cbd5e1' }}>Blog</Link>
-              <Link to="/descargar" style={{ color: '#cbd5e1' }}>Descargar app</Link>
-              <a href="#preguntas" style={{ color: '#cbd5e1' }}>Preguntas frecuentes</a>
-              <Link to={trialWhatsAppUrl} target="_blank" rel="noreferrer" style={{ color: '#cbd5e1' }}>Solicitar mes de prueba</Link>
-              <Link to="/login" style={{ color: '#cbd5e1' }}>Iniciar sesión</Link>
-              <Link to="/pagos-saas" style={{ color: '#cbd5e1' }}>Pagos de suscripción</Link>
-            </nav>
-            <nav aria-label="Enlaces legales" style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', marginBottom: '16px', fontSize: '0.8rem' }}>
-              <Link to="/politica-cookies" style={{ color: '#94a3b8' }}>Política de Cookies</Link>
-              <Link to="/politica-privacidad" style={{ color: '#94a3b8' }}>Política de Privacidad</Link>
-              <Link to="/terminos" style={{ color: '#94a3b8' }}>Términos y Condiciones</Link>
-            </nav>
-            <div style={{ display: 'flex', gap: '14px' }}>
-              <a href="https://github.com/MoonPlay-Z/Gestor-Inventario" target="_blank" rel="noreferrer" aria-label="Proyecto GestorPOS en GitHub" style={{ color: '#94a3b8', fontSize: '1.2rem' }}><Icon icon={githubIcon} /></a>
-              <a href="https://www.linkedin.com/in/jadeveloper/" target="_blank" rel="noreferrer" aria-label="Perfil de Juan Arcila en LinkedIn" style={{ color: '#94a3b8', fontSize: '1.2rem' }}><Icon icon={linkedinIcon} /></a>
-              <a href="mailto:arcila.juan10@gmail.com" aria-label="Enviar correo a soporte" style={{ color: '#94a3b8', fontSize: '1.2rem' }}><Icon icon={emailIcon} /></a>
-              <a href="https://wa.me/584127723148" target="_blank" rel="noreferrer" aria-label="Contactar por WhatsApp" style={{ color: '#94a3b8', fontSize: '1.2rem' }}><Icon icon={whatsappIcon} /></a>
-            </div>
+          {/* Copyright y créditos */}
+          <div className="landing-footer-bottom">
+            <p>© {new Date().getFullYear()} ING. Juan Arcila. Todos los derechos reservados.</p>
+            <p>Sitio desarrollado y mantenido con asistencia de inteligencia artificial.</p>
           </div>
-        </div>
 
-        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '24px', textAlign: 'center', fontSize: '0.8rem', color: '#64748b' }}>
-          <p style={{ margin: '0 0 8px' }}>
-            © {new Date().getFullYear()} ING. Juan Arcila. Todos los derechos reservados.
-          </p>
-          <p style={{ margin: 0, fontSize: '0.75rem', color: '#475569' }}>
-            Sitio desarrollado y mantenido con asistencia de inteligencia artificial.
-          </p>
         </div>
       </footer>
 

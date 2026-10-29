@@ -6,12 +6,12 @@ import { ResponsiveTables } from './ResponsiveTables';
 import { AlertaTasaDolar } from '../widgets/AlertaTasaDolar';
 import { ActualizarApk } from '../app/ActualizarApk';
 import { API } from '../../services/api';
-import { useMediaQuery, QUERY_TELEFONO } from '../../hooks/useMediaQuery';
+import { useMediaQuery, QUERY_NAVEGACION_MOVIL } from '../../hooks/useMediaQuery';
 
 const DESKTOP_BREAKPOINT = 1024;
 
 export default function Layout() {
-  const esTelefono = useMediaQuery(QUERY_TELEFONO);
+  const esTelefono = useMediaQuery(QUERY_NAVEGACION_MOVIL);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -86,7 +86,7 @@ export default function Layout() {
       </main>
 
       {/* Bottom Navigation Dock (Visible on Mobile Screens) */}
-      <BottomNav setIsMobileOpen={setIsMobileOpen} visible={esTelefono} />
+      <BottomNav setIsMobileOpen={setIsMobileOpen} visible={esTelefono} isMenuOpen={isMobileOpen} />
 
       {/* Adapta las tablas del contenido a tarjetas en móvil (solo presentación) */}
       <ResponsiveTables />

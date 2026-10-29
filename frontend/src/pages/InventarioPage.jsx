@@ -36,6 +36,27 @@ const UNIDADES_MEDIDA = [
   { value: 'MEDIA_DOCENA', label: 'Media Docena (6)' },
 ];
 
+const UNIDADES_CORTAS = {
+  UNIDAD: 'unidades',
+  KILOGRAMO: 'kg',
+  GRAMO: 'g',
+  LITRO: 'L',
+  MILILITRO: 'ml',
+  METRO: 'm',
+  CENTIMETRO: 'cm',
+  BULTO: 'bultos',
+  PAQUETE: 'paquetes',
+  CAJA: 'cajas',
+  SACO: 'sacos',
+  BOTELLA: 'botellas',
+  LATA: 'latas',
+  DOCENA: 'docenas',
+  MEDIA_DOCENA: 'medias docenas',
+};
+
+const formatearCantidad = (valor) =>
+  Number(valor || 0).toLocaleString('es-VE', { maximumFractionDigits: 2 });
+
 export function InventarioPage() {
   const { toggleSidebar } = useOutletContext();
   const { showToast } = useToast();
@@ -249,6 +270,16 @@ export function InventarioPage() {
     } catch (err) { showToast(err.message, 'error'); }
   };
 
+  const abrirAjusteStock = (producto, operacion = 'set') => {
+    setStockTarget(producto);
+    setStockForm({
+      cantidad: '',
+      operacion,
+      unidadMedida: producto.esVentaPorPeso ? 'KILOGRAMO' : producto.unidadMedida,
+    });
+    setShowStockModal(true);
+  };
+
   const handleStockSave = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -271,18 +302,27 @@ export function InventarioPage() {
   return (
     <>
       <Header
-        title="Inventario de Productos"
+        title={(
+          <>
+            <span className="inventario-mobile-title">
+              <span className="inventario-mobile-title-icon"><Icon icon="mdi:package-variant" /></span>
+              Inventario de Productos
+            </span>
+            <span className="inventario-desktop-title">Inventario de Productos</span>
+          </>
+        )}
         subtitle={`${total} producto${total !== 1 ? 's' : ''} registrado${total !== 1 ? 's' : ''}`}
         toggleSidebar={toggleSidebar}
         actions={
-          <Button onClick={openCreate} variant="primary" size="sm" icon="mdi:plus">
-            Nuevo Producto
+          <Button onClick={openCreate} variant="primary" size="sm" icon="mdi:plus" className="inventario-nuevo-btn">
+            <span className="inventario-nuevo-desktop">Nuevo Producto</span>
+            <span className="inventario-nuevo-movil">Nuevo</span>
           </Button>
         }
       />
-      <div className="page-body">
+      <div className="page-body inventario-page">
         {/* Resumen de inventario */}
-        <div className="metric-grid" style={{ marginBottom: '1rem' }}>
+        <div className="metric-grid inventario-metricas" style={{ marginBottom: '1rem' }}>
           <div className="metric-card accent">
             <div className="metric-icon"><Icon icon="mdi:cash" className="h-6 w-6" /></div>
             <div>
@@ -304,7 +344,7 @@ export function InventarioPage() {
               <div className="metric-label">Valor Invertido (Costo)</div>
             </div>
           </div>
-          <div className="metric-card danger">
+          <div className="metric-card danger inventario-metrica-stock">
             <div className="metric-icon"><Icon icon="mdi:alert" className="h-6 w-6" /></div>
             <div>
               <div className="metric-value">{metricas ? metricas.productosStockBajo : '...'}</div>
@@ -314,7 +354,7 @@ export function InventarioPage() {
         </div>
 
         {alertas && (alertas.conIva.length > 0 || alertas.costoMayorAVenta.length > 0) && (
-          <div className="card" style={{
+          <div className="card inventario-alerta" style={{
             padding: '1rem 1.25rem',
             marginBottom: '1rem',
             border: '1px solid var(--warning-border, #f59e0b)',
@@ -344,12 +384,15 @@ export function InventarioPage() {
           </div>
         )}
 
-        <div className="card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <input type="text" className="form-control" placeholder="Buscar por nombre, SKU, categoría..."
-              value={search} onChange={handleSearchChange} style={{ flex: 1, minWidth: '220px' }} />
+        <div className="card inventario-filtros-card" style={{ padding: '1rem 1.25rem', marginBottom: '1rem' }}>
+          <div className="inventario-filtros-controles" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div className="inventario-busqueda">
+              <Icon icon="mdi:magnify" className="inventario-busqueda-icono" aria-hidden="true" />
+              <input type="text" className="form-control" placeholder="Buscar por nombre, SKU, categoría..."
+                value={search} onChange={handleSearchChange} style={{ flex: 1, minWidth: '220px' }} />
+            </div>
             <select
-              className="form-select"
+              className="form-select inventario-categoria"
               style={{ width: 'auto', minWidth: '150px' }}
               value={categoriaFiltro}
               onChange={(e) => { setCategoriaFiltro(e.target.value); setPage(1); }}
@@ -359,26 +402,28 @@ export function InventarioPage() {
                 <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              <input type="checkbox" checked={soloStockBajo} onChange={(e) => { setSoloStockBajo(e.target.checked); setPage(1); }} style={{ accentColor: 'var(--danger)' }} />
-              Solo stock bajo
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              <input type="checkbox" checked={filtroIva} onChange={(e) => { setFiltroIva(e.target.checked); setPage(1); }} style={{ accentColor: 'var(--warning, #f59e0b)' }} />
-              Con IVA
-            </label>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              <input type="checkbox" checked={filtroCostoVenta} onChange={(e) => { setFiltroCostoVenta(e.target.checked); setPage(1); }} style={{ accentColor: 'var(--danger)' }} />
-              Costo &gt; Venta
-            </label>
-            <button onClick={recargar} className="btn btn-secondary btn-sm inline-flex items-center gap-1">
+            <div className="inventario-filtros-checks">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                <input type="checkbox" checked={soloStockBajo} onChange={(e) => { setSoloStockBajo(e.target.checked); setPage(1); }} style={{ accentColor: 'var(--danger)' }} />
+                Solo stock bajo
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                <input type="checkbox" checked={filtroIva} onChange={(e) => { setFiltroIva(e.target.checked); setPage(1); }} style={{ accentColor: 'var(--warning, #f59e0b)' }} />
+                Con IVA
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                <input type="checkbox" checked={filtroCostoVenta} onChange={(e) => { setFiltroCostoVenta(e.target.checked); setPage(1); }} style={{ accentColor: 'var(--danger)' }} />
+                Costo &gt; Venta
+              </label>
+            </div>
+            <button onClick={recargar} className="btn btn-secondary btn-sm inline-flex items-center gap-1 inventario-recargar">
               <Icon icon="mdi:refresh" className="h-4 w-4" /> Recargar
             </button>
           </div>
         </div>
 
-        <div className="card">
-          <div className="table-wrapper">
+        <div className="card inventario-listado">
+          <div className="table-wrapper inventario-tabla">
             <table>
               <thead>
                 <tr>
@@ -450,7 +495,7 @@ export function InventarioPage() {
                     <td>{p.activo ? <span className="badge badge-success">Activo</span> : <span className="badge badge-danger">Inactivo</span>}</td>
                     <td>
                       <div style={{ display: 'flex', gap: '4px' }}>
-                        <button onClick={() => { setStockTarget(p); setStockForm({ cantidad: '', operacion: 'set', unidadMedida: p.esVentaPorPeso ? 'KILOGRAMO' : p.unidadMedida }); setShowStockModal(true); }}
+                        <button onClick={() => abrirAjusteStock(p)}
                           className="btn btn-ghost btn-sm" title="Ajustar stock">
                           <Icon icon="mdi:package-variant-plus" className="h-4 w-4" />
                         </button>
@@ -470,13 +515,135 @@ export function InventarioPage() {
               </tbody>
             </table>
           </div>
-          {totalPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '1rem', borderTop: '1px solid var(--border)' }}>
-              <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => setPage(p => p - 1)}><Icon icon="mdi:chevron-left" /></button>
+          <div className="inventario-productos-movil">
+            {loading ? (
+              <div className="inventario-lista-vacia">Cargando productos...</div>
+            ) : productos.length === 0 ? (
+              <div className="inventario-lista-vacia">No se encontraron productos</div>
+            ) : productos.map((producto) => {
+              const unidad = producto.esVentaPorPeso
+                ? 'kg'
+                : UNIDADES_CORTAS[producto.unidadMedida] || 'unidades';
+              const ganancia = producto.precioVenta - producto.costoCompra;
+              const claseStock = producto.stockBajoMinimo ? ' inventario-producto--stock-bajo' : '';
+
+              return (
+                <article className={`inventario-producto${claseStock}`} key={producto.id}>
+                  <header className="inventario-producto-cabecera">
+                    <span className="inventario-producto-icono">
+                      {producto.imagenUrl && (
+                        <img src={producto.imagenUrl} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                      )}
+                      <Icon icon="mdi:package-variant" aria-hidden="true" />
+                    </span>
+                    <div className="inventario-producto-identidad">
+                      <div className="inventario-producto-meta">
+                        <span>Nombre / Categoría</span>
+                        <span className="inventario-producto-categoria">{producto.categoria || 'General'}</span>
+                      </div>
+                      <code>#{producto.sku}</code>
+                      <h3>{producto.nombre}</h3>
+                    </div>
+                    <span className={`badge ${producto.activo ? 'badge-success' : 'badge-danger'}`}>
+                      <span className="inventario-estado-punto" />
+                      {producto.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </header>
+
+                  <div className="inventario-producto-detalles">
+                    <div>
+                      <span>Precio USD</span>
+                      <strong className="inventario-valor-venta">{Utils.formatMoney(producto.precioVenta)}</strong>
+                      <small>Precio de venta</small>
+                    </div>
+                    <div>
+                      <span>Costo</span>
+                      <strong>{Utils.formatMoney(producto.costoCompra)}</strong>
+                      <small>Costo de compra</small>
+                    </div>
+                    <div>
+                      <span>Ganancia</span>
+                      <strong className={ganancia < 0 ? 'inventario-valor-negativo' : 'inventario-valor-positivo'}>
+                        {Utils.formatMoney(ganancia)}
+                      </strong>
+                      <small>Por unidad de medida</small>
+                    </div>
+                    <div>
+                      <span>IVA %</span>
+                      <strong className={Number(producto.tasaImpuesto) > 0 ? 'inventario-valor-iva' : ''}>
+                        {Number(producto.tasaImpuesto) > 0 ? `${producto.tasaImpuesto}%` : 'Exento'}
+                      </strong>
+                      <small>{Number(producto.tasaImpuesto) > 0 ? 'Impuesto aplicado' : 'Sin impuesto'}</small>
+                    </div>
+                  </div>
+
+                  <div className="inventario-producto-stock">
+                    <div>
+                      <span>Stock disponible</span>
+                      <strong>{formatearCantidad(producto.stockActual)} <small>{unidad}</small></strong>
+                    </div>
+                    <div className="inventario-producto-minimo">
+                      <span>Mínimo</span>
+                      <strong>{formatearCantidad(producto.stockMinimo)} {unidad}</strong>
+                    </div>
+                    <span className={`inventario-stock-estado${producto.stockBajoMinimo ? ' bajo' : ''}`}>
+                      {producto.stockBajoMinimo ? 'Stock bajo' : 'Disponible'}
+                    </span>
+                  </div>
+
+                  <footer className="inventario-producto-pie">
+                    <span className="inventario-producto-actualizado">
+                      <Icon icon="mdi:clock-outline" aria-hidden="true" />
+                      {producto.updatedAt
+                        ? `Actualizado: ${Utils.formatDate(producto.updatedAt)}`
+                        : 'Registro de producto'}
+                    </span>
+                    <div className={`inventario-producto-acciones${producto.activo ? ' tiene-desactivar' : ''}`}>
+                      <button
+                        type="button"
+                        className={`btn btn-sm ${producto.stockBajoMinimo ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => abrirAjusteStock(producto, producto.stockBajoMinimo ? 'add' : 'set')}
+                        aria-label={producto.stockBajoMinimo ? `Reabastecer ${producto.nombre}` : `Ajustar stock de ${producto.nombre}`}
+                      >
+                        <Icon icon="mdi:package-variant-plus" aria-hidden="true" />
+                        {producto.stockBajoMinimo ? 'Reabastecer' : 'Ajustar Stock'}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => openEdit(producto)}
+                        aria-label={`Editar ${producto.nombre}`}
+                      >
+                        <Icon icon="mdi:pencil" aria-hidden="true" />
+                        Editar
+                      </button>
+                      {producto.activo && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-sm inventario-desactivar"
+                          onClick={() => handleEliminar(producto)}
+                          aria-label={`Desactivar ${producto.nombre}`}
+                          title="Desactivar producto"
+                        >
+                          <Icon icon="mdi:archive-off" aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
+                  </footer>
+                </article>
+              );
+            })}
+          </div>
+          <div className={`inventario-paginacion${totalPages > 1 ? ' inventario-paginacion--multiple' : ''}`}>
+            <span className="inventario-paginacion-conteo">
+              Mostrando {total === 0 ? 0 : (page - 1) * LIMIT + 1}–{Math.min(page * LIMIT, total)} de {total} artículos
+            </span>
+            <div className="inventario-paginacion-controles">
+              <button className="btn btn-ghost btn-sm" aria-label="Página anterior" disabled={page <= 1} onClick={() => setPage(p => p - 1)}><Icon icon="mdi:chevron-left" /></button>
               <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Página {page} de {totalPages}</span>
-              <button className="btn btn-ghost btn-sm" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}><Icon icon="mdi:chevron-right" /></button>
+              <button className="btn btn-ghost btn-sm" aria-label="Página siguiente" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}><Icon icon="mdi:chevron-right" /></button>
             </div>
-          )}
+          </div>
         </div>
       </div>
 

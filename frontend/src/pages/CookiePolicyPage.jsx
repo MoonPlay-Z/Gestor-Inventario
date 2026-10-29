@@ -9,16 +9,18 @@ export function CookiePolicyPage() {
       <header style={{
         backgroundColor: '#0b0f17',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '16px 32px',
+        padding: '16px clamp(16px, 4vw, 32px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '10px',
         position: 'sticky',
         top: 0,
         zIndex: 100,
         backdropFilter: 'blur(10px)'
       }}>
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', minWidth: 0 }}>
           <img
             src="/favicon.png"
             alt=""
@@ -26,18 +28,18 @@ export function CookiePolicyPage() {
             height="36"
             style={{ width: '36px', height: '36px', borderRadius: '8px', display: 'block', flexShrink: 0 }}
           />
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
+          <span style={{ fontSize: 'clamp(1.05rem, 4vw, 1.25rem)', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
             GestorPOS<span style={{ color: '#38bdf8' }}>.dev</span>
           </span>
         </Link>
-        <Link to="/" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none' }}>
+        <Link to="/" style={{ color: '#94a3b8', fontSize: 'clamp(0.8rem, 3.2vw, 0.9rem)', fontWeight: 500, textDecoration: 'none', whiteSpace: 'nowrap' }}>
           ← Volver al inicio
         </Link>
       </header>
 
       {/* Content */}
-      <article style={{ padding: '60px 32px', maxWidth: '800px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, marginBottom: '8px' }}>
+      <article style={{ padding: '60px clamp(16px, 4vw, 32px)', maxWidth: '800px', margin: '0 auto' }}>
+        <h1 style={{ fontSize: 'clamp(1.6rem, 6vw, 2.2rem)', fontWeight: 900, marginBottom: '8px' }}>
           Política de Cookies
         </h1>
         <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '40px' }}>
@@ -47,18 +49,18 @@ export function CookiePolicyPage() {
         <div style={{
           backgroundColor: '#1e293b',
           borderRadius: '16px',
-          padding: '40px',
+          padding: 'clamp(20px, 5vw, 40px)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           lineHeight: 1.8,
           fontSize: '1rem',
           color: '#cbd5e1'
         }}>
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem', marginTop: '0' }}>1. ¿Qué son las cookies?</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)', marginTop: '0' }}>1. ¿Qué son las cookies?</h2>
           <p>
             Las cookies son pequeños archivos de texto que se almacenan en tu dispositivo (computadora, tablet o teléfono móvil) cuando visitas un sitio web. Son ampliamente utilizadas para hacer que los sitios web funcionen de manera más eficiente y para proporcionar información a los propietarios del sitio.
           </p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>2. Tipos de cookies que utilizamos</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>2. Tipos de cookies que utilizamos</h2>
           <p>En GestorPOS utilizamos los siguientes tipos de cookies:</p>
           
           <h3 style={{ color: '#38bdf8', fontSize: '1.1rem' }}>2.1 Cookies técnicas (necesarias)</h3>
@@ -82,7 +84,7 @@ export function CookiePolicyPage() {
           </ul>
           <p><strong>Estas cookies solo se instalan con tu consentimiento previo.</strong></p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>3. Cookies de terceros</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>3. Cookies de terceros</h2>
           <p>
             Nuestro sitio puede incluir contenido de terceros que puede instalar sus propias cookies:
           </p>
@@ -95,7 +97,7 @@ export function CookiePolicyPage() {
             No tenemos control sobre las cookies instaladas por terceros. Te recomendamos revisar las políticas de privacidad de estos servicios.
           </p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>4. ¿Cómo gestionar las cookies?</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>4. ¿Cómo gestionar las cookies?</h2>
           <p>
             Puedes gestionar las cookies de varias maneras:
           </p>
@@ -116,7 +118,7 @@ export function CookiePolicyPage() {
             <li><strong>Edge:</strong> Configuración → Cookies y permisos del sitio</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>5. Duración de las cookies</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>5. Duración de las cookies</h2>
           <p>
             Las cookies pueden ser de sesión (se eliminan al cerrar el navegador) o persistentes (permanecen en tu dispositivo durante un período determinado):
           </p>
@@ -127,12 +129,12 @@ export function CookiePolicyPage() {
             <li><strong>Cookies analíticas:</strong> Hasta 2 años</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>6. Actualizaciones de esta política</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>6. Actualizaciones de esta política</h2>
           <p>
             Podemos actualizar esta Política de Cookies periódicamente para reflejar cambios en las cookies que utilizamos u otras razones operativas, legales o regulatorias. Te recomendamos revisar esta página regularmente.
           </p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>7. Contacto</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>7. Contacto</h2>
           <p>
             Si tienes preguntas sobre nuestra Política de Cookies, puedes contactarnos:
           </p>
@@ -144,7 +146,7 @@ export function CookiePolicyPage() {
       </article>
 
       {/* Footer */}
-      <footer style={{ padding: '40px 32px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center' }}>
+      <footer style={{ padding: '40px clamp(16px, 4vw, 32px)', borderTop: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center' }}>
         <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '8px' }}>
           © 2026 GestorPOS — Sistema POS para comercios en Venezuela
         </p>

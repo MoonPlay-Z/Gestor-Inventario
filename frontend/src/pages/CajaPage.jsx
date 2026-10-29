@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Icon } from '@iconify/react';
+import { Link } from 'react-router-dom';
 import lockIcon from '@iconify/icons-mdi/lock';
 import lockOpenIcon from '@iconify/icons-mdi/lock-open';
 import cashIcon from '@iconify/icons-mdi/cash';
@@ -133,22 +134,27 @@ export function CajaPage() {
         subtitle="Apertura, cuadre e historial del turno de ventas"
         toggleSidebar={toggleSidebar}
         actions={
-          isAbierta ? (
-            <Button onClick={handleOpenCerrar} variant="danger" size="sm" icon="mdi:lock">
-              Cerrar Caja
+          <div className="caja-header-actions">
+            {isAbierta ? (
+              <Button onClick={handleOpenCerrar} variant="danger" size="sm" icon="mdi:lock">
+                Cerrar Caja
+              </Button>
+            ) : (
+              <Button onClick={() => setModalAbrir(true)} variant="primary" size="sm" icon="mdi:lock-open">
+                Abrir Caja
+              </Button>
+            )}
+            <Button as={Link} to="/pos" variant="primary" size="sm" icon="mdi:cart" className="caja-mobile-pos-action">
+              Realizar Ventas
             </Button>
-          ) : (
-            <Button onClick={() => setModalAbrir(true)} variant="primary" size="sm" icon="mdi:lock-open">
-              Abrir Caja
-            </Button>
-          )
+          </div>
         }
       />
 
-      <div className="page-body">
+      <div className="page-body caja-page">
         {/* ── Turno Activo ── */}
         {isAbierta && (
-          <div className="card" style={{ marginBottom: '24px' }}>
+          <div className="card caja-turno-card" style={{ marginBottom: '24px' }}>
             <div className="card-header">
               <h3 className="card-title">Turno Activo</h3>
               <span className="badge badge-success">ABIERTA</span>
@@ -232,7 +238,7 @@ export function CajaPage() {
                         <td>{c.fechaCierre ? Utils.formatDate(c.fechaCierre) : '-'}</td>
                         <td>{Utils.formatMoney(c.montoInicial)}</td>
                         <td>{Utils.formatMoney(c.ingresosEfectivo || 0)}</td>
-                        <td>{Utils.formatMoney(c.ingresosEfectivoVES || 0)}</td>
+                        <td>{Utils.formatMoney(c.ingresosEfectivoVES || 0, 'Bs.')}</td>
                         <td>{Utils.formatMoney(c.ingresosBanco || 0)}</td>
                         <td style={{ fontWeight: 700 }}>{Utils.formatMoney(final)}</td>
                         <td>
@@ -262,6 +268,57 @@ export function CajaPage() {
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="caja-mobile-history">
+            {loading ? (
+              <p className="caja-mobile-message">Cargando historial de caja...</p>
+            ) : historial.length === 0 ? (
+              <p className="caja-mobile-message">No hay registros de apertura o cierre de caja</p>
+            ) : (
+              historial.map((c) => {
+                const esperado = parseFloat(c.montoInicial || 0) + parseFloat(c.ingresosEfectivo || 0);
+                const final = parseFloat(c.montoFinal ?? 0);
+                const diff = c.estado === 'CLOSED' ? final - esperado : null;
+
+                return (
+                  <article key={c.id} className="caja-mobile-record">
+                    <div className="caja-mobile-record-head">
+                      <strong>@{c.usuario?.username || 'N/A'}</strong>
+                      <span className={`badge ${c.estado === 'OPEN' ? 'badge-success' : 'badge-neutral'}`}>
+                        {c.estado}
+                      </span>
+                    </div>
+                    <div className="caja-mobile-record-dates">
+                      <div><span>Apertura</span><strong>{Utils.formatDate(c.fechaApertura)}</strong></div>
+                      <div><span>Cierre</span><strong>{c.fechaCierre ? Utils.formatDate(c.fechaCierre) : '-'}</strong></div>
+                    </div>
+                    <dl className="caja-mobile-record-amounts">
+                      <div><dt>Monto inicial</dt><dd>{Utils.formatMoney(c.montoInicial)}</dd></div>
+                      <div><dt>Efectivo</dt><dd>{Utils.formatMoney(c.ingresosEfectivo || 0)}</dd></div>
+                      <div><dt>Efectivo VES</dt><dd>{Utils.formatMoney(c.ingresosEfectivoVES || 0, 'Bs.')}</dd></div>
+                      <div><dt>Banco</dt><dd>{Utils.formatMoney(c.ingresosBanco || 0)}</dd></div>
+                      <div className="caja-mobile-total"><dt>Monto final</dt><dd>{Utils.formatMoney(final)}</dd></div>
+                      <div>
+                        <dt>Diferencia</dt>
+                        <dd className={diff === null ? '' : diff >= 0 ? 'caja-difference-positive' : 'caja-difference-negative'}>
+                          {diff === null ? '-' : `${diff >= 0 ? '+' : ''}${Utils.formatMoney(diff)}`}
+                        </dd>
+                      </div>
+                    </dl>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon="mdi:printer"
+                      className="caja-mobile-report"
+                      onClick={() => { setReporteCierre(c); setReportePreview(null); }}
+                      title="Imprimir Reporte de Cierre"
+                    >
+                      Ver reporte
+                    </Button>
+                  </article>
+                );
+              })
+            )}
           </div>
         </div>
 

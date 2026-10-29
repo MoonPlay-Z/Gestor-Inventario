@@ -32,15 +32,19 @@ const prisma = global.__prisma || new Prisma(prismaOptions);
 
 if (isSqlite && !global.__sqliteNumericMiddleware) {
   const numericFields = new Set([
-    'precioVenta', 'costoCompra', 'tasaImpuesto', 'subtotal', 'impuestoTotal', 'total',
+    'precioVenta', 'costoCompra', 'tasaImpuesto', 'stockActual', 'stockMinimo',
+    'precioPorKilo', 'toleranciaPeso', 'subtotal', 'impuestoTotal', 'total',
     'tasaCambio', 'precioUnitarioHistorico', 'costoUnitarioHistoricoUSD', 'tasaImpuestoAplicada', 'subtotalLinea',
     'impuestoLinea', 'totalLinea', 'monto', 'montoInicial', 'montoFinal',
     'montoOriginal', 'montoCobrado', 'montoPendiente', 'tasaBCV',
-    'ingresosEfectivo', 'ingresosBanco', 'precioUnitario',
+    'ingresosEfectivo', 'ingresosBanco', 'ingresosEfectivoVES', 'ingresosBancoVES',
+    'precioUnitario',
   ]);
   const convert = (value, key) => {
     if (value instanceof Date) return value;
     if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const prototype = Object.getPrototypeOf(value);
+      if (prototype !== Object.prototype && prototype !== null) return value;
       return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [childKey, convert(childValue, childKey)]));
     }
     if (Array.isArray(value)) return value.map((item) => convert(item, key));

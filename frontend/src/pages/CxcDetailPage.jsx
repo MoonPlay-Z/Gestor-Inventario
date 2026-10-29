@@ -212,18 +212,18 @@ export function CxcDetailPage() {
   return (
     <>
       <Header title={`CxC Factura #${cuenta.factura?.numeroFactura || 'N/A'}`} subtitle="Detalle de cuenta por cobrar" />
-      <div className="p-4 md:p-6 space-y-4">
+      <div className="p-4 md:p-6 space-y-4 cxc-detail-page">
         <button onClick={() => navigate('/cxc')} className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium">
           <Icon icon={arrowLeftIcon} width={18} height={18} /> Volver a Cuentas por Cobrar
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 cxc-detail-layout">
           <div className="lg:col-span-2 space-y-4">
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 cxc-detail-card cxc-cliente-card">
               <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Icon icon={accountIcon} width={20} height={20} /> Informacion del Cliente
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm cxc-cliente-grid">
                 <div><span className="text-gray-500">Nombre:</span><p className="font-medium">{cuenta.cliente?.razonSocial}</p></div>
                 <div><span className="text-gray-500">RIF/Cedula:</span><p className="font-medium">{cuenta.cliente?.rifCedula}</p></div>
                 <div><span className="text-gray-500">Telefono:</span><p className="font-medium">{cuenta.cliente?.telefono || '-'}</p></div>
@@ -231,30 +231,30 @@ export function CxcDetailPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 cxc-detail-card cxc-factura-card">
               <h3 className="font-semibold text-gray-900 mb-4">Detalle de la Factura</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm mb-4 cxc-factura-resumen">
                 <div><span className="text-gray-500">Factura #</span><p className="font-medium">{cuenta.factura?.numeroFactura}</p></div>
                 <div><span className="text-gray-500">Fecha Emision</span><p className="font-medium">{Utils.formatDate(cuenta.factura?.fechaEmision)}</p></div>
                 <div><span className="text-gray-500">Vencimiento</span><p className="font-medium">{Utils.formatDate(cuenta.fechaVencimiento)}</p></div>
                 <div><span className="text-gray-500">Dias Vencido</span><p className={`font-bold ${cuenta.diasVencido > 0 ? 'text-red-600' : 'text-green-600'}`}>{cuenta.diasVencido > 0 ? cuenta.diasVencido : 'Al dia'}</p></div>
               </div>
-              <table className="w-full text-sm">
+              <table className="w-full text-sm cxc-detail-table">
                 <thead><tr className="border-b"><th className="text-left py-2">Producto</th><th className="text-center py-2">Cant.</th><th className="text-right py-2">P. Unit.</th><th className="text-right py-2">Total</th></tr></thead>
                 <tbody>
                   {cuenta.factura?.items?.map((item, i) => (
                     <tr key={i} className="border-b border-gray-50">
-                      <td className="py-2">{item.descripcionHistorica}</td>
-                      <td className="text-center py-2">{item.cantidad}</td>
-                      <td className="text-right py-2">{Utils.formatMoney(item.precioUnitarioHistorico)}</td>
-                      <td className="text-right py-2 font-medium">{Utils.formatMoney(item.totalLinea)}</td>
+                      <td data-label="Producto" className="py-2">{item.descripcionHistorica}</td>
+                      <td data-label="Cantidad" className="text-center py-2">{item.cantidad}</td>
+                      <td data-label="Precio unitario" className="text-right py-2">{Utils.formatMoney(item.precioUnitarioHistorico)}</td>
+                      <td data-label="Total" className="text-right py-2 font-medium">{Utils.formatMoney(item.totalLinea)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 cxc-detail-card cxc-pagos-card">
               <h3 className="font-semibold text-gray-900 mb-4">Historial de Pagos</h3>
               {cuenta.factura?.pagos?.length === 0 ? (
                 <p className="text-gray-400 text-sm">Sin pagos registrados</p>
@@ -315,7 +315,7 @@ export function CxcDetailPage() {
               )}
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 cxc-detail-card cxc-gestiones-card">
               <h3 className="font-semibold text-gray-900 mb-4">Gestiones de Cobranza</h3>
               {cuenta.gestions?.length === 0 ? (
                 <p className="text-gray-400 text-sm">Sin gestiones registradas</p>
@@ -336,14 +336,14 @@ export function CxcDetailPage() {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="space-y-4 cxc-detail-aside">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 cxc-detail-card cxc-saldo-card">
               <div className="text-center mb-4">
                 <span className="inline-block px-3 py-1 rounded-full text-sm font-semibold" style={{ backgroundColor: estado.color + '20', color: estado.color }}>
                   {estado.label}
                 </span>
               </div>
-              <div className="space-y-3 text-sm">
+              <div className="space-y-3 text-sm cxc-saldo-datos">
                 <div className="flex justify-between"><span className="text-gray-500">Monto Original</span><span className="font-medium">{Utils.formatMoney(cuenta.montoOriginal)}</span></div>
                 <div className="flex justify-between"><span className="text-gray-500">Monto Cobrado</span><span className="font-medium text-green-600">{Utils.formatMoney(cuenta.montoCobrado)}</span></div>
                 <div className="border-t pt-3 flex justify-between"><span className="text-gray-500 font-semibold">Pendiente</span><span className="font-bold text-lg">{Utils.formatMoney(cuenta.montoPendiente)}</span></div>
@@ -361,7 +361,7 @@ export function CxcDetailPage() {
             </div>
 
             {showPago && (
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-200">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-200 cxc-detail-card cxc-form-card">
                 <h3 className="font-semibold text-gray-900 mb-4">Registrar Pago</h3>
                 <div className="space-y-3">
                   <div>
@@ -450,7 +450,7 @@ export function CxcDetailPage() {
             )}
 
             {showGestion && (
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-200">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-200 cxc-detail-card cxc-form-card">
                 <h3 className="font-semibold text-gray-900 mb-4">Registrar Gestion</h3>
                 <div className="space-y-3">
                   <div>
@@ -477,7 +477,7 @@ export function CxcDetailPage() {
             )}
 
             {pagoAnular && (
-              <div className="bg-white rounded-xl p-6 shadow-sm border border-red-200">
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-red-200 cxc-detail-card cxc-form-card">
                 <h3 className="font-semibold text-gray-900 mb-1">Anular pago</h3>
                 <p className="text-sm text-gray-500 mb-4">
                   {Utils.formatMoney(pagoAnular.monto, pagoAnular.monedaPago === 'VES' ? 'Bs.' : '$')}

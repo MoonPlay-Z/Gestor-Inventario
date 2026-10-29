@@ -13,7 +13,7 @@ Sistema POS y Gestor de Inventario (Venezuela). Backend: Node.js + Express + Pri
 - `frontend/src/context/` — `AuthContext`, `ThemeContext`, `ToastContext`
 - `scripts/` — `validar-flujos.js` (API flow validation), `verify-prisma-engines.js`, `generar-iconos.py` (regenera favicon/PWA/iconos Android desde `frontend/public/favicon.html`)
 - `backend/scripts/` — `backfill-cierre-caja-monedas.js`, `backfill-empresa-config.js`, migration/verification scripts
-- `opencode.json` — OpenCode config with `opencode-omniroute-auth` plugin
+- `opencode.json` — OpenCode 2 config with the local OmniRoute adapter in `.opencode/plugins/omniroute-auth`; it reuses `opencode-omniroute-auth` for model discovery
 
 ## Commands
 
@@ -125,7 +125,9 @@ Uses `decimal.js` for all monetary math. Invoices support dual currency (`moneda
 
 ## Frontend dev server
 
-`vite.config.js` enables HTTPS with a self-signed cert via `@vitejs/plugin-basic-ssl` (required for camera/barcode on mobile), `host: true` (LAN access), and proxies `/api` → `http://localhost:3001`. The frontend calls the API at `/api` by default (override with `VITE_API_URL`).
+`vite.config.js` enables HTTPS with a self-signed cert via `@vitejs/plugin-basic-ssl` (required for camera/barcode on mobile), `host: true` (LAN access), and proxies `/api` → `http://127.0.0.1:3001`. The frontend calls the API at `/api` by default (override with `VITE_API_URL`).
+
+**El puerto del backend es configurable.** El proxy resuelve el destino en este orden: `VITE_PROXY_TARGET` (URL completa) → `BACKEND_PORT` (solo el puerto) → `3001`. Si el 3001 está ocupado por otro servicio (en esta máquina lo usa el gateway local de modelos), el backend no arranca y el proxy acaba hablando con el intruso: en la consola del navegador aparecen `api/health` → **401** y `api/public/noticias` → **404**. La configuración de este equipo deja el backend en **3010** (`PORT` en `backend/.env`) y el proxy apuntando ahí (`frontend/.env.local`, ignorado por git). Cuando el proxy no puede conectar, ahora imprime un aviso explícito en la terminal de Vite.
 
 ## CSS Modules
 
@@ -144,6 +146,10 @@ Archivos de módulo en `frontend/src/components/ui/*.module.css`:
 - `Table.module.css`, `Badge.module.css`, `Toast.module.css`, `Card.module.css`
 
 Estilos globales (variables CSS, reset, Tailwind) en `frontend/src/css/main.css`. Ejemplos en `CSSModulesExamples.jsx`.
+
+**Landing pública:** `frontend/src/css/landing.css` (importado desde `LandingPage.jsx`) concentra la cabecera, el hero con foto de fondo, las preguntas frecuentes (acordeón `<details>`) y el pie. Ahí las media queries funcionan sin `!important`; `css/movil.css` sólo conserva los ajustes de teléfono de la landing que deben vencer estilos en línea. La foto del hero es `frontend/public/banner-landing-page.webp` y se sirve como `/banner-landing-page.webp`.
+
+**Páginas públicas sin cobertura en `movil.css`** (blog, artículo, descarga, legales y pago SaaS): se ajustan con estilos en línea fluidos, no con media queries. Patrón: `padding: 'Xpx clamp(16px, 4vw, 32px)'`, rejillas `repeat(auto-fit, minmax(min(100%, 320px), 1fr))` (el `min(100%, …)` evita que la tarjeta pida más ancho que un teléfono de 320px) y cabecera con `flexWrap: 'wrap'`. En `/pagos-saas`, `.auth-features` son los datos bancarios: **no se ocultan** en móvil (regla en `movil.css`, bloque 04).
 
 CSS Modules: `localsConvention: 'camelCaseOnly'` and scoped names `[name]__[local]___[hash:base64:5]` — import styles as `styles` and use camelCase keys. Production build splits manual chunks `react` and `iconify`.
 
@@ -279,4 +285,8 @@ Cada `Empresa` tiene su propia configuración: `tasaDolar` (Float), `monedaSimbo
 
 ## Env vars
 
+OpenCode's OmniRoute adapter reads `OMNIROUTE_API_KEY` for authentication and optionally `OMNIROUTE_BASE_URL` (default `http://localhost:20128/v1`). The FreeLLMAPI provider uses `http://127.0.0.1:3001/v1` and reads its unified key from `FREELLMAPI_API_KEY`; set keys in the environment that launches OpenCode, not in project config.
+
 Required: `DATABASE_URL`, `JWT_SECRET` (app exits if missing). Optional: `PORT` (default 3001), `EMPRESA_NOMBRE`, `EMPRESA_RIF`, `EMPRESA_DIRECCION`, `EMPRESA_TELEFONO`, `EMPRESA_EMAIL`, `MONEDA_SIMBOLO`, `MONEDA_CODIGO`, `B2B_API_KEY`, `ALLOWED_ORIGINS`, `DB_PROVIDER`, `NODE_ENV`, `ELECTRON_ENV`, `TASA_DOLAR_AUTO_UPDATE` (poner `false` para desactivar el job diario de la tasa), `RESEND_API_KEY` (activa el envío real de avisos de pago), `ADMIN_EMAIL_FROM` y `ADMIN_NOTIFICACION_EMAIL`.
+
+Frontend (solo desarrollo): `VITE_API_URL` (base de la API, por defecto `/api`), `VITE_PROXY_TARGET` (URL completa del backend para el proxy de Vite) y `BACKEND_PORT` (solo el puerto). Los dos últimos existen para poder mover el backend sin tocar `vite.config.js` — ver *Frontend dev server*.

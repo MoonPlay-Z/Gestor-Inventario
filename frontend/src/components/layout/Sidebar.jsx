@@ -22,6 +22,7 @@ import chartBarIcon from '@iconify/icons-mdi/chart-bar';
 import cashCheckIcon from '@iconify/icons-mdi/cash-check';
 import closeCircleIcon from '@iconify/icons-mdi/close-circle-outline';
 import downloadIcon from '@iconify/icons-mdi/download';
+import searchIcon from '@iconify/icons-mdi/magnify';
 
 const ROL_LABEL = {
   SUPER_ADMIN: 'Super Admin',
@@ -35,6 +36,10 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [cxCvencidas, setCxCvencidas] = useState(0);
+  const [busquedaMovil, setBusquedaMovil] = useState('');
+  const busquedaNormalizada = busquedaMovil.trim().toLocaleLowerCase();
+  const coincideBusqueda = (...textos) =>
+    !busquedaNormalizada || textos.some((texto) => texto.toLocaleLowerCase().includes(busquedaNormalizada));
 
   const closeMobile = () => setIsMobileOpen(false);
 
@@ -62,13 +67,15 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
   return (
     <aside
       id="sidebar"
-      className={`fixed top-0 left-0 z-50 h-full overflow-y-auto border-r border-[#1e40af]/40 transition-all duration-300 w-72 ${
+      className={`app-sidebar fixed top-0 left-0 z-50 h-full overflow-y-auto border-r border-[#1e40af]/40 transition-all duration-300 w-72 ${
         esTelefono
           ? (isMobileOpen ? 'translate-x-0 mobile-open' : '-translate-x-full')
           : 'translate-x-0'
       }`}
       style={{
-        background: 'linear-gradient(180deg, #0b4f9c 0%, #022a5e 100%)',
+        background: esTelefono
+          ? 'var(--bg-page)'
+          : 'linear-gradient(180deg, #0b4f9c 0%, #022a5e 100%)',
         color: '#ffffff',
         // Pantalla completa: el panel sigue llegando al borde, pero el
         // contenido no queda bajo el lente ni bajo la barra de estado.
@@ -76,8 +83,35 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
         paddingLeft: 'var(--safe-left, 0px)'
       }}
     >
+      <div className="sidebar-mobile-header">
+        <div className="sidebar-mobile-status">
+          <span><i /> Sesión activa · {ROL_LABEL[user?.rol] || user?.rol || 'Usuario'}</span>
+          <strong>{user?.rol === 'CAJA' ? 'CAJERO' : user?.rol === 'SUPER_ADMIN' ? 'ADMIN' : 'GESTORPOS'}</strong>
+        </div>
+        <div className="sidebar-mobile-brand">
+          <div className="sidebar-mobile-logo"><Icon icon={packageIcon} /></div>
+          <div className="sidebar-mobile-identity">
+            <strong>{user?.nombre || user?.username || brandName || 'GestorPOS'}</strong>
+            <span>{ROL_LABEL[user?.rol] || 'Sistema Administrativo'}</span>
+          </div>
+          <button type="button" onClick={closeMobile} aria-label="Cerrar menú">
+            <Icon icon={closeIcon} />
+          </button>
+        </div>
+        <label className="sidebar-mobile-search">
+          <Icon icon={searchIcon} />
+          <input
+            type="search"
+            value={busquedaMovil}
+            onChange={(event) => setBusquedaMovil(event.target.value)}
+            placeholder="Buscar módulo o función..."
+            aria-label="Buscar módulo o función"
+          />
+        </label>
+      </div>
+
       {/* ── Brand & Toggle Button Header ───────────────────────── */}
-      <div className="flex items-center justify-between gap-2 px-5 py-5 border-b border-white/15 bg-black/10">
+      <div className="sidebar-desktop-header flex items-center justify-between gap-2 px-5 py-5 border-b border-white/15 bg-black/10">
         <div className="flex items-center gap-3 truncate">
           <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-white font-extrabold">
             <Icon icon={packageIcon} className="h-6 w-6" />
@@ -101,7 +135,143 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
       </div>
 
       {/* ── Navigation Links ──────────────────────────────────── */}
-      <nav className="flex-1 px-4 py-4 space-y-5 w-full">
+      <nav className="sidebar-mobile-menu">
+        {user?.rol === 'SUPER_ADMIN' ? (
+          <div className="sidebar-mobile-feature">
+            <NavSection label="Administración" isCollapsed={false}>
+              {coincideBusqueda('Panel de Administración', 'Admin') && (
+                <NavItem to="/admin" icon={dashboardIcon} label="Panel de Administración"
+                  roles={ROLE_GROUPS.SUPER_ADMIN_ONLY} onClick={closeMobile} isCollapsed={false}
+                  className="sidebar-mobile-feature-link" />
+              )}
+              {import.meta.env.DEV && coincideBusqueda('Pruebas de facturas') && (
+                <NavItem to="/pruebas/facturas" icon={clipboardIcon} label="Pruebas de facturas"
+                  roles={ROLE_GROUPS.SUPER_ADMIN_ONLY} onClick={closeMobile} isCollapsed={false}
+                  className="sidebar-mobile-feature-link" />
+              )}
+            </NavSection>
+          </div>
+        ) : (
+          <>
+            <div className="sidebar-mobile-feature">
+              <NavSection label="Principal" isCollapsed={false}>
+                {coincideBusqueda('Dashboard General', 'Dashboard') && (
+                  <NavItem to="/dashboard" icon={dashboardIcon} label="Dashboard General"
+                    roles={ROLE_GROUPS.ALL} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-feature-link" />
+                )}
+              </NavSection>
+            </div>
+
+            <div className="sidebar-mobile-operations">
+              <NavSection label="Operaciones diarias" isCollapsed={false}>
+                {coincideBusqueda('Nueva Factura', 'Ventas') && (
+                  <NavItem to="/pos" icon={cartIcon} label="Nueva Factura"
+                    roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-tile sidebar-mobile-tone-green"
+                    description="Emitir venta POS" />
+                )}
+                {coincideBusqueda('Visor de Precios', 'Precios') && (
+                  <NavItem to="/visor" icon={packageIcon} label="Visor de Precios"
+                    roles={ROLE_GROUPS.VISOR_ONLY} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-tile sidebar-mobile-tone-violet"
+                    description="Buscar productos y precios" />
+                )}
+                {coincideBusqueda('Cotizaciones', 'Presupuestos') && (
+                  <NavItem to="/cotizaciones" icon={fileDocIcon} label="Cotizaciones"
+                    roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-tile sidebar-mobile-tone-blue"
+                    description="Crear presupuestos" />
+                )}
+                {coincideBusqueda('Historial Ventas', 'Tickets') && (
+                  <NavItem to="/ventas" icon={clipboardIcon} label="Historial Ventas"
+                    roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-tile sidebar-mobile-tone-cyan"
+                    description="Tickets y facturas" />
+                )}
+                {coincideBusqueda('Cuentas por Cobrar', 'Cobrar') && (
+                  <NavItem to="/cxc" icon={cashCheckIcon} label="Cuentas por Cobrar"
+                    roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false}
+                    badge={cxCvencidas > 0 ? cxCvencidas : null}
+                    className="sidebar-mobile-tile sidebar-mobile-tone-rose"
+                    description="Saldos y cobranza" />
+                )}
+                {coincideBusqueda('Pagos anulados', 'Anulaciones') && (
+                  <NavItem to="/pagos-anulados" icon={closeCircleIcon} label="Pagos anulados"
+                    roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-tile sidebar-mobile-tone-orange"
+                    description="Auditoría de pagos" />
+                )}
+                {coincideBusqueda('Cierre de Caja', 'Caja') && (
+                  <NavItem to="/caja" icon={cashRegIcon} label="Cierre de Caja"
+                    roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-tile sidebar-mobile-tone-blue"
+                    description="Aperturas y cierres" />
+                )}
+                {coincideBusqueda('Reportes', 'Estadísticas') && (
+                  <NavItem to="/reportes" icon={chartBarIcon} label="Reportes"
+                    roles={ROLE_GROUPS.REPORTES} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-tile sidebar-mobile-tone-violet"
+                    description="Estadísticas" />
+                )}
+              </NavSection>
+            </div>
+
+            <div className="sidebar-mobile-list">
+              <NavSection label="Administración" isCollapsed={false}>
+                {coincideBusqueda('Inventario', 'Stock') && (
+                  <NavItem to="/inventario" icon={packageIcon} label="Inventario y Stock"
+                    roles={ROLE_GROUPS.INVENTARIO} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-list-link sidebar-mobile-tone-orange"
+                    description="Control de almacén y existencias" />
+                )}
+                {coincideBusqueda('Clientes') && (
+                  <NavItem to="/clientes" icon={accountGroupIcon} label="Clientes"
+                    roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-list-link sidebar-mobile-tone-cyan"
+                    description="Directorio, créditos y contactos" />
+                )}
+                {coincideBusqueda('Usuarios', 'Cajas', 'Permisos') && (
+                  <NavItem to="/usuarios" icon={accountKeyIcon} label="Usuarios / Cajas"
+                    roles={ROLE_GROUPS.ADMIN_ONLY} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-list-link sidebar-mobile-tone-rose"
+                    description="Permisos, cajas y terminales" />
+                )}
+              </NavSection>
+            </div>
+
+            <div className="sidebar-mobile-settings">
+              <NavSection label="Ajustes y sistema" isCollapsed={false}>
+                {coincideBusqueda('Configuración', 'Preferencias') && (
+                  <NavItem to="/config" icon={cogIcon} label="Configuración"
+                    roles={ROLE_GROUPS.ADMIN_ONLY} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-list-link sidebar-mobile-tone-slate"
+                    description="Personaliza tasa, empresa e impresión" />
+                )}
+                {coincideBusqueda('Descargar app', 'Aplicación') && (
+                  <NavItem to="/descargar" icon={downloadIcon} label="Descargar app"
+                    roles={ROLE_GROUPS.ALL} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-list-link sidebar-mobile-tone-blue"
+                    description="Instala GestorPOS en tu dispositivo" />
+                )}
+                {coincideBusqueda('Cerrar sesión', 'Salir') && (
+                  <button type="button" onClick={handleLogout} className="sidebar-mobile-logout">
+                    <span className="sidebar-mobile-logout-icon"><Icon icon={logoutIcon} /></span>
+                    <span><strong>Cerrar sesión</strong><small>Salir de tu cuenta de forma segura</small></span>
+                    <span aria-hidden="true">›</span>
+                  </button>
+                )}
+              </NavSection>
+            </div>
+          </>
+        )}
+      </nav>
+
+      <div className="sidebar-mobile-footer">
+        <span>{brandName || 'GestorPOS'} · Sistema Administrativo</span>
+      </div>
+
+      <nav className="sidebar-desktop-menu flex-1 px-4 py-4 space-y-5 w-full">
 
         {/* SuperAdmin: solo ve la página de administración */}
         {user?.rol === 'SUPER_ADMIN' ? (
@@ -162,7 +332,7 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
       </nav>
 
       {/* ── Footer ────────────────────────────────────────────── */}
-      <div className={`p-3 border-t border-white/15 bg-black/15 flex flex-col gap-2 ${
+      <div className={`sidebar-desktop-footer p-3 border-t border-white/15 bg-black/15 flex flex-col gap-2 ${
         isCollapsed ? 'items-center px-2' : ''
       }`}>
         {/* Info de usuario */}

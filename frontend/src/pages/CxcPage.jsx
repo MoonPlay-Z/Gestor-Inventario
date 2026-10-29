@@ -139,25 +139,25 @@ export function CxcPage() {
         toggleSidebar={toggleSidebar}
       />
 
-      <div className="p-4 md:p-6 space-y-4">
+      <div className="p-4 md:p-6 space-y-4 cxc-page">
         {/* Resumen Cards */}
         {resumen && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 cxc-resumen">
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cxc-resumen-card">
               <p className="text-sm text-gray-500">Total Pendiente</p>
               <p className="text-2xl font-bold text-gray-900">{Utils.formatMoney(resumen.totalPendiente)}</p>
               <p className="text-xs text-gray-400 mt-1">{resumen.cantidadPendientes} facturas</p>
             </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cxc-resumen-card">
               <p className="text-sm text-gray-500">Total Vencido</p>
               <p className="text-2xl font-bold text-red-600">{Utils.formatMoney(resumen.totalVencido)}</p>
               <p className="text-xs text-gray-400 mt-1">{resumen.cantidadVencidas} facturas</p>
             </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cxc-resumen-card">
               <p className="text-sm text-gray-500">0-30 días</p>
               <p className="text-2xl font-bold text-green-600">{Utils.formatMoney(resumen.aging['0_30'])}</p>
             </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cxc-resumen-card">
               <p className="text-sm text-gray-500">61+ días</p>
               <p className="text-2xl font-bold text-red-600">{Utils.formatMoney(resumen.aging['61_90'])}</p>
             </div>
@@ -165,19 +165,38 @@ export function CxcPage() {
         )}
 
         {/* Filtros */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 cxc-filtros">
           <div className="p-4 border-b border-gray-100 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
               <Icon icon={filterIcon} width={20} height={20} /> Filtros
             </h3>
-            <Button variant="ghost" size="sm" onClick={() => setShowFiltros(!showFiltros)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-expanded={showFiltros}
+              onClick={() => setShowFiltros(!showFiltros)}
+            >
               {showFiltros ? 'Ocultar' : 'Mostrar'}
             </Button>
           </div>
 
+          <div className="cxc-busqueda-movil">
+            <input
+              type="search"
+              value={filtros.q}
+              onChange={(e) => setFiltros({ ...filtros, q: e.target.value })}
+              onKeyDown={(e) => { if (e.key === 'Enter') aplicarFiltros(); }}
+              placeholder="Buscar factura o cliente..."
+              aria-label="Buscar factura o cliente"
+            />
+            <Button variant="primary" size="sm" onClick={aplicarFiltros} aria-label="Aplicar búsqueda">
+              <Icon icon={filterIcon} width={16} height={16} />
+            </Button>
+          </div>
+
           {showFiltros && (
-            <div className="p-4 space-y-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
+            <div className="p-4 space-y-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 cxc-filtros-campos">
+              <div className="cxc-filtro-buscar">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
                 <input
                   type="text"
@@ -231,8 +250,8 @@ export function CxcPage() {
         </div>
 
         {/* Tabla */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-end gap-2">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cxc-listado">
+          <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-end gap-2 cxc-orden">
             <label className="text-sm text-gray-600">Ordenar por</label>
             <select
               value={orden}
@@ -245,8 +264,61 @@ export function CxcPage() {
               <option value="monto">Monto (mayor a menor)</option>
             </select>
           </div>
+          <div className="cxc-mobile-list">
+            {loading ? (
+              <p className="cxc-mobile-message">Cargando cuentas...</p>
+            ) : cuentas.length === 0 ? (
+              <p className="cxc-mobile-message">No se encontraron cuentas por cobrar</p>
+            ) : (
+              cuentas.map((cuenta) => (
+                <article key={cuenta.id} className="cxc-mobile-card">
+                  <div className="cxc-mobile-card-head">
+                    <div>
+                      <span>Factura</span>
+                      <strong>#{cuenta.factura?.numeroFactura || 'N/A'}</strong>
+                    </div>
+                    {formatEstado(cuenta.estado)}
+                  </div>
+
+                  <div className="cxc-mobile-client">
+                    <span>Cliente</span>
+                    <strong>{cuenta.cliente?.razonSocial || 'Sin nombre'}</strong>
+                    <small>{cuenta.cliente?.rifCedula || 'Sin identificación'}</small>
+                  </div>
+
+                  <div className="cxc-mobile-amount">
+                    <span>Monto pendiente</span>
+                    <strong>{Utils.formatMoney(cuenta.montoPendiente)}</strong>
+                  </div>
+
+                  <div className="cxc-mobile-details">
+                    <div>
+                      <span>Vencimiento</span>
+                      <strong>{cuenta.fechaVencimiento ? Utils.formatDate(cuenta.fechaVencimiento) : '-'}</strong>
+                    </div>
+                    <div>
+                      <span>Días vencido</span>
+                      <strong className={getDiasVencidoClass(cuenta.diasVencido)}>
+                        {cuenta.diasVencido > 0 ? `${cuenta.diasVencido} días` : 'Al día'}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <Button
+                    variant={cuenta.estado === 'PAID' ? 'secondary' : 'primary'}
+                    onClick={() => window.location.href = `/cxc/${cuenta.id}`}
+                    className="cxc-mobile-action"
+                    aria-label={`${cuenta.estado === 'PAID' ? 'Ver' : cuenta.estado === 'OVERDUE' ? 'Cobrar' : 'Abonar'} cuenta de factura ${cuenta.factura?.numeroFactura || 'N/A'}`}
+                  >
+                    <Icon icon={eyeIcon} width={18} height={18} />
+                    <span>{cuenta.estado === 'PAID' ? 'Ver detalle' : cuenta.estado === 'OVERDUE' ? 'Cobrar' : 'Abonar'}</span>
+                  </Button>
+                </article>
+              ))
+            )}
+          </div>
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full cxc-table">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Factura</th>
@@ -274,33 +346,37 @@ export function CxcPage() {
                 ) : (
                   cuentas.map((cuenta) => (
                     <tr key={cuenta.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      <td data-label="Factura" className="px-4 py-3 text-sm font-medium text-gray-900">
                         #{cuenta.factura?.numeroFactura || 'N/A'}
                       </td>
-                      <td className="px-4 py-3">
+                      <td data-label="Cliente" className="px-4 py-3">
                         <div className="text-sm font-medium text-gray-900">{cuenta.cliente?.razonSocial}</div>
                         <div className="text-xs text-gray-500">{cuenta.cliente?.rifCedula}</div>
                       </td>
-                      <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
+                      <td data-label="Monto pendiente" className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
                         {Utils.formatMoney(cuenta.montoPendiente)}
                       </td>
-                      <td className="px-4 py-3 text-center text-sm text-gray-500">
+                      <td data-label="Vencimiento" className="px-4 py-3 text-center text-sm text-gray-500">
                         {cuenta.fechaVencimiento ? Utils.formatDate(cuenta.fechaVencimiento) : '-'}
                       </td>
-                      <td className={`px-4 py-3 text-center text-sm font-medium ${getDiasVencidoClass(cuenta.diasVencido)}`}>
+                      <td data-label="Días vencido" className={`px-4 py-3 text-center text-sm font-medium ${getDiasVencidoClass(cuenta.diasVencido)}`}>
                         {cuenta.diasVencido > 0 ? `${cuenta.diasVencido} días` : 'Al día'}
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td data-label="Estado" className="px-4 py-3 text-center">
                         {formatEstado(cuenta.estado)}
                       </td>
-                      <td className="px-4 py-3 text-center">
+                      <td data-label="Acciones" className="px-4 py-3 text-center">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => window.location.href = `/cxc/${cuenta.id}`}
-                          className="text-blue-600 hover:text-blue-700"
+                          className={`cxc-open-action ${cuenta.estado !== 'PAID' ? 'cxc-open-action-pendiente' : ''} text-blue-600 hover:text-blue-700`}
+                          aria-label={`Ver cuenta de factura ${cuenta.factura?.numeroFactura || 'N/A'}`}
                         >
                           <Icon icon={eyeIcon} width={18} height={18} />
+                          {cuenta.estado !== 'PAID' && (
+                            <span>{cuenta.estado === 'OVERDUE' ? 'Cobrar' : 'Abonar'}</span>
+                          )}
                         </Button>
                       </td>
                     </tr>

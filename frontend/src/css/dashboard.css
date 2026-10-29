@@ -1,39 +1,59 @@
 /* =========================================================================
-   Dashboard principal — escala y legibilidad de tablas.
+   dashboard.css — PÁGINA DE DASHBOARD (`pages/DashboardPage.jsx`)
+   -------------------------------------------------------------------------
+   Se importa directamente en `DashboardPage.jsx`.
 
+   Objetivos:
    - En escritorio el contenido se limita a 1440 px y el gráfico y la tabla
      comparten fila (antes la tabla quedaba a todo el ancho, con columnas
      separadas por cientos de píxeles y difícil de seguir).
    - En teléfono la tabla de facturas se sustituye por fichas compactas: dos
      líneas por factura en lugar de cinco filas apiladas, para ver varias de
      un vistazo.
+
+   CÓMO ESTÁ ORGANIZADO (índice)
+     01. Estructura: .dash-body / .dash-grid
+     02. Tarjeta y cabecera: .dash-card, .dash-card-head, .dash-h3…
+     03. Tabla (escritorio y tablet): .dash-tabla
+     04. Fichas (teléfono): .dash-facturas / .dash-factura
+     05. Error de carga: .dash-error
+     06. Tema oscuro
+     07. ▓ ESCRITORIO / PC (≥1200px)
+     08. ▓ TELÉFONO (≤767px y teléfono girado)
    ========================================================================= */
 
+
+/* =========================================================================
+   01. ESTRUCTURA
+   ========================================================================= */
+
+/* Ancho máximo del contenido: en monitores grandes no se estira sin fin. */
 .dash-body {
   width: 100%;
   max-width: 1440px;
   margin: 0 auto;
 }
 
+/* Rejilla de la página. En teléfono es una sola columna (por defecto); en
+   escritorio se parte en dos (ver bloque 07). */
 .dash-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 24px;
 }
 
-@media (min-width: 1200px) {
-  .dash-grid {
-    grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr);
-    align-items: start;
-  }
-}
 
+/* =========================================================================
+   02. TARJETA Y CABECERA
+   ========================================================================= */
+
+/* Tarjeta del dashboard (padding fluido entre teléfono y monitor). */
 .dash-card {
   padding: clamp(1rem, 0.7rem + 0.9vw, 1.6rem);
   min-width: 0;
 }
 
-/* ── Cabecera de la tarjeta ───────────────────────────────────────────────── */
+/* Cabecera de la tarjeta: título a la izquierda, enlace a la derecha. */
 .dash-card-head {
   display: flex;
   align-items: flex-start;
@@ -43,6 +63,7 @@
   margin-bottom: clamp(0.75rem, 1.4vw, 1.1rem);
 }
 
+/* Título de la tarjeta. */
 .dash-h3 {
   margin: 0;
   font-size: clamp(1rem, 0.94rem + 0.25vw, 1.15rem);
@@ -50,12 +71,14 @@
   color: var(--text-primary);
 }
 
+/* Subtítulo / aclaración bajo el título. */
 .dash-sub {
   margin: 2px 0 0;
   font-size: 0.8rem;
   color: var(--text-secondary);
 }
 
+/* Enlace "Ver todas" de la cabecera. */
 .dash-link {
   font-size: 0.8rem;
   font-weight: 700;
@@ -66,6 +89,7 @@
 
 .dash-link:hover { text-decoration: underline; }
 
+/* Mensaje cuando la tarjeta no tiene datos. */
 .dash-empty {
   margin: 0;
   padding: 24px 0;
@@ -74,7 +98,14 @@
   font-size: 0.9rem;
 }
 
-/* ── Tabla (escritorio / tablet) ──────────────────────────────────────────── */
+
+/* =========================================================================
+   03. TABLA (ESCRITORIO Y TABLET)
+   -------------------------------------------------------------------------
+   Se oculta en teléfono (bloque 08) a favor de las fichas.
+   ========================================================================= */
+
+/* Contenedor con scroll horizontal si la tabla no cabe. */
 .dash-tabla {
   width: 100%;
   overflow-x: auto;
@@ -86,6 +117,7 @@
   border-spacing: 0;
 }
 
+/* Encabezados: mayúsculas pequeñas, grises. */
 .dash-tabla th {
   padding: 10px 12px;
   border-bottom: 2px solid var(--border);
@@ -98,6 +130,7 @@
   white-space: nowrap;
 }
 
+/* Celdas. */
 .dash-tabla td {
   padding: clamp(9px, 0.5rem + 0.3vw, 14px) 12px;
   border-bottom: 1px solid var(--border);
@@ -109,9 +142,11 @@
 
 .dash-tabla tbody tr:hover { background: var(--bg-hover); }
 
+/* Utilidades de alineación dentro de la tabla. */
 .dash-tabla .num { text-align: right; }
 .dash-tabla .center { text-align: center; }
 
+/* Números alineados por dígito (montos, cantidades). */
 .dash-tabla .mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
@@ -120,6 +155,7 @@
 
 .dash-tabla .strong { font-weight: 700; }
 
+/* Columna del cliente: nombre en negrita y RIF debajo. */
 .dash-cliente {
   font-weight: 600;
   color: var(--text-primary);
@@ -132,12 +168,20 @@
   color: var(--text-secondary);
 }
 
+/* Columna de fecha: no se parte en dos líneas. */
 .dash-fecha {
   color: var(--text-secondary);
   white-space: nowrap;
 }
 
-/* ── Fichas (teléfono) ────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   04. FICHAS (TELÉFONO)
+   -------------------------------------------------------------------------
+   Salen sólo en teléfono (bloque 08). En escritorio están ocultas.
+   ========================================================================= */
+
+/* Lista de fichas: oculta por defecto. */
 .dash-facturas {
   display: none;
   margin: 0;
@@ -145,6 +189,7 @@
   list-style: none;
 }
 
+/* Ficha de una factura. */
 .dash-factura {
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -155,6 +200,7 @@
 
 .dash-factura:last-child { margin-bottom: 0; }
 
+/* Línea superior: número/estado a la izquierda, fecha a la derecha. */
 .dash-factura-top {
   display: flex;
   align-items: center;
@@ -170,6 +216,7 @@
 
 .dash-factura-top .badge { font-size: 0.68rem; }
 
+/* Nombre del cliente (una sola línea con puntos suspensivos). */
 .dash-factura-cliente {
   font-size: 0.95rem;
   font-weight: 700;
@@ -180,6 +227,7 @@
   white-space: nowrap;
 }
 
+/* Línea inferior: total y medio de pago. */
 .dash-factura-meta {
   display: flex;
   align-items: center;
@@ -196,7 +244,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Error de carga ───────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   05. ERROR DE CARGA
+   ========================================================================= */
+
 .dash-error {
   display: flex;
   align-items: center;
@@ -229,13 +281,38 @@
   line-height: 1.4;
 }
 
+
+/* =========================================================================
+   06. TEMA OSCURO
+   ========================================================================= */
+
 [data-theme='dark'] .dash-error {
   background: rgba(239, 68, 68, 0.12);
   border-color: rgba(239, 68, 68, 0.35);
   color: #fca5a5;
 }
 
-/* ── Teléfono / teléfono girado ───────────────────────────────────────────── */
+
+/* =========================================================================
+   ▓▓ 07. ESCRITORIO / PC  (≥1200px)
+   -------------------------------------------------------------------------
+   Gráfico y tabla comparten fila: contenido principal + panel lateral.
+   ========================================================================= */
+
+@media (min-width: 1200px) {
+  .dash-grid {
+    grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+
+/* =========================================================================
+   ▓▓ 08. TELÉFONO  (≤767px y teléfono girado)
+   -------------------------------------------------------------------------
+   La tabla desaparece y su lugar lo ocupan las fichas del bloque 04.
+   ========================================================================= */
+
 @media (max-width: 767px), (max-width: 1023px) and (max-height: 520px) and (orientation: landscape) {
   .dash-body {
     padding-left: 14px !important;
@@ -244,8 +321,10 @@
 
   .dash-grid { gap: 16px; }
 
+  /* Fuera la tabla… */
   .dash-tabla { display: none; }
 
+  /* …y dentro las fichas. */
   .dash-facturas { display: block; }
 
   .dash-card { padding: 14px; }

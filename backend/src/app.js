@@ -3,7 +3,7 @@ const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
 const prisma  = require('./db/prisma');
-const { tsFrag, monthTrunc } = require('./utils/sql');
+const { tsFrag, periodTrunc } = require('./utils/sql');
 const { resolverEmpresaRefId } = require('./utils/empresaContext');
 const { tasaParaEmpresa } = require('./utils/tasaAPI');
 const { ESTADOS_PAGO } = require('./config/pagos');
@@ -205,10 +205,65 @@ app.use('/api/reportes',     reportesRouter);
 app.use('/api/cxc',          cxcRouter);
 
 // ─── Dashboard stats ──────────────────────────────────────────────────────────
+
+/**
+ * Períodos del histórico de ingresos.
+ * `unidad` es el vocabulario de DATE_TRUNC; `puntos`, cuántos tramos muestra
+ * el gráfico; `formato`, cómo se etiqueta cada tramo en el eje X.
+ *
+ * El parámetro `?periodo=` es opcional: si falta o no es válido se usa 'mes',
+ * que reproduce exactamente la serie histórica de siempre (últimos 6 meses).
+ */
+const PERIODOS_DASHBOARD = {
+  dia:    { unidad: 'day',   puntos: 14, formato: { day: '2-digit', month: 'short' } },
+  semana: { unidad: 'week',  puntos: 8,  formato: { day: '2-digit', month: 'short' } },
+  mes:    { unidad: 'month', puntos: 6,  formato: { month: 'short', year: 'numeric' } },
+  anio:   { unidad: 'year',  puntos: 5,  formato: { year: 'numeric' } },
+};
+
+/** Fecha de inicio de la serie para el período pedido. */
+const inicioSerieDashboard = (periodo, hoy) => {
+  const { puntos } = PERIODOS_DASHBOARD[periodo];
+  const dia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+
+  if (periodo === 'dia') {
+    dia.setDate(dia.getDate() - (puntos - 1));
+    return dia;
+  }
+
+  if (periodo === 'semana') {
+    // Lunes de esta semana (getDay(): 0 = domingo).
+    dia.setDate(dia.getDate() - ((dia.getDay() + 6) % 7));
+    dia.setDate(dia.getDate() - 7 * (puntos - 1));
+    return dia;
+  }
+
+  if (periodo === 'anio') {
+    return new Date(hoy.getFullYear() - (puntos - 1), 0, 1);
+  }
+
+  return new Date(hoy.getFullYear(), hoy.getMonth() - (puntos - 1), 1);
+};
+
+/** Etiqueta del eje X a partir de la fecha que devuelve la agrupación SQL. */
+const etiquetaPeriodoDashboard = (valor, formato) => {
+  const texto = String(valor);
+  const fecha = valor instanceof Date
+    ? valor
+    // SQLite devuelve texto 'YYYY-MM-DD' (o 'YYYY-MM' en versiones antiguas).
+    : new Date(/^\d{4}-\d{2}$/.test(texto) ? `${texto}-01T00:00:00` : `${texto}T00:00:00`);
+  return fecha.toLocaleString('es-VE', formato);
+};
+
 app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'), async (req, res, next) => {
   try {
     const hoy   = new Date();
     const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const periodo = Object.prototype.hasOwnProperty.call(PERIODOS_DASHBOARD, req.query.periodo)
+      ? req.query.periodo
+      : 'mes';
+    const configPeriodo = PERIODOS_DASHBOARD[periodo];
+    const inicioSerie = inicioSerieDashboard(periodo, hoy);
     const empresaId = req.user?.empresaId || req.user?.id;
     const facturaTenantFilter = {
       OR: [
@@ -244,7 +299,7 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
           END) AS total_usd
         FROM pagos p
         INNER JOIN facturas f ON f."id" = p."facturaId"
-        WHERE p."fechaPago" >= ${inicioMes.toISOString()}::timestamp
+        WHERE p."fechaPago" >= ${tsFrag(inicioMes)}
           AND p."estado" = ${ESTADOS_PAGO.ACTIVO}
           AND (f."usuarioId" = ${empresaId} OR f."usuarioId" IN (
             SELECT id FROM usuarios WHERE "empresaId" = ${empresaId}
@@ -297,7 +352,7 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
       // 6. Ingresos últimos 6 meses - agregación en BD
       prisma.$queryRaw`
         SELECT
-          ${monthTrunc('p."fechaPago"')} AS mes,
+          ${periodTrunc('p."fechaPago"', configPeriodo.unidad)} AS mes,
           SUM(CASE
             WHEN p."monedaPago" = 'VES' THEN
               CASE WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
@@ -308,12 +363,12 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
           END) AS total_usd
         FROM pagos p
         INNER JOIN facturas f ON f."id" = p."facturaId"
-        WHERE p."fechaPago" >= ${tsFrag(new Date(hoy.getFullYear(), hoy.getMonth() - 5, 1))}
+        WHERE p."fechaPago" >= ${tsFrag(inicioSerie)}
           AND p."estado" = ${ESTADOS_PAGO.ACTIVO}
           AND (f."usuarioId" = ${empresaId} OR f."usuarioId" IN (
             SELECT id FROM usuarios WHERE "empresaId" = ${empresaId}
           ))
-        GROUP BY ${monthTrunc('p."fechaPago"')}
+        GROUP BY ${periodTrunc('p."fechaPago"', configPeriodo.unidad)}
         ORDER BY mes ASC
       `,
     ]);
@@ -329,8 +384,10 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
       _count: { id: Number(row.count) },
     }));
 
+    // La agrupación devuelve una fecha (Date en PostgreSQL, texto ISO en
+    // SQLite) y aquí se etiqueta según el período elegido.
     const ingresosHistorico = ingresosHistoricoRaw.map(row => ({
-      mes: new Date(row.mes).toLocaleString('es-VE', { month: 'short', year: 'numeric' }),
+      mes: etiquetaPeriodoDashboard(row.mes, configPeriodo.formato),
       total: new (require('decimal.js').Decimal)(row.total_usd || 0).toFixed(2),
     }));
 

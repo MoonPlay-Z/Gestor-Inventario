@@ -1,4 +1,24 @@
-/* frontend/src/components/ui/Form.module.css */
+/* =========================================================================
+   Form.module.css — COMPONENTES DE FORMULARIO (campo, etiqueta, rejilla)
+   -------------------------------------------------------------------------
+   Uso:  import styles from './Form.module.css'
+         <div className={styles.formGroup}>
+           <label className={styles.label}>Nombre <span className={styles.required}>*</span></label>
+           <input className={styles.control} />
+           <span className={`${styles.error} ${styles.errorVisible}`}>Obligatorio</span>
+         </div>
+
+   CONTENIDO
+     01. Campo: formGroup, label, required, control, controlError
+     02. Error y ayuda: error, errorVisible, helpIcon
+     03. Rejillas: grid, grid2, grid3
+     04. ▓ TELÉFONO (≤768px): las rejillas pasan a una columna
+
+   Equivalente global: `.form-group`, `.form-control`… en `css/main.css`.
+   ========================================================================= */
+
+/* ── 01. Campo ────────────────────────────────────────────────────────────
+   Etiqueta arriba y control debajo. */
 
 .formGroup {
   display: flex;
@@ -12,11 +32,13 @@
   color: var(--text-secondary);
 }
 
+/* Asterisco de "obligatorio". */
 .required {
   color: var(--danger);
   margin-left: 2px;
 }
 
+/* Input / select / textarea. */
 .control {
   background: var(--bg-primary);
   border: 2px solid var(--border);
@@ -28,6 +50,7 @@
   width: 100%;
 }
 
+/* Foco: borde azul y halo suave. */
 .control:focus {
   outline: none;
   border-color: var(--accent);
@@ -38,10 +61,14 @@
   color: var(--text-muted);
 }
 
+/* Estado inválido del control (se combina con .control). */
 .controlError {
   border-color: var(--danger);
 }
 
+/* ── 02. Error y ayuda ──────────────────────────────────────────────────── */
+
+/* Mensaje de error: oculto hasta añadir .errorVisible. */
 .error {
   font-size: 0.75rem;
   color: var(--danger);
@@ -52,6 +79,7 @@
   display: block;
 }
 
+/* Icono "?" de ayuda junto a la etiqueta. */
 .helpIcon {
   display: inline-flex;
   align-items: center;
@@ -74,18 +102,30 @@
   color: white;
 }
 
+/* ── 03. Rejillas de campos ─────────────────────────────────────────────── */
+
+/* Base: rejilla con separación de 16px (las columnas las ponen grid2/grid3). */
 .grid {
   display: grid;
   gap: 16px;
 }
 
+/* Dos columnas. */
 .grid2 {
   grid-template-columns: 1fr 1fr;
 }
 
+/* Tres columnas. */
 .grid3 {
   grid-template-columns: 1fr 1fr 1fr;
 }
+
+
+/* =========================================================================
+   ▓▓ 04. TELÉFONO (≤768px)
+   -------------------------------------------------------------------------
+   Con dos o tres columnas los campos quedan de ~100px: se apilan.
+   ========================================================================= */
 
 @media (max-width: 768px) {
   .grid2,

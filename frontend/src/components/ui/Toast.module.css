@@ -1,5 +1,27 @@
-/* frontend/src/components/ui/Toast.module.css */
+/* =========================================================================
+   Toast.module.css — COMPONENTE <Toast> / contenedor de avisos
+   -------------------------------------------------------------------------
+   Uso:  import styles from './Toast.module.css'
+         <div className={styles.container}>
+           <div className={`${styles.toast} ${styles.success}`}>
+             <span className={styles.icon}>✓</span>
+             <span className={styles.msg}>Guardado</span>
+             <button className={styles.close}>×</button>
+           </div>
+         </div>
 
+   CONTENIDO
+     01. Contenedor fijo (.container)
+     02. Aviso (.toast) y colores por tipo
+     03. Partes: icono, mensaje, cerrar
+     04. Animación de entrada
+
+   Equivalente global (sin module): `#toast-container` y `.toast` en
+   `css/main.css`.
+   ========================================================================= */
+
+/* ── 01. Contenedor ───────────────────────────────────────────────────────
+   Apila los avisos en la esquina inferior derecha. */
 .container {
   position: fixed;
   bottom: 24px;
@@ -10,6 +32,8 @@
   gap: 10px;
 }
 
+/* ── 02. Aviso ────────────────────────────────────────────────────────────
+   Tarjeta con una barra de color a la izquierda que indica el tipo. */
 .toast {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -25,34 +49,44 @@
   border-left: 3px solid var(--accent);
 }
 
+/* Tipo éxito (verde). */
 .success {
   border-left-color: var(--success);
 }
 
+/* Tipo error (rojo). */
 .error {
   border-left-color: var(--danger);
 }
 
+/* Tipo aviso (ámbar). */
 .warning {
   border-left-color: var(--warning);
 }
 
+/* ── 03. Partes del aviso ───────────────────────────────────────────────── */
+
+/* Icono del tipo. */
 .icon {
   font-size: 1.1rem;
   flex-shrink: 0;
 }
 
+/* Texto del aviso (ocupa el espacio libre). */
 .msg {
   font-size: 0.85rem;
   flex: 1;
 }
 
+/* Botón × de cerrar. */
 .close {
   color: var(--text-muted);
   cursor: pointer;
   padding: 2px;
 }
 
+/* ── 04. Animación ────────────────────────────────────────────────────────
+   Entra deslizándose desde la derecha. */
 @keyframes slideInRight {
   from {
     transform: translateX(100%);

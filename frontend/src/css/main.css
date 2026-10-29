@@ -3,22 +3,61 @@
 @tailwind components;
 @tailwind utilities;
 
-/*
-  ==========================================
-  ESTILOS GLOBALES (main.css)
-  ==========================================
-  Este archivo contiene:
-  - Variables CSS (--bg-page, --accent, etc.)
-  - Reset global (*, body, html)
-  - Clases de utilidad globales (.btn, .card, .badge, .modal, etc.)
-  - Tailwind @apply para componentes base
+/* =========================================================================
+   main.css — ESTILOS GLOBALES DE LA APP
+   -------------------------------------------------------------------------
+   Se importa UNA sola vez en `frontend/src/main.jsx`, antes de `movil.css` y
+   de `escaner.css`.
 
-  NOTA: Para estilos específicos de componentes, usar CSS Modules:
-  - frontend/src/components/ui/*.module.css
-  - Se importan como: import styles from './Button.module.css'
-  - Generan nombres únicos: Button__btnPrimary___a1b2c
-  - Configuración en vite.config.js (localsConvention: 'camelCaseOnly')
-*/
+   ¿QUÉ HAY AQUÍ?
+     · Variables de color, tipografía y geometría (`:root`)
+     · Reset y reglas base del documento (`html`, `body`, `*`)
+     · Utilidades compartidas por toda la app: `.btn`, `.card`, `.form-control`,
+       `.table-wrapper`, `.badge`, `.modal`, `.toast`, `.pagination`…
+     · Estilos de impresión del recibo
+
+   ¿QUÉ NO VA AQUÍ?
+     · Ajustes de teléfono/tablet  → `css/movil.css`
+     · Componentes con CSS Module → `components/ui/*.module.css`,
+       `components/app/*.module.css`
+     · Páginas concretas          → `css/dashboard.css`, `css/visor.css`…
+
+   CÓMO ESTÁ ORGANIZADO (índice)
+     01. Variables del tema (:root)
+     02. Reset y base del documento
+     03. Layout de página (#main-content, .page-header, .page-body)
+     04. Componente: tarjeta .card (+ tarjetas de historial de caja)
+     05. Componente: tarjeta de métrica (.metric-grid / .metric-card)
+     06. Componente: botones (.btn, .btn-primary, .btn-sm…)
+     07. Componente: formularios (.form-group, .form-control, .form-grid…)
+     08. Componente: tablas (.table-wrapper, table, th, td)
+     09. Componente: badges (.badge, .badge-success…)
+     10. Componente: modales (.modal-overlay, .modal, .modal-footer…)
+     11. Componente: barra de herramientas y buscador (.toolbar, .search-box)
+     12. Componente: toasts (#toast-container, .toast) + animaciones
+     13. Componente: carga / esqueleto (.spinner, .skeleton…)
+     14. Componente: estado vacío (.empty-state)
+     15. Componente: paginación (.pagination)
+     16. Utilidades sueltas (.divider, .chip)
+     17. ▓ ESCRITORIO / PC (≥768px y ≥1200px)
+     18. ▓ TABLET (≤1024px)
+     19. ▓ TELÉFONO (≤768px y ≤640px)
+     20. Barra de desplazamiento
+     21. Impresión
+
+   REGLA DE ORDEN: base → PC → tablet → teléfono. Las media queries de
+   teléfono van al final a propósito, para poder sobrescribir lo de escritorio
+   sin necesidad de `!important`.
+   ========================================================================= */
+
+
+/* =========================================================================
+   01. VARIABLES DEL TEMA (:root)
+   -------------------------------------------------------------------------
+   Panel de control visual de toda la app. Los componentes leen estas
+   variables y NO colores sueltos: si cambias un valor aquí, cambia en todos
+   los módulos (POS, facturación, reportes, caja…).
+   ========================================================================= */
 
 :root {
   color-scheme: light;
@@ -26,7 +65,7 @@
   background-color: var(--bg-page);
   color: var(--text-primary);
 
-  /* Fondo y Superficies */
+  /* Fondo y superficies (tarjetas, inputs, hover) */
   --bg-page: #f8fafc;
   --bg-card: #ffffff;
   --bg-input: #ffffff;
@@ -39,19 +78,19 @@
   --border: #e2e8f0;
   --border-focus: #2563eb;
 
-  /* Textos */
+  /* Textos (primario, secundario, atenuado) */
   --text-primary: #0f172a;
   --text-secondary: #334155;
   --text-muted: #64748b;
 
-  /* Sidebar Azul Rey (GestorPOS / PureSoft Style) */
+  /* Sidebar azul rey (GestorPOS / PureSoft Style) */
   --sidebar-bg: linear-gradient(180deg, #0b4f9c 0%, #022a5e 100%);
   --sidebar-text: #e2e8f0;
   --sidebar-active: #2563eb;
   --sidebar-active-text: #ffffff;
   --sidebar-section-header: #93c5fd;
 
-  /* Accent & Buttons */
+  /* Acento y botones */
   --accent: #2563eb;
   --accent-hover: #1d4ed8;
   --btn-primary: #2563eb;
@@ -59,19 +98,20 @@
   --accent-gradient: linear-gradient(135deg, #0b4f9c 0%, #1d4ed8 50%, #2563eb 100%);
   --blue-card-gradient: linear-gradient(180deg, #0b4f9c 0%, #022a5e 100%);
 
-  /* Estados de Alerta */
+  /* Estados de alerta (texto/icono) */
   --success: #10b981;
   --danger: #ef4444;
   --warning: #f59e0b;
   --info: #3b82f6;
 
+  /* Estados de alerta (fondo translúcido para badges y chips) */
   --success-dim: rgba(16, 185, 129, 0.12);
   --warning-dim: rgba(245, 158, 11, 0.12);
   --danger-dim: rgba(239, 68, 68, 0.12);
   --info-dim: rgba(59, 130, 246, 0.12);
   --accent-dim: rgba(37, 99, 235, 0.12);
 
-  /* Geometría */
+  /* Geometría: radios, sombras y curva de transición */
   --radius-card: 16px;
   --radius-btn: 10px;
   --radius-sm: 0.5rem;
@@ -84,11 +124,16 @@
 }
 
 
+/* =========================================================================
+   02. RESET Y BASE DEL DOCUMENTO
+   ========================================================================= */
 
+/* Desplazamiento suave al saltar a anclas. */
 html {
   scroll-behavior: smooth;
 }
 
+/* Lienzo de la app: el color de fondo y el texto salen de las variables. */
 body {
   min-height: 100vh;
   margin: 0;
@@ -96,10 +141,12 @@ body {
   color: var(--text-primary);
 }
 
+/* Cualquier borde/padding suma dentro del ancho declarado (evita desbordes). */
 * {
   box-sizing: border-box;
 }
 
+/* Los controles de formulario heredan la tipografía del contenedor. */
 button,
 input,
 select,
@@ -107,6 +154,7 @@ textarea {
   font: inherit;
 }
 
+/* Las imágenes nunca desbordan su contenedor. */
 img {
   max-width: 100%;
   display: block;
@@ -116,8 +164,15 @@ img {
    ventana el canvas agranda su tarjeta y el documento gana scroll horizontal. */
 canvas { max-width: 100%; }
 
-.card { min-width: 0; }
 
+/* =========================================================================
+   03. LAYOUT DE PÁGINA
+   -------------------------------------------------------------------------
+   `.page-header` + `.page-body` son la estructura estándar de cada página.
+   `#main-content` es el contenedor flex que queda a la derecha del sidebar.
+   ========================================================================= */
+
+/* Contenedor principal (a la derecha del sidebar). */
 #main-content {
   background: var(--bg-page);
   color: var(--text-primary);
@@ -131,6 +186,7 @@ canvas { max-width: 100%; }
   padding-right: var(--safe-right, 0px);
 }
 
+/* Cabecera de página: título + acciones. Fondo blanco y borde inferior. */
 .page-header {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -138,28 +194,24 @@ canvas { max-width: 100%; }
   color: var(--text-primary);
 }
 
+/* Cuerpo de página: donde vive el contenido (tarjetas, tablas, formularios). */
 .page-body {
   padding: 16px 20px 32px;
   background: var(--bg-page);
   color: var(--text-primary);
 }
 
-@media (min-width: 768px) {
-  .page-header { padding: 20px 28px; }
-  .page-body { padding: 20px 28px 36px; }
-}
 
-@media (min-width: 1280px) {
-  .page-header { padding: 24px 32px; }
-  .page-body { padding: 24px 32px 40px; }
-}
+/* =========================================================================
+   04. COMPONENTE: TARJETA (.card)
+   -------------------------------------------------------------------------
+   Contenedor blanco reutilizado en casi todas las pantallas.
+   Variantes usadas en reportes: `.cash-history-card` (historial de caja).
+   ========================================================================= */
 
-@media (min-width: 1920px) {
-  .page-header { padding: 28px 40px; }
-  .page-body { padding: 28px 40px 48px; }
-}
-
+/* Tarjeta genérica. (`min-width: 0` evita que una tabla interna la estire). */
 .card {
+  min-width: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
@@ -167,10 +219,14 @@ canvas { max-width: 100%; }
   transition: all var(--transition);
   box-shadow: var(--shadow-sm);
 }
+
+/* Realce al pasar el ratón (sólo tiene efecto en punteros finos). */
 .card:hover {
   box-shadow: var(--shadow-md);
   border-color: rgba(37, 99, 235, 0.15);
 }
+
+/* Historial de caja: la cabecera reparte título y acciones en una fila. */
 .cash-history-card > .card-header {
   display: flex;
   align-items: center;
@@ -179,20 +235,30 @@ canvas { max-width: 100%; }
   gap: 16px;
   margin-bottom: 16px;
 }
+
 .cash-history-card .card-title { margin: 0; }
+
+/* Tabla del historial: ancho mínimo para que no se aplasten las columnas. */
 .cash-history-table { min-width: 1100px; }
+
 .cash-history-table th,
 .cash-history-table td { padding: 16px 20px; }
+
+/* Filtros de reportes: fila que se envuelve. */
 .report-filters {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 20px 24px;
 }
+
+/* Cada campo de filtro (select o input) ocupa 200px como máximo. */
 .report-filter-field { flex: 0 1 200px; }
 .report-filter-field .form-label { display: block; margin-bottom: 4px; }
 .report-filter-field select,
 .report-filter-field input { width: 100%; min-height: 40px; }
+
+/* Casilla "comparar con periodo anterior". */
 .report-filter-compare {
   display: flex;
   align-items: center;
@@ -200,51 +266,161 @@ canvas { max-width: 100%; }
   min-height: 40px;
   padding-bottom: 8px;
 }
+
 .report-filter-compare input { width: 16px; height: 16px; flex: 0 0 auto; }
 .report-filter-compare label { display: flex; align-items: center; gap: 6px; line-height: 1.4; }
 
+
+/* =========================================================================
+   05. COMPONENTE: TARJETA DE MÉTRICA (.metric-grid / .metric-card)
+   -------------------------------------------------------------------------
+   Rejilla de indicadores del dashboard: icono + valor + etiqueta.
+   ========================================================================= */
+
+/* Rejilla: 4 columnas en escritorio (las media queries la reducen). */
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+/* Tarjeta de indicador. */
+.metric-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
+  border-color: rgba(37, 99, 235, 0.25);
+}
+
+/* Cuadro del icono (color según la variante de abajo). */
+.metric-icon {
+  width: 3rem;
+  height: 3rem;
+  min-width: 3rem;
+  display: grid;
+  place-items: center;
+  border-radius: 1rem;
+  color: white;
+  background: var(--accent);
+}
+
+/* Números grandes del indicador. */
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+/* Texto pequeño bajo el número. */
+.metric-label {
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Variantes de color del icono: .accent .success .warning .danger .info */
+.metric-card.accent .metric-icon { background: var(--accent); }
+.metric-card.success .metric-icon { background: var(--success); }
+.metric-card.warning .metric-icon { background: var(--warning); }
+.metric-card.danger .metric-icon { background: var(--danger); }
+.metric-card.info .metric-icon { background: var(--info); }
+
+
+/* =========================================================================
+   06. COMPONENTE: BOTONES (.btn)
+   -------------------------------------------------------------------------
+   Clases globales (usadas en JSX como className="btn btn-primary").
+   OJO: el componente <Button> usa `Button.module.css`, que es otro sistema de
+   botones con nombres con hash. Aquí sólo van los `.btn-*` globales.
+   ========================================================================= */
+
+/* Base común a todos los botones. */
 .btn {
   @apply inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-all;
   box-shadow: var(--shadow-sm);
 }
 
+/* Acción principal (azul degradado). */
 .btn-primary {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: white;
   border: none;
 }
-.btn-primary:hover { 
+.btn-primary:hover {
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
 }
 
+/* Acción secundaria (fondo blanco con borde). */
 .btn-secondary {
   background: var(--surface);
   color: var(--text-primary);
   border: 1px solid var(--border);
 }
-.btn-secondary:hover { 
-  border-color: var(--accent); 
-  color: var(--accent); 
+.btn-secondary:hover {
+  border-color: var(--accent);
+  color: var(--accent);
   background: var(--surface3);
   transform: translateY(-1px);
 }
+
+/* Acción afirmativa (verde). */
 .btn-success { background: var(--success); color: white; border: none; }
 .btn-success:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
+
+/* Acción destructiva (rojo). */
 .btn-danger { background: var(--danger); color: white; border: none; }
 .btn-danger:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
+
+/* Acción discreta (sin fondo hasta el hover). */
 .btn-ghost { color: var(--text-secondary); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid transparent; }
 .btn-ghost:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border); }
+
+/* Tamaños. */
 .btn-sm { padding: 8px 14px; font-size: 0.8rem; }
 .btn-lg { padding: 14px 28px; font-size: 1rem; }
+
+/* Botón deshabilitado: se atenúa y no se mueve. */
 .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+/* Botón cuadrado de sólo icono. */
 .btn-icon { width: 38px; height: 38px; padding: 0; border-radius: var(--radius-sm); }
 
-/* ─── Forms ─── */
+
+/* =========================================================================
+   07. COMPONENTE: FORMULARIOS
+   -------------------------------------------------------------------------
+   .form-group     agrupa etiqueta + control + error
+   .form-label     etiqueta del campo
+   .form-control   input/select/textarea
+   .form-error     mensaje de error (oculto hasta .visible)
+   .help-icon      icono "?" de ayuda
+   .form-grid-*    rejillas de 2 o 3 columnas
+   ========================================================================= */
+
+/* Grupo de campo: etiqueta arriba, control debajo. */
 .form-group { display: flex; flex-direction: column; gap: 8px; }
+
+/* Etiqueta del campo. */
 .form-label { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); }
+
+/* Asterisco de campo obligatorio. */
 .form-label span.required { color: var(--danger); margin-left: 2px; }
+
+/* Control base (input, select o textarea). */
 .form-control {
   background: var(--bg-primary); border: 2px solid var(--border);
   border-radius: var(--radius-md); padding: 12px 14px;
@@ -252,11 +428,21 @@ canvas { max-width: 100%; }
   transition: all var(--transition);
   width: 100%;
 }
+
+/* Foco: borde azul + halo. */
 .form-control:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
+
+/* Texto de ejemplo. */
 .form-control::placeholder { color: var(--text-muted); }
+
+/* Estado de error del control. */
 .form-control.error { border-color: var(--danger); }
+
+/* Mensaje de error bajo el campo (se muestra añadiendo .visible). */
 .form-error { font-size: 0.75rem; color: var(--danger); display: none; }
 .form-error.visible { display: block; }
+
+/* Icono de ayuda junto a la etiqueta. */
 .help-icon {
   display: inline-flex;
   align-items: center;
@@ -277,91 +463,66 @@ canvas { max-width: 100%; }
   background: var(--accent);
   color: white;
 }
+
+/* Rejillas de formulario (las media queries las pasan a 1 columna). */
 .form-grid { display: grid; gap: 16px; }
 .form-grid-2 { grid-template-columns: 1fr 1fr; }
 .form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+/* Desplegables: el fondo de las opciones no hereda el del input. */
 select.form-control option { background: var(--bg-card); }
 
-/* ─── Metric Grid ─── */
-.metric-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1rem;
-}
-.metric-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  padding: 1rem 1.25rem;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
-}
-.metric-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.06);
-  border-color: rgba(37, 99, 235, 0.25);
-}
-.metric-icon {
-  width: 3rem;
-  height: 3rem;
-  min-width: 3rem;
-  display: grid;
-  place-items: center;
-  border-radius: 1rem;
-  color: white;
-  background: var(--accent);
-}
-.metric-value {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text-primary);
-  line-height: 1.1;
-}
-.metric-label {
-  margin-top: 0.25rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-.metric-card.accent .metric-icon { background: var(--accent); }
-.metric-card.success .metric-icon { background: var(--success); }
-.metric-card.warning .metric-icon { background: var(--warning); }
-.metric-card.danger .metric-icon { background: var(--danger); }
-.metric-card.info .metric-icon { background: var(--info); }
 
-@media (max-width: 1024px) {
-  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@media (max-width: 640px) {
-  .metric-grid { grid-template-columns: 1fr; }
-  .metric-card { padding: 0.88rem 1rem; }
-  .metric-value { font-size: 1.3rem; }
-}
+/* =========================================================================
+   08. COMPONENTE: TABLAS
+   -------------------------------------------------------------------------
+   `.table-wrapper` aporta el scroll horizontal; `table` es el estilo base de
+   TODAS las tablas. En teléfono `movil.css` las convierte en tarjetas
+   (`table.rt-cards`).
+   ========================================================================= */
 
-/* ─── Tables ─── */
+/* Contenedor con scroll horizontal y borde redondeado. */
 .table-wrapper { overflow-x: auto; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--surface); }
+
+/* Tabla base. */
 table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.875rem; }
+
+/* Cabecera de la tabla (color de fondo secundario). */
 thead { background: var(--bg-secondary); }
+
+/* Celda de encabezado: mayúsculas, gris y sin salto de línea. */
 th {
   padding: 14px 16px; text-align: left;
   font-size: 0.75rem; font-weight: 700; color: var(--text-secondary);
   text-transform: uppercase; letter-spacing: 0.5px;
   border-bottom: 2px solid var(--border); white-space: nowrap;
 }
+
+/* Celda de datos. */
 td { padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+
+/* Filas: transición y resaltado al pasar el ratón. */
 tbody tr { transition: background var(--transition); }
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--bg-hover); }
 
-/* ─── Badges ─── */
+
+/* =========================================================================
+   09. COMPONENTE: BADGES (.badge)
+   -------------------------------------------------------------------------
+   Etiquetas de estado: .badge-success .badge-warning .badge-danger
+   .badge-info .badge-neutral .badge-accent
+   ========================================================================= */
+
+/* Píldora base. */
 .badge {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 4px 12px; border-radius: 999px;
   font-size: 0.72rem; font-weight: 700; white-space: nowrap;
   letter-spacing: 0.3px;
 }
+
+/* Variantes de color. */
 .badge-success  { background: var(--success-dim); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); }
 .badge-warning  { background: var(--warning-dim); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.2); }
 .badge-danger   { background: var(--danger-dim);  color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
@@ -369,14 +530,28 @@ tbody tr:hover { background: var(--bg-hover); }
 .badge-neutral  { background: var(--bg-hover);    color: var(--text-secondary); border: 1px solid var(--border); }
 .badge-accent   { background: var(--accent-dim);  color: var(--accent); border: 1px solid rgba(37, 99, 235, 0.2); }
 
-/* ─── Modals ─── */
+
+/* =========================================================================
+   10. COMPONENTE: MODALES (.modal-overlay / .modal)
+   -------------------------------------------------------------------------
+   Estructura:
+     .modal-overlay[.open] > .modal[.modal-lg]
+       .modal-header > .modal-title + .modal-close
+       .modal-footer
+   ========================================================================= */
+
+/* Fondo oscuro con desenfoque. Oculto hasta añadir `.open`. */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.6);
   backdrop-filter: blur(4px); z-index: 200;
   display: flex; align-items: center; justify-content: center; padding: 16px;
   opacity: 0; pointer-events: none; transition: opacity var(--transition);
 }
+
+/* Modal abierto: visible y clicable. */
 .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+/* Caja del modal. */
 .modal {
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius-xl); padding: 28px;
@@ -386,22 +561,49 @@ tbody tr:hover { background: var(--bg-hover); }
   transition: transform var(--transition);
   box-shadow: var(--shadow-lg);
 }
+
+/* Animación de entrada. */
 .modal-overlay.open .modal { transform: translateY(0) scale(1); }
+
+/* Variante ancha (formularios de varias columnas). */
 .modal-lg { max-width: 760px; }
+
+/* Cabecera: título a la izquierda, cerrar a la derecha. */
 .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
 .modal-title { font-size: 1.1rem; font-weight: 700; }
+
+/* Botón de cerrar (×). */
 .modal-close { color: var(--text-secondary); font-size: 1.25rem; width: 32px; height: 32px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; transition: all var(--transition); }
 .modal-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+/* Pie: botones alineados a la derecha, separados por una línea. */
 .modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
 
-/* ─── Toolbar ─── */
+
+/* =========================================================================
+   11. COMPONENTE: BARRA DE HERRAMIENTAS Y BUSCADOR
+   ========================================================================= */
+
+/* Fila de filtros/acciones sobre una tabla. */
 .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* Buscador con icono dentro del campo. */
 .search-box { position: relative; }
 .search-box input { padding-left: 36px; width: 280px; }
 .search-box .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 0.9rem; pointer-events: none; }
 
-/* ─── Alerts / Toasts ─── */
+
+/* =========================================================================
+   12. COMPONENTE: TOASTS (avisos flotantes)
+   -------------------------------------------------------------------------
+   #toast-container apila los avisos; `.toast` es cada uno (`.success`,
+   `.error`, `.warning` cambian el color del borde izquierdo).
+   ========================================================================= */
+
+/* Esquina inferior derecha de la pantalla. */
 #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 300; display: flex; flex-direction: column; gap: 10px; }
+
+/* Aviso individual. */
 .toast {
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: var(--radius-md); padding: 14px 18px;
@@ -411,20 +613,32 @@ tbody tr:hover { background: var(--bg-hover); }
   animation: slideInRight 0.3s ease;
   border-left: 3px solid var(--accent);
 }
+
+/* Colores por tipo de aviso. */
 .toast.success { border-left-color: var(--success); }
 .toast.error   { border-left-color: var(--danger); }
 .toast.warning { border-left-color: var(--warning); }
+
+/* Partes del aviso. */
 .toast-icon { font-size: 1.1rem; flex-shrink: 0; }
 .toast-msg { font-size: 0.85rem; flex: 1; }
 .toast-close { color: var(--text-muted); cursor: pointer; padding: 2px; }
+
+/* Entrada del toast desde la derecha. */
 @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* Pulso del widget del dólar cuando la tasa cambia. */
 @keyframes dolar-pulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.6); opacity: 1; }
   50%       { box-shadow: 0 0 0 6px rgba(16,185,129,0);  opacity: 0.8; }
 }
 
 
-/* ─── Loading ─── */
+/* =========================================================================
+   13. COMPONENTE: CARGA / ESQUELETO
+   ========================================================================= */
+
+/* Spinner circular. */
 .spinner {
   width: 20px; height: 20px;
   border: 2px solid var(--border); border-top-color: var(--accent);
@@ -432,36 +646,95 @@ tbody tr:hover { background: var(--bg-hover); }
   display: inline-block;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Capa de carga sobre un contenedor (respeta sus esquinas). */
 .loading-overlay {
   position: absolute; inset: 0; background: rgba(0,0,0,0.3);
   display: flex; align-items: center; justify-content: center;
   border-radius: inherit; z-index: 10;
 }
+
+/* Bloque gris animado mientras llegan los datos. */
 .skeleton { background: linear-gradient(90deg, var(--bg-hover) 25%, var(--border) 50%, var(--bg-hover) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: var(--radius-sm); }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-/* ─── Empty State ─── */
+
+/* =========================================================================
+   14. COMPONENTE: ESTADO VACÍO
+   ========================================================================= */
+
 .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
 .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.5; }
 .empty-state p { font-size: 0.875rem; }
 
-/* ─── Pagination ─── */
+
+/* =========================================================================
+   15. COMPONENTE: PAGINACIÓN
+   ========================================================================= */
+
 .pagination { display: flex; align-items: center; gap: 6px; margin-top: 16px; justify-content: center; }
 .pagination button { width: 34px; height: 34px; border-radius: var(--radius-sm); font-size: 0.8rem; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-secondary); transition: all var(--transition); }
 .pagination button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .pagination button.active { background: var(--accent); color: white; border-color: var(--accent); }
 .pagination button:disabled { opacity: 0.4; cursor: default; }
 
-/* ─── Divider ─── */
+
+/* =========================================================================
+   16. UTILIDADES SUELTAS
+   ========================================================================= */
+
+/* Línea separadora horizontal. */
 .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
 
-/* ─── Chips ─── */
+/* Ficha compacta (filtros activos, etiquetas) con su botón de quitar. */
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--bg-hover); border: 1px solid var(--border); font-size: 0.8rem; }
 .chip-remove { cursor: pointer; color: var(--text-muted); line-height: 1; font-size: 0.9rem; }
 .chip-remove:hover { color: var(--danger); }
 
-/* ─── Responsive ─── */
+
+/* =========================================================================
+   ▓▓ 17. ESCRITORIO / PC
+   -------------------------------------------------------------------------
+   De aquí en adelante, TODO es responsive. De 768px para arriba el contenido
+   gana aire (padding) y la rejilla de métricas se mantiene en 4 columnas.
+   ========================================================================= */
+
+/* PC/tablet ancha: más aire lateral en cabecera y cuerpo. */
+@media (min-width: 768px) {
+  .page-header { padding: 20px 28px; }
+  .page-body { padding: 20px 28px 36px; }
+}
+
+/* PC grande (1280px+): un paso más de aire. */
+@media (min-width: 1280px) {
+  .page-header { padding: 24px 32px; }
+  .page-body { padding: 24px 32px 40px; }
+}
+
+/* PC muy grande (1920px+): monitores 4K/ultrawide. */
+@media (min-width: 1920px) {
+  .page-header { padding: 28px 40px; }
+  .page-body { padding: 28px 40px 48px; }
+}
+
+
+/* =========================================================================
+   ▓▓ 18. TABLET  (≤1024px)
+   ========================================================================= */
+
+/* Tablet: la rejilla de métricas pasa de 4 a 2 columnas. */
+@media (max-width: 1024px) {
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+
+/* =========================================================================
+   ▓▓ 19. TELÉFONO  (≤768px y ≤640px)
+   ========================================================================= */
+
+/* Teléfono: sidebar fuera de pantalla, rejillas de formulario a 1 columna. */
 @media (max-width: 768px) {
+  /* El sidebar se desliza desde la izquierda al abrirse (clase .mobile-open). */
   #sidebar { transform: translateX(-100%); }
   #sidebar.mobile-open { transform: translateX(0); }
   #main-content { margin-left: 0; }
@@ -469,26 +742,41 @@ tbody tr:hover { background: var(--bg-hover); }
   .page-body, .page-header { padding-left: 16px; padding-right: 16px; }
 }
 
-/* ─── Scrollbar ─── */
+/* Teléfono pequeño: 1 columna y tipografía más compacta. */
+@media (max-width: 640px) {
+  .metric-grid { grid-template-columns: 1fr; }
+  .metric-card { padding: 0.88rem 1rem; }
+  .metric-value { font-size: 1.3rem; }
+}
+
+
+/* =========================================================================
+   20. BARRA DE DESPLAZAMIENTO (sólo navegadores WebKit)
+   ========================================================================= */
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
 
-/* -------------------------------------
- * PRINT STYLES
- * ------------------------------------- */
+
+/* =========================================================================
+   21. IMPRESIÓN
+   -------------------------------------------------------------------------
+   Al imprimir sólo se ve el recibo: todo lo demás se oculta (`visibility`) y
+   el modal del recibo se pega a la esquina superior izquierda del papel.
+   ========================================================================= */
 @media print {
   /* Ocultar todo lo que no sea el recibo */
   body * {
     visibility: hidden;
   }
-  
+
   /* Asegurar que el modal y su contenido sí se vean */
   .receipt-overlay, .receipt-modal, .receipt-content, .receipt-content * {
     visibility: visible;
   }
-  
+
   /* Posicionar el modal de recibo en la esquina superior izquierda del papel */
   .receipt-overlay {
     position: absolute;
@@ -497,7 +785,7 @@ tbody tr:hover { background: var(--bg-hover); }
     background: none !important;
     padding: 0 !important;
   }
-  
+
   .receipt-modal {
     box-shadow: none !important;
     border: none !important;

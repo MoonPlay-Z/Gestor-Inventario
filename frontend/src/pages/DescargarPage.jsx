@@ -118,7 +118,7 @@ export function DescargarPage() {
       <header style={{
         backgroundColor: '#0b0f17',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '16px 32px',
+        padding: '16px clamp(16px, 4vw, 32px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -129,7 +129,7 @@ export function DescargarPage() {
         zIndex: 100,
         backdropFilter: 'blur(10px)'
       }}>
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', minWidth: 0 }}>
           <img
             src="/favicon.png"
             alt=""
@@ -137,17 +137,17 @@ export function DescargarPage() {
             height="36"
             style={{ width: '36px', height: '36px', borderRadius: '8px', display: 'block', flexShrink: 0 }}
           />
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
+          <span style={{ fontSize: 'clamp(1.05rem, 4vw, 1.25rem)', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
             GestorPOS<span style={{ color: '#38bdf8' }}>.dev</span>
           </span>
         </Link>
-        <Link to={volverA} style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none' }}>
+        <Link to={volverA} style={{ color: '#94a3b8', fontSize: 'clamp(0.8rem, 3.2vw, 0.9rem)', fontWeight: 500, textDecoration: 'none', whiteSpace: 'nowrap' }}>
           {volverTexto}
         </Link>
       </header>
 
       {/* Contenido */}
-      <main style={{ padding: '56px 32px 72px', maxWidth: '1000px', margin: '0 auto' }}>
+      <main style={{ padding: '56px clamp(16px, 4vw, 32px) 72px', maxWidth: '1000px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '40px' }}>
           <span style={{
             display: 'inline-flex',
@@ -174,7 +174,9 @@ export function DescargarPage() {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+        {/* `min(100%, 300px)` evita que las tarjetas pidan 300px cuando el
+            contenedor es más estrecho (teléfonos de 320px de ancho). */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))', gap: '20px' }}>
           {/* Android APK */}
           <Tarjeta
             destacada

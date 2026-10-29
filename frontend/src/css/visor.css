@@ -1,12 +1,38 @@
 /* =========================================================================
-   Visor de Precios — escala fluida.
+   visor.css — VISOR DE PRECIOS (`pages/VisorPreciosPage.jsx`)
+   -------------------------------------------------------------------------
+   Se importa directamente en `VisorPreciosPage.jsx`.
 
    Todo el tamaño se expresa con `clamp()` sobre `vmin`/`vh`, así el visor
    ocupa lo mismo en un teléfono pequeño (873×392 en horizontal), en una
    tablet y en un monitor grande, sin depender de `isMobile` para el layout.
+   Por eso casi todo es "base" y sólo hay tres ajustes por dispositivo.
+
+   CÓMO ESTÁ ORGANIZADO (índice)
+     01. Raíz y variables (.visor-root)
+     02. Cabecera (.visor-head, .visor-brand, .visor-clock…)
+     03. Botones de icono (.visor-icon-btn, .visor-back)
+     04. Buscador (.visor-search, .visor-input, .visor-search-btn)
+     05. Contenido y tarjeta base (.visor-main, .visor-card)
+     06. Reposo y cámara (.visor-standby, .visor-cam, .visor-reticle…)
+     07. Cargando (.visor-loading, .visor-spin)
+     08. Producto (.visor-product, .visor-price-box, .visor-usd…)
+     09. No encontrado (.visor-notfound, .visor-error-icon, .visor-code)
+     10. Botones de acción (.visor-btn…)
+     11. Pie (.visor-foot)
+     12. ▓ TELÉFONO VERTICAL (≤767px)
+     13. ▓ TELÉFONO MUY ANGOSTO (≤399px)
+     14. ▓ TELÉFONO HORIZONTAL (≤1023px de ancho y ≤540px de alto)
+     15. Animaciones
+   ========================================================================= */
+
+
+/* =========================================================================
+   01. RAÍZ Y VARIABLES
    ========================================================================= */
 
 .visor-root {
+  /* Aire interior fluido y ancho máximo del visor (monitores grandes). */
   --visor-pad: clamp(8px, 1.4vmin, 22px);
   --visor-max: 1320px;
 
@@ -14,6 +40,7 @@
   display: flex;
   flex-direction: column;
   gap: clamp(6px, 1vmin, 14px);
+  /* Padding + área segura del teléfono (pantalla completa). */
   padding:
     calc(var(--visor-pad) + var(--safe-top, 0px))
     calc(var(--visor-pad) + var(--safe-right, 0px))
@@ -27,6 +54,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Modo pantalla completa: cubre toda la ventana y hace scroll propio. */
 .visor-root--full {
   position: fixed;
   inset: 0;
@@ -34,7 +62,12 @@
   overflow-y: auto;
 }
 
-/* ── Cabecera ─────────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   02. CABECERA
+   ========================================================================= */
+
+/* Barra azul superior: marca a la izquierda, reloj y acciones a la derecha. */
 .visor-head {
   display: flex;
   align-items: center;
@@ -50,6 +83,7 @@
   box-shadow: 0 4px 20px #0b4f9c40;
 }
 
+/* Bloque de marca: logo + textos. */
 .visor-brand {
   display: flex;
   align-items: center;
@@ -59,6 +93,7 @@
 
 .visor-brand-txt { min-width: 0; }
 
+/* Cuadro del logo. */
 .visor-logo {
   display: grid;
   place-items: center;
@@ -68,6 +103,7 @@
   font-size: clamp(19px, 2.7vmin, 28px);
 }
 
+/* Fila del título + etiqueta verde. */
 .visor-title-row {
   display: flex;
   align-items: center;
@@ -75,6 +111,7 @@
   flex-wrap: wrap;
 }
 
+/* Título "Visor de precios". */
 .visor-title {
   margin: 0;
   font-size: clamp(13.5px, 1.7vmin, 20px);
@@ -83,6 +120,7 @@
   white-space: nowrap;
 }
 
+/* Etiqueta verde "EN LÍNEA" (o similar). */
 .visor-tag {
   padding: 2px 8px;
   border-radius: 99px;
@@ -92,6 +130,7 @@
   font-weight: 800;
 }
 
+/* Subtítulo de la marca (nombre de la empresa). */
 .visor-sub {
   margin: 0;
   color: #93c5fd;
@@ -101,6 +140,7 @@
   text-overflow: ellipsis;
 }
 
+/* Acciones de la derecha. */
 .visor-head-right {
   display: flex;
   align-items: center;
@@ -108,6 +148,7 @@
   flex-shrink: 0;
 }
 
+/* Reloj: hora grande y fecha pequeña. */
 .visor-clock { text-align: right; }
 
 .visor-clock-time {
@@ -123,7 +164,11 @@
   font-size: clamp(8.5px, 1.05vmin, 11px);
 }
 
-/* ── Botones de icono ─────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   03. BOTONES DE ICONO
+   ========================================================================= */
+
 .visor-icon-btn {
   display: grid;
   place-items: center;
@@ -141,9 +186,14 @@
 .visor-icon-btn:hover { background: rgba(255, 255, 255, 0.26); }
 .visor-icon-btn:active { transform: scale(0.94); }
 
+/* Botón de volver (no se encoge). */
 .visor-back { flex-shrink: 0; }
 
-/* ── Buscador ─────────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   04. BUSCADOR
+   ========================================================================= */
+
 .visor-search {
   width: 100%;
   max-width: 680px;
@@ -156,6 +206,7 @@
   align-items: center;
 }
 
+/* Icono de lupa dentro del campo. */
 .visor-search-icon {
   position: absolute;
   left: clamp(10px, 1.4vmin, 16px);
@@ -164,6 +215,7 @@
   pointer-events: none;
 }
 
+/* Campo: padding izquierdo para el icono y derecho para el botón. */
 .visor-input {
   width: 100%;
   box-sizing: border-box;
@@ -186,6 +238,7 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
+/* Botón "Buscar" dentro del campo. */
 .visor-search-btn {
   position: absolute;
   right: 6px;
@@ -201,7 +254,11 @@
 
 .visor-search-btn:disabled { opacity: 0.7; cursor: progress; }
 
-/* ── Contenido ────────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   05. CONTENIDO Y TARJETA BASE
+   ========================================================================= */
+
 .visor-main {
   flex: 1;
   min-height: 0;
@@ -213,6 +270,7 @@
   margin: 0 auto;
 }
 
+/* Tarjeta blanca que usan todas las vistas (reposo, producto, error…). */
 .visor-card {
   width: 100%;
   border: 1px solid #e2e8f0;
@@ -221,7 +279,12 @@
   box-shadow: 0 8px 40px #0b4f9c15;
 }
 
-/* ── Reposo / cámara ──────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   06. REPOSO Y CÁMARA
+   ========================================================================= */
+
+/* Pantalla de reposo: icono, título y botón de abrir cámara. */
 .visor-standby {
   max-width: clamp(300px, 52vw, 460px);
   padding: clamp(16px, 2.6vmin, 32px);
@@ -234,6 +297,7 @@
   margin-bottom: clamp(8px, 1.6vmin, 18px);
 }
 
+/* Resplandor azul difuminado tras el icono. */
 .visor-standby-glow {
   position: absolute;
   inset: 0;
@@ -242,6 +306,7 @@
   filter: blur(20px);
 }
 
+/* Círculo con el icono de código de barras. */
 .visor-standby-icon {
   position: relative;
   display: grid;
@@ -254,6 +319,7 @@
   font-size: clamp(34px, 5.6vmin, 56px);
 }
 
+/* Título de sección dentro del visor. */
 .visor-h2 {
   margin: 0 0 6px;
   color: #0f172a;
@@ -261,6 +327,7 @@
   font-weight: 900;
 }
 
+/* Texto secundario. */
 .visor-muted {
   margin: 0 0 clamp(12px, 2vmin, 20px);
   color: #64748b;
@@ -268,18 +335,21 @@
   line-height: 1.45;
 }
 
+/* Bloque de instrucciones de ayuda. */
 .visor-standby-help {
   max-width: 320px;
   margin-left: auto;
   margin-right: auto;
 }
 
+/* Nota final en letra muy pequeña. */
 .visor-fine {
   margin: clamp(8px, 1.4vmin, 12px) 0 0;
   color: #94a3b8;
   font-size: clamp(9px, 1.15vmin, 11px);
 }
 
+/* Marco del vídeo de la cámara. */
 .visor-cam {
   position: relative;
   margin-bottom: clamp(8px, 1.4vmin, 16px);
@@ -289,6 +359,7 @@
   background: #0f172a;
 }
 
+/* Vídeo: cubre el marco sin deformarse. */
 .visor-video {
   display: block;
   width: 100%;
@@ -296,6 +367,7 @@
   object-fit: cover;
 }
 
+/* Centra la mira sobre el vídeo. */
 .visor-reticle-wrap {
   position: absolute;
   inset: 0;
@@ -305,6 +377,7 @@
   pointer-events: none;
 }
 
+/* Recuadro verde de lectura; su sombra gigante oscurece el resto del vídeo. */
 .visor-reticle {
   position: relative;
   width: clamp(150px, 22vmin, 220px);
@@ -314,6 +387,7 @@
   box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.35);
 }
 
+/* Línea roja que sube y baja dentro de la mira. */
 .visor-reticle-line {
   position: absolute;
   top: 50%;
@@ -325,6 +399,7 @@
   animation: visor-line 1.5s ease-in-out infinite alternate;
 }
 
+/* Pista "acerca el código" bajo la mira. */
 .visor-scan-hint {
   position: absolute;
   bottom: 8px;
@@ -338,6 +413,7 @@
   white-space: nowrap;
 }
 
+/* Error de cámara (permiso denegado, sin dispositivo…). */
 .visor-camera-error {
   margin-top: 12px;
   padding: 10px 14px;
@@ -350,7 +426,11 @@
   text-align: left;
 }
 
-/* ── Cargando ─────────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   07. CARGANDO
+   ========================================================================= */
+
 .visor-loading {
   max-width: 360px;
   padding: clamp(24px, 4vmin, 48px);
@@ -364,6 +444,7 @@
   font-weight: 700;
 }
 
+/* Icono giratorio de carga. */
 .visor-loading-icon {
   display: block;
   margin: 0 auto 12px;
@@ -371,9 +452,15 @@
   font-size: clamp(34px, 5vmin, 52px);
 }
 
+/* Clase auxiliar que aplica la animación de giro. */
 .visor-spin { animation: visor-spin 1s linear infinite; }
 
-/* ── Producto ─────────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   08. PRODUCTO
+   ========================================================================= */
+
+/* Tarjeta del producto escaneado. */
 .visor-product-card {
   position: relative;
   max-width: 1040px;
@@ -382,6 +469,7 @@
   overflow: hidden;
 }
 
+/* Barra de cuenta atrás para volver al reposo. */
 .visor-countdown {
   position: absolute;
   top: 0;
@@ -391,12 +479,14 @@
   background: #f1f5f9;
 }
 
+/* Relleno que se acorta con el tiempo (ancho por estilo en línea). */
 .visor-countdown > div {
   height: 100%;
   background: #2563eb;
   transition: width 1s linear;
 }
 
+/* Rejilla del producto: imagen a la izquierda, datos a la derecha. */
 .visor-product {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.55fr);
@@ -409,6 +499,7 @@
   justify-content: center;
 }
 
+/* Recuadro cuadrado de la foto. */
 .visor-figure {
   position: relative;
   width: clamp(110px, 25vmin, 220px);
@@ -422,17 +513,20 @@
   background: #f8fafc;
 }
 
+/* Foto del producto. */
 .visor-img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
 }
 
+/* Icono de relleno cuando no hay foto. */
 .visor-img-ph {
   color: #cbd5e1;
   font-size: clamp(40px, 8vmin, 72px);
 }
 
+/* Categoría superpuesta en la esquina de la foto. */
 .visor-cat {
   position: absolute;
   top: 8px;
@@ -449,6 +543,7 @@
   white-space: nowrap;
 }
 
+/* Código / SKU del producto. */
 .visor-sku {
   display: inline-flex;
   align-items: center;
@@ -464,6 +559,7 @@
   font-weight: 700;
 }
 
+/* Nombre del producto. */
 .visor-name {
   margin: 0 0 clamp(3px, 0.6vmin, 6px);
   color: #0f172a;
@@ -472,12 +568,14 @@
   line-height: 1.15;
 }
 
+/* Descripción corta. */
 .visor-desc {
   margin: 0 0 clamp(8px, 1.2vmin, 12px);
   color: #64748b;
   font-size: clamp(10.5px, 1.3vmin, 12px);
 }
 
+/* Caja del precio (fondo azul claro). */
 .visor-price-box {
   margin-bottom: clamp(8px, 1.4vmin, 14px);
   padding: clamp(10px, 1.6vmin, 18px);
@@ -486,6 +584,7 @@
   background: #eff6ff;
 }
 
+/* Etiqueta "PRECIO EN DÓLARES". */
 .visor-price-label {
   color: #1e40af;
   font-size: clamp(9px, 1.15vmin, 11px);
@@ -494,6 +593,7 @@
   text-transform: uppercase;
 }
 
+/* Precio en USD (el número más grande de la pantalla). */
 .visor-usd {
   color: #10b981;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -503,12 +603,14 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Separador entre el precio en USD y el equivalente en Bs. */
 .visor-price-sep {
   margin-top: clamp(6px, 1vmin, 10px);
   padding-top: clamp(6px, 1vmin, 10px);
   border-top: 1px solid #bfdbfe;
 }
 
+/* Fila "Bs · tasa del día". */
 .visor-ves-row {
   display: flex;
   justify-content: space-between;
@@ -519,6 +621,7 @@
   font-weight: 700;
 }
 
+/* Precio en bolívares. */
 .visor-ves {
   color: #0b4f9c;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -527,6 +630,7 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Fila inferior: stock + acciones. */
 .visor-actions {
   display: flex;
   align-items: center;
@@ -535,6 +639,7 @@
   gap: clamp(6px, 1vmin, 10px);
 }
 
+/* Píldora de existencias. */
 .visor-stock {
   padding: clamp(3px, 0.6vmin, 5px) clamp(9px, 1.3vmin, 13px);
   border-radius: 99px;
@@ -543,16 +648,22 @@
   white-space: nowrap;
 }
 
+/* Con stock (verde) / sin stock (rojo). */
 .visor-stock--in { border: 1px solid #86efac; background: #dcfce7; color: #15803d; }
 .visor-stock--out { border: 1px solid #fca5a5; background: #fee2e2; color: #dc2626; }
 
-/* ── No encontrado ────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   09. NO ENCONTRADO
+   ========================================================================= */
+
 .visor-notfound {
   max-width: 440px;
   padding: clamp(20px, 3vmin, 32px);
   text-align: center;
 }
 
+/* Círculo rojo con el signo de error. */
 .visor-error-icon {
   display: grid;
   place-items: center;
@@ -566,6 +677,7 @@
   font-size: clamp(28px, 4vmin, 38px);
 }
 
+/* Código escaneado, en tipografía monoespaciada. */
 .visor-code {
   padding: 1px 6px;
   border-radius: 4px;
@@ -574,7 +686,11 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* ── Botones ──────────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   10. BOTONES DE ACCIÓN
+   ========================================================================= */
+
 .visor-btn {
   display: inline-flex;
   align-items: center;
@@ -592,6 +708,7 @@
 
 .visor-btn:active { transform: scale(0.97); }
 
+/* Variantes: primario, apagado, peligro y pequeño. */
 .visor-btn--primary {
   background: #2563eb;
   color: #fff;
@@ -602,12 +719,17 @@
 .visor-btn--danger { background: #ef4444; color: #fff; }
 .visor-btn--sm { font-size: clamp(11px, 1.35vmin, 13px); }
 
+/* El botón de la pantalla de reposo ocupa todo el ancho disponible. */
 .visor-standby .visor-btn--primary {
   width: 100%;
   max-width: 320px;
 }
 
-/* ── Pie ──────────────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   11. PIE
+   ========================================================================= */
+
 .visor-foot {
   display: flex;
   align-items: center;
@@ -622,6 +744,7 @@
   font-size: clamp(10px, 1.2vmin, 11.5px);
 }
 
+/* Botón "Volver al inicio" del pie. */
 .visor-foot-back {
   display: inline-flex;
   align-items: center;
@@ -639,7 +762,14 @@
 
 .visor-foot-mode strong { color: #0b4f9c; }
 
-/* ── Teléfono en vertical ─────────────────────────────────────────────────── */
+
+/* =========================================================================
+   ▓▓ 12. TELÉFONO VERTICAL  (≤767px)
+   -------------------------------------------------------------------------
+   La foto pasa arriba y los datos debajo (una sola columna); los precios
+   usan vw para crecer con el ancho del teléfono.
+   ========================================================================= */
+
 @media (max-width: 767px) {
   .visor-product {
     grid-template-columns: minmax(0, 1fr);
@@ -672,18 +802,34 @@
   .visor-actions { justify-content: space-between; }
 }
 
+
+/* =========================================================================
+   ▓▓ 13. TELÉFONO MUY ANGOSTO  (≤399px)
+   -------------------------------------------------------------------------
+   Se sacrifica el reloj para que el título de la marca respire.
+   ========================================================================= */
+
 @media (max-width: 399px) {
   .visor-clock { display: none; }
   .visor-title { font-size: 12.5px; }
 }
 
-/* ── Teléfono en horizontal (incluye el giro con giroscopio) ──────────────── */
+
+/* =========================================================================
+   ▓▓ 14. TELÉFONO HORIZONTAL  (incluye el giro con giroscopio)
+   -------------------------------------------------------------------------
+   (max-width: 1023px) and (max-height: 540px) and (orientation: landscape)
+   Se ocultan adornos y se recupera alto útil: la ficha del producto y la
+   cabecera se compactan.
+   ========================================================================= */
+
 @media (max-width: 1023px) and (max-height: 540px) and (orientation: landscape) {
   .visor-root {
     gap: 5px;
     --visor-pad: 6px;
   }
 
+  /* Cabecera compacta. */
   .visor-head { padding: 5px 10px; border-radius: 10px; }
   .visor-logo { display: none; }
   .visor-sub,
@@ -693,10 +839,12 @@
   .visor-icon-btn { width: 34px; height: 34px; font-size: 18px; }
   .visor-title { font-size: 13px; }
 
+  /* Buscador más bajo. */
   .visor-search { max-width: 560px; }
   .visor-input { padding-top: 6px; padding-bottom: 6px; font-size: 12.5px; }
   .visor-search-btn { padding: 5px 14px; font-size: 11px; }
 
+  /* Reposo sin adornos. */
   .visor-standby { max-width: 440px; padding: 10px 16px; }
   .visor-standby-icon-wrap { display: none; }
   .visor-standby-help { display: none; }
@@ -705,6 +853,7 @@
   .visor-muted { margin-bottom: 8px; font-size: 11px; }
   .visor-btn { padding: 8px 16px; font-size: 12px; }
 
+  /* Producto en dos columnas apretadas. */
   .visor-product-card { padding: 12px 16px; padding-top: 14px; }
   .visor-product { gap: 14px; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.6fr); }
   .visor-figure { width: clamp(92px, 26vh, 150px); }
@@ -718,11 +867,17 @@
   .visor-foot { display: none; }
 }
 
-/* ── Animaciones ──────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   15. ANIMACIONES
+   ========================================================================= */
+
+/* Giro del icono de carga (usado por .visor-spin). */
 @keyframes visor-spin {
   to { transform: rotate(360deg); }
 }
 
+/* Recorrido de la línea roja de la mira. */
 @keyframes visor-line {
   from { top: 10%; }
   to { top: 90%; }

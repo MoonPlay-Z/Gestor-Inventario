@@ -3,7 +3,17 @@ import { NavLink } from 'react-router-dom';
 import { Icon } from '@iconify/react';
 import { useRole } from '../ui/RoleGuard';
 
-export function NavItem({ to, icon, label, roles, onClick, badge, isCollapsed }) {
+export function NavItem({
+  to,
+  icon,
+  label,
+  roles,
+  onClick,
+  badge,
+  isCollapsed,
+  className = '',
+  description,
+}) {
   const { can } = useRole();
 
   if (roles && roles.length > 0 && !can(roles)) return null;
@@ -20,13 +30,22 @@ export function NavItem({ to, icon, label, roles, onClick, badge, isCollapsed })
           isActive
             ? 'bg-[#2563eb] text-white shadow-md border border-[#60a5fa]/30 font-bold'
             : 'text-[#e2e8f0] hover:bg-white/12 hover:text-white'
-        }`
+        } ${className}`
       }
     >
       <span className="text-base flex-shrink-0">
         <Icon icon={icon} className="h-5 w-5" />
       </span>
-      {!isCollapsed && <span className="flex-1 truncate">{label}</span>}
+      {!isCollapsed && (
+        description ? (
+          <span className="sidebar-mobile-link-copy">
+            <strong>{label}</strong>
+            <small>{description}</small>
+          </span>
+        ) : (
+          <span className="flex-1 truncate">{label}</span>
+        )
+      )}
       {!isCollapsed && badge !== undefined && badge !== null && (
         <span style={{
           background: '#ef4444',

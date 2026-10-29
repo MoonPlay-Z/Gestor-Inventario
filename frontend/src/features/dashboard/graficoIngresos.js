@@ -2,8 +2,9 @@
 import { Utils } from '../../services/api';
 
 export function construirGraficoIngresos({ datos, moneda, isDark }) {
-  const historico = Array.isArray(datos?.ingresosHistorico) ? [...datos.ingresosHistorico] : [];
-  const serie = historico.reverse();
+  // La API devuelve la serie en orden cronológico (más antigua primero); se
+  // pinta tal cual para que el eje X avance de izquierda a derecha.
+  const serie = Array.isArray(datos?.ingresosHistorico) ? datos.ingresosHistorico : [];
 
   const textColor = isDark ? '#9099c4' : '#4b5280';
   const gridColor = isDark ? '#2d3150' : '#e2e6f0';

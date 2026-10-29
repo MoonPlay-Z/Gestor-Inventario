@@ -1,31 +1,53 @@
 /* =========================================================================
-   Escáner de códigos con ML Kit (app nativa).
+   escaner.css — ESCÁNER DE CÓDIGOS CON ML KIT (app nativa)
+   -------------------------------------------------------------------------
+   Se importa en `frontend/src/main.jsx`.
 
    La cámara la dibuja el nativo DETRÁS del WebView: mientras el escáner está
    activo se oculta todo el documento (`body.barcode-scanner-active`) y encima
    se pinta este marco. El fondo oscuro alrededor del recuadro lo genera la
    sombra del propio marco (box-shadow de 100vmax), así el centro queda
    transparente y deja ver la cámara.
+
+   CÓMO ESTÁ ORGANIZADO (índice)
+     01. Modo escáner: ocultar el documento para ver la cámara nativa
+     02. Contenedor .mlkit-scan
+     03. Barra superior (.mlkit-scan__bar, .mlkit-scan__titulo)
+     04. Botones (.mlkit-scan__btn)
+     05. Recuadro de lectura (.mlkit-scan__centro, __marco, __linea, __pista)
+     06. Pie: zoom y nota (.mlkit-scan__pie, __zoom, __nota)
+     07. ▓ TELÉFONO HORIZONTAL (≤1023px de ancho y ≤520px de alto)
+     08. Animaciones
    ========================================================================= */
 
-/* El fondo del documento también tiene que desaparecer: `:root` trae
+
+/* =========================================================================
+   01. MODO ESCÁNER
+   -------------------------------------------------------------------------
+   El fondo del documento también tiene que desaparecer: `:root` trae
    `background-color: var(--bg-page)` en main.css y ese color se propaga al
    lienzo de la página, por encima de la cámara nativa. `visibility: hidden`
-   en <body> no basta porque el fondo del lienzo se pinta aparte. */
+   en <body> no basta porque el fondo del lienzo se pinta aparte.
+   ========================================================================= */
+
+/* Documento transparente (#root incluido) mientras el escáner está activo. */
 html.barcode-scanner-active,
 html.barcode-scanner-active body,
 html.barcode-scanner-active #root {
   background: transparent !important;
 }
 
+/* Se oculta todo el documento… */
 html.barcode-scanner-active body {
   visibility: hidden;
 }
 
+/* …salvo el marco del escáner. */
 html.barcode-scanner-active .mlkit-scan {
   visibility: visible;
 }
 
+/* El mismo ocultado cuando la clase se pone en <body>. */
 body.barcode-scanner-active {
   visibility: hidden;
   background: transparent !important;
@@ -34,6 +56,11 @@ body.barcode-scanner-active {
 body.barcode-scanner-active .mlkit-scan {
   visibility: visible;
 }
+
+
+/* =========================================================================
+   02. CONTENEDOR
+   ========================================================================= */
 
 .mlkit-scan {
   position: fixed;
@@ -47,7 +74,11 @@ body.barcode-scanner-active .mlkit-scan {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ── Barra superior ──────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   03. BARRA SUPERIOR
+   ========================================================================= */
+
 .mlkit-scan__bar {
   position: relative;
   z-index: 3;
@@ -55,6 +86,7 @@ body.barcode-scanner-active .mlkit-scan {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  /* Degradado negro arriba para que los botones blancos se lean. */
   padding:
     calc(10px + var(--safe-top, 0px))
     calc(14px + var(--safe-right, 0px))
@@ -63,6 +95,7 @@ body.barcode-scanner-active .mlkit-scan {
   background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
 }
 
+/* Título centrado entre los dos botones. */
 .mlkit-scan__titulo {
   flex: 1;
   text-align: center;
@@ -72,7 +105,12 @@ body.barcode-scanner-active .mlkit-scan {
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
 }
 
-/* ── Botones ─────────────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   04. BOTONES
+   ========================================================================= */
+
+/* Botón redondo de 44px (objetivo táctil). */
 .mlkit-scan__btn {
   display: inline-flex;
   align-items: center;
@@ -93,19 +131,25 @@ body.barcode-scanner-active .mlkit-scan {
   transform: scale(0.94);
 }
 
+/* Botón activo (linterna encendida): amarillo. */
 .mlkit-scan__btn.is-on {
   background: #facc15;
   border-color: #facc15;
   color: #0f172a;
 }
 
+/* Variante pequeña. */
 .mlkit-scan__btn--sm {
   width: 36px;
   height: 36px;
   font-size: 18px;
 }
 
-/* ── Recuadro de lectura ─────────────────────────────────────────────────── */
+
+/* =========================================================================
+   05. RECUADRO DE LECTURA
+   ========================================================================= */
+
 .mlkit-scan__centro {
   position: relative;
   z-index: 1;
@@ -118,6 +162,7 @@ body.barcode-scanner-active .mlkit-scan {
   padding: 0 16px;
 }
 
+/* Marco verde; la sombra enorme oscurece todo menos el centro. */
 .mlkit-scan__marco {
   position: relative;
   width: min(78vw, 520px);
@@ -129,6 +174,7 @@ body.barcode-scanner-active .mlkit-scan {
     0 0 24px rgba(52, 211, 153, 0.35);
 }
 
+/* Línea roja de barrido. */
 .mlkit-scan__linea {
   position: absolute;
   left: 6%;
@@ -141,15 +187,12 @@ body.barcode-scanner-active .mlkit-scan {
   opacity: 0.9;
 }
 
+/* La línea sólo se anima cuando el escáner está activo. */
 .mlkit-scan__marco.is-activo .mlkit-scan__linea {
   animation: mlkit-linea 1.6s ease-in-out infinite alternate;
 }
 
-@keyframes mlkit-linea {
-  from { top: 9%; }
-  to { top: 91%; }
-}
-
+/* Texto de instrucción bajo el marco. */
 .mlkit-scan__pista {
   margin: 0;
   font-size: 14px;
@@ -158,6 +201,7 @@ body.barcode-scanner-active .mlkit-scan {
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.8);
 }
 
+/* Aviso (permiso de cámara denegado, etc.). */
 .mlkit-scan__aviso {
   margin: 0;
   max-width: 420px;
@@ -171,7 +215,11 @@ body.barcode-scanner-active .mlkit-scan {
   text-align: center;
 }
 
-/* ── Pie: zoom y nota ────────────────────────────────────────────────────── */
+
+/* =========================================================================
+   06. PIE: ZOOM Y NOTA
+   ========================================================================= */
+
 .mlkit-scan__pie {
   position: relative;
   z-index: 3;
@@ -187,6 +235,7 @@ body.barcode-scanner-active .mlkit-scan {
   background: linear-gradient(rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.6));
 }
 
+/* Control de zoom (− 1× +). */
 .mlkit-scan__zoom {
   display: inline-flex;
   align-items: center;
@@ -200,6 +249,7 @@ body.barcode-scanner-active .mlkit-scan {
   font-variant-numeric: tabular-nums;
 }
 
+/* Nota legal / de uso. */
 .mlkit-scan__nota {
   margin: 0;
   font-size: 10.5px;
@@ -208,7 +258,14 @@ body.barcode-scanner-active .mlkit-scan {
   text-align: center;
 }
 
-/* ── Teléfono en horizontal: el recuadro se aplana y se gana alto ────────── */
+
+/* =========================================================================
+   ▓▓ 07. TELÉFONO HORIZONTAL
+   -------------------------------------------------------------------------
+   (max-width: 1023px) and (max-height: 520px) and (orientation: landscape)
+   El recuadro se aplana y se gana alto útil.
+   ========================================================================= */
+
 @media (max-width: 1023px) and (max-height: 520px) and (orientation: landscape) {
   .mlkit-scan__bar { padding-top: calc(6px + var(--safe-top, 0px)); padding-bottom: 6px; }
   .mlkit-scan__centro { gap: 8px; }
@@ -217,6 +274,18 @@ body.barcode-scanner-active .mlkit-scan {
     height: min(42vh, 150px);
   }
   .mlkit-scan__pista { font-size: 12.5px; }
+  /* El pie pasa a fila para no robar alto. */
   .mlkit-scan__pie { flex-direction: row; justify-content: center; gap: 14px; padding-bottom: calc(8px + var(--safe-bottom, 0px)); }
   .mlkit-scan__nota { display: none; }
+}
+
+
+/* =========================================================================
+   08. ANIMACIONES
+   ========================================================================= */
+
+/* Recorrido vertical de la línea de barrido. */
+@keyframes mlkit-linea {
+  from { top: 9%; }
+  to { top: 91%; }
 }

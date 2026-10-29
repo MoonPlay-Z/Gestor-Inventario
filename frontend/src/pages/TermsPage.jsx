@@ -9,16 +9,18 @@ export function TermsPage() {
       <header style={{
         backgroundColor: '#0b0f17',
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '16px 32px',
+        padding: '16px clamp(16px, 4vw, 32px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '10px',
         position: 'sticky',
         top: 0,
         zIndex: 100,
         backdropFilter: 'blur(10px)'
       }}>
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none', minWidth: 0 }}>
           <img
             src="/favicon.png"
             alt=""
@@ -26,18 +28,18 @@ export function TermsPage() {
             height="36"
             style={{ width: '36px', height: '36px', borderRadius: '8px', display: 'block', flexShrink: 0 }}
           />
-          <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em' }}>
+          <span style={{ fontSize: 'clamp(1.05rem, 4vw, 1.25rem)', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
             GestorPOS<span style={{ color: '#38bdf8' }}>.dev</span>
           </span>
         </Link>
-        <Link to="/" style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 500, textDecoration: 'none' }}>
+        <Link to="/" style={{ color: '#94a3b8', fontSize: 'clamp(0.8rem, 3.2vw, 0.9rem)', fontWeight: 500, textDecoration: 'none', whiteSpace: 'nowrap' }}>
           ← Volver al inicio
         </Link>
       </header>
 
       {/* Content */}
-      <article style={{ padding: '60px 32px', maxWidth: '800px', margin: '0 auto' }}>
-        <h1 style={{ fontSize: '2.2rem', fontWeight: 900, marginBottom: '8px' }}>
+      <article style={{ padding: '60px clamp(16px, 4vw, 32px)', maxWidth: '800px', margin: '0 auto' }}>
+        <h1 style={{ fontSize: 'clamp(1.6rem, 6vw, 2.2rem)', fontWeight: 900, marginBottom: '8px' }}>
           Términos y Condiciones
         </h1>
         <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '40px' }}>
@@ -47,18 +49,18 @@ export function TermsPage() {
         <div style={{
           backgroundColor: '#1e293b',
           borderRadius: '16px',
-          padding: '40px',
+          padding: 'clamp(20px, 5vw, 40px)',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           lineHeight: 1.8,
           fontSize: '1rem',
           color: '#cbd5e1'
         }}>
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem', marginTop: '0' }}>1. Aceptación de los términos</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)', marginTop: '0' }}>1. Aceptación de los términos</h2>
           <p>
             Al acceder y utilizar GestorPOS, aceptas estos Términos y Condiciones. Si no estás de acuerdo con alguna parte de estos términos, no debes utilizar nuestro servicio.
           </p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>2. Descripción del servicio</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>2. Descripción del servicio</h2>
           <p>
             GestorPOS es un sistema de punto de venta (POS) y gestión de inventario basado en la nube (SaaS) diseñado para comercios en Venezuela. El servicio incluye:
           </p>
@@ -71,7 +73,7 @@ export function TermsPage() {
             <li>Soporte técnico por email y WhatsApp</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>3. Cuenta de usuario</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>3. Cuenta de usuario</h2>
           <p>
             Para utilizar el servicio, debes crear una cuenta proporcionando información veraz y actualizada. Eres responsable de:
           </p>
@@ -81,7 +83,7 @@ export function TermsPage() {
             <li>Notificarnos inmediatamente cualquier uso no autorizado</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>4. Uso aceptable</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>4. Uso aceptable</h2>
           <p>Te comprometes a no:</p>
           <ul>
             <li>Utilizar el servicio para actividades ilegales o fraudulentas</li>
@@ -92,12 +94,12 @@ export function TermsPage() {
             <li>Realizar ingeniería inversa del software</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>5. Propiedad intelectual</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>5. Propiedad intelectual</h2>
           <p>
             Todo el contenido, diseño, código y funcionalidades de GestorPOS son propiedad exclusiva de Juan Arcila y están protegidos por leyes de propiedad intelectual. No se otorga ningún derecho de uso, reproducción o distribución sin autorización expresa.
           </p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>6. Pagos y facturación</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>6. Pagos y facturación</h2>
           <p>
             El servicio se ofrece mediante planes de suscripción. Al contratar un plan:
           </p>
@@ -108,7 +110,7 @@ export function TermsPage() {
             <li>La falta de pago puede resultar en la suspensión del servicio</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>7. Disponibilidad del servicio</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>7. Disponibilidad del servicio</h2>
           <p>
             Nos esforzamos por mantener el servicio disponible 24/7, pero no garantizamos disponibilidad ininterrumpida. El servicio puede estar temporalmente no disponible por:
           </p>
@@ -119,7 +121,7 @@ export function TermsPage() {
             <li>Casos de fuerza mayor</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>8. Limitación de responsabilidad</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>8. Limitación de responsabilidad</h2>
           <p>
             En la máxima medida permitida por la ley, GestorPOS no será responsable por:
           </p>
@@ -130,12 +132,12 @@ export function TermsPage() {
             <li>Decisiones comerciales basadas en la información del sistema</li>
           </ul>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>9. Modificaciones del servicio</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>9. Modificaciones del servicio</h2>
           <p>
             Nos reservamos el derecho de modificar, suspender o descontinuar cualquier aspecto del servicio en cualquier momento. Te notificaremos sobre cambios significativos con anticipación razonable.
           </p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>10. Terminación</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>10. Terminación</h2>
           <p>
             Puedes cancelar tu cuenta en cualquier momento. Podemos suspender o cancelar tu cuenta si:
           </p>
@@ -148,12 +150,12 @@ export function TermsPage() {
             Al cancelar, tendrás acceso hasta el final del período pagado. Después de eso, tus datos serán eliminados según nuestra Política de Privacidad.
           </p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>11. Ley aplicable</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>11. Ley aplicable</h2>
           <p>
             Estos Términos y Condiciones se rigen por las leyes de la República Bolivariana de Venezuela. Cualquier disputa será resuelta ante los tribunales competentes de Venezuela.
           </p>
 
-          <h2 style={{ color: '#ffffff', fontSize: '1.4rem' }}>12. Contacto</h2>
+          <h2 style={{ color: '#ffffff', fontSize: 'clamp(1.15rem, 4.5vw, 1.4rem)' }}>12. Contacto</h2>
           <p>
             Si tienes preguntas sobre estos Términos y Condiciones, puedes contactarnos:
           </p>
@@ -165,7 +167,7 @@ export function TermsPage() {
       </article>
 
       {/* Footer */}
-      <footer style={{ padding: '40px 32px', borderTop: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center' }}>
+      <footer style={{ padding: '40px clamp(16px, 4vw, 32px)', borderTop: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center' }}>
         <p style={{ color: '#64748b', fontSize: '0.85rem', marginBottom: '8px' }}>
           © 2026 GestorPOS — Sistema POS para comercios en Venezuela
         </p>

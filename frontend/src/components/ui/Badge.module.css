@@ -1,5 +1,23 @@
-/* frontend/src/components/ui/Badge.module.css */
+/* =========================================================================
+   Badge.module.css — COMPONENTE <Badge>
+   -------------------------------------------------------------------------
+   Uso:  import styles from './Badge.module.css'
+         <span className={`${styles.badge} ${styles.success}`}>Pagada</span>
 
+   Las claves se importan en camelCase (`vite.config.js` →
+   localsConvention: 'camelCaseOnly').
+
+   CONTENIDO
+     01. Base .badge
+     02. Variantes de color (success, warning, danger, info, neutral, accent)
+
+   No necesita ajustes por dispositivo: es una píldora de texto que se adapta
+   al contenedor.
+   ========================================================================= */
+
+/* ── 01. Base ─────────────────────────────────────────────────────────────
+   Píldora: texto corto, sin salto de línea y con esquinas totalmente
+   redondeadas. */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -12,36 +30,46 @@
   letter-spacing: 0.3px;
 }
 
+/* ── 02. Variantes de color ───────────────────────────────────────────────
+   Fondo translúcido + texto sólido + borde suave, para que se lea el estado
+   sin gritar. */
+
+/* Éxito / pagado / activo. */
 .success {
   background: var(--success-dim);
   color: var(--success);
   border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
+/* Aviso / pendiente / por vencer. */
 .warning {
   background: var(--warning-dim);
   color: var(--warning);
   border: 1px solid rgba(245, 158, 11, 0.2);
 }
 
+/* Error / anulado / vencido. */
 .danger {
   background: var(--danger-dim);
   color: var(--danger);
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+/* Informativo / en proceso. */
 .info {
   background: var(--info-dim);
   color: var(--info);
   border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
+/* Neutro / sin estado. */
 .neutral {
   background: var(--bg-hover);
   color: var(--text-secondary);
   border: 1px solid var(--border);
 }
 
+/* Acento de marca (azul). */
 .accent {
   background: var(--accent-dim);
   color: var(--accent);
