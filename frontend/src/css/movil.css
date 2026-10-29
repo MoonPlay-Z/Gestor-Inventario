@@ -476,7 +476,7 @@ html {
     bottom: calc(var(--dock-h) + var(--safe-bottom, 0px) + 1px);
     height: calc(100vh - var(--dock-h) - var(--safe-bottom, 0px) - 1px);
     height: calc(100dvh - var(--dock-h) - var(--safe-bottom, 0px) - 1px);
-    width: min(100vw, 430px);
+    width: 100vw;
     max-width: 100%;
     padding-right: var(--safe-right, 0px);
     padding-bottom: var(--safe-bottom, 0px);

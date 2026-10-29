@@ -1,12 +1,12 @@
 {
-  "versionCode": 11,
-  "versionName": "1.10",
+  "versionCode": 12,
+  "versionName": "1.11",
   "url": "https://gestor-pos.netlify.app/descargas/gestorpos-android.apk",
-  "size": 9700993,
-  "sha256": "a861f1fa6d3e41896a38b9cbe781ba612c2dbfaa825e33ec7b0862694763d506",
+  "size": 9700999,
+  "sha256": "32fe39d4501af7f554610fbfd41c51bd928b7725f42c81d21d7e582c55cd727b",
   "publishedAt": "2026-10-29",
   "minVersionCode": 0,
   "notes": [
-    "Mejoras de interfaz móvil y correcciones en ventas y arqueo de caja"
+    "Menú móvil y tablet a pantalla completa"
   ]
 }
