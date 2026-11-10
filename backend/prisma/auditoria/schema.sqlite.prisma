@@ -1,0 +1,41 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../node_modules/@prisma/client-auditoria-sqlite"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./bitacora.db"
+}
+
+model Bitacora {
+  id              String   @id @default(uuid())
+  empresaId       String?
+  usuarioId       String?
+  usuarioNombre   String?
+  usuarioRol      String?
+  categoria       String
+  modulo          String
+  accion          String
+  entidad         String
+  entidadId       String?
+  descripcion     String
+  datosAnteriores String?
+  datosNuevos     String?
+  monto           Float?
+  ipAddress       String?
+  userAgent       String?
+  httpMethod      String?
+  httpPath        String?
+  httpStatus      Int?
+  duracionMs      Int?
+  hash            String
+  hashAnterior    String?
+  creadoEn        DateTime @default(now())
+
+  @@index([empresaId, creadoEn])
+  @@index([categoria, creadoEn])
+  @@index([accion])
+  @@index([usuarioId])
+  @@map("bitacora")
+}

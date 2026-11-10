@@ -5,7 +5,7 @@ import { Header } from '../components/layout/Header';
 import { API } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { Button } from '../components/ui';
+import { Button, CustomSelect } from '../components/ui';
 import { getBrowserLocation } from '../utils/geolocation';
 
 const ROLES = [
@@ -214,10 +214,11 @@ export function UsuariosPage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Rol</label>
-                  <select className="form-control" value={createForm.rol}
-                    onChange={e => setCreateForm(f => ({ ...f, rol: e.target.value }))}>
-                    {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                  </select>
+                  <CustomSelect
+                    value={createForm.rol}
+                    onChange={val => setCreateForm(f => ({ ...f, rol: val }))}
+                    options={ROLES}
+                  />
                 </div>
                 <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                   Al crear la cuenta, se solicitará permiso para guardar la ubicación de este dispositivo. Si no autorizas, el usuario se creará sin coordenadas.
@@ -251,18 +252,22 @@ export function UsuariosPage() {
                 </div>
                 <div className="form-group">
                   <label className="form-label">Rol</label>
-                  <select className="form-control" value={editForm.rol}
-                    onChange={e => setEditForm(f => ({ ...f, rol: e.target.value }))}>
-                    {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                  </select>
+                  <CustomSelect
+                    value={editForm.rol}
+                    onChange={val => setEditForm(f => ({ ...f, rol: val }))}
+                    options={ROLES}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Estado</label>
-                  <select className="form-control" value={editForm.activo ? 'true' : 'false'}
-                    onChange={e => setEditForm(f => ({ ...f, activo: e.target.value === 'true' }))}>
-                    <option value="true">Activo</option>
-                    <option value="false">Inactivo</option>
-                  </select>
+                  <CustomSelect
+                    value={editForm.activo ? 'true' : 'false'}
+                    onChange={val => setEditForm(f => ({ ...f, activo: val === 'true' }))}
+                    options={[
+                      { value: 'true', label: 'Activo' },
+                      { value: 'false', label: 'Inactivo' }
+                    ]}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Nueva contraseña <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>(dejar en blanco para no cambiar)</span></label>

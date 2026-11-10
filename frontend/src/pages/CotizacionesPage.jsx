@@ -9,8 +9,9 @@ import { useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
-import { Button } from '../components/ui';
+import { Button, CustomSelect } from '../components/ui';
 import { ReceiptModal } from '../components/ui/ReceiptModal';
+import { simboloMoneda } from '../utils/numero';
 
 const EMPTY_CLIENT = { razonSocial: '', rifCedula: '', direccion: '', telefono: '', correo: '' };
 
@@ -146,7 +147,8 @@ export function CotizacionesPage() {
   // LÓGICA NUEVA COTIZACIÓN
   // ==========================================
   const tasaDolar = Number((config?.moneda?.tasaDolar || 1).toFixed(2));
-  const currencySymbol = config?.moneda?.simbolo || '$';
+  const monedaExhibicion = config?.moneda?.monedaExhibicion || config?.moneda?.codigo || 'USD';
+  const currencySymbol = simboloMoneda(monedaExhibicion);
 
   const filteredProducts = useMemo(() => {
     if (!searchTerm.trim()) return [];
@@ -364,17 +366,15 @@ export function CotizacionesPage() {
                       Nuevo Cliente
                     </Button>
                   </div>
-                  <select
-                    className="form-control"
+                  <CustomSelect
                     value={selectedClienteId}
-                    onChange={e => setSelectedClienteId(e.target.value)}
-                  >
-                    {clientes.map(c => (
-                      <option key={c.id} value={c.id}>
-                        {c.razonSocial} — ({c.rifCedula})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={val => setSelectedClienteId(val)}
+                    options={clientes.map(c => ({
+                      value: c.id,
+                      label: `${c.razonSocial} — (${c.rifCedula})`
+                    }))}
+                    placeholder="Seleccionar cliente..."
+                  />
                 </div>
               </div>
 
@@ -503,16 +503,16 @@ export function CotizacionesPage() {
               <form onSubmit={handleEmitirCotizacion} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div className="form-group">
                   <label className="form-label">Días de Validez</label>
-                  <select
-                    className="form-control"
+                  <CustomSelect
                     value={validezDias}
-                    onChange={e => setValidezDias(e.target.value)}
-                  >
-                    <option value={7}>7 Días</option>
-                    <option value={15}>15 Días</option>
-                    <option value={30}>30 Días</option>
-                    <option value={60}>60 Días</option>
-                  </select>
+                    onChange={val => setValidezDias(Number(val))}
+                    options={[
+                      { value: 7, label: '7 Días' },
+                      { value: 15, label: '15 Días' },
+                      { value: 30, label: '30 Días' },
+                      { value: 60, label: '60 Días' }
+                    ]}
+                  />
                 </div>
 
                 <button

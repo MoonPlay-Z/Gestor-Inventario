@@ -55,7 +55,7 @@ export function FacturasRecientes({ facturas, moneda }) {
                       <div className="dash-rif">{factura.cliente?.rifCedula}</div>
                     </td>
                     <td className="dash-fecha">{Utils.formatDate(factura.fechaEmision)}</td>
-                    <td className="num mono strong">{Utils.formatMoney(factura.total, moneda)}</td>
+                    <td className="num mono strong">{Utils.formatMoney(factura.total, factura.moneda || 'USD')}</td>
                     <td className="center">{badgeEstado(factura.estado)}</td>
                   </tr>
                 ))}
@@ -74,7 +74,7 @@ export function FacturasRecientes({ facturas, moneda }) {
                 <div className="dash-factura-cliente">{factura.cliente?.razonSocial}</div>
                 <div className="dash-factura-meta">
                   <span>{Utils.formatDate(factura.fechaEmision)}</span>
-                  <strong className="mono">{Utils.formatMoney(factura.total, moneda)}</strong>
+                  <strong className="mono">{Utils.formatMoney(factura.total, factura.moneda || 'USD')}</strong>
                 </div>
               </li>
             ))}

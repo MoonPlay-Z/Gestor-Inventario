@@ -291,7 +291,8 @@ router.post('/', async (req, res, next) => {
     // validara el saldo antes, dos abonos concurrentes leían el mismo pendiente
     // y ambos pasaban (sobrepago por carrera). Con el lock, el segundo espera y
     // ve el saldo ya actualizado.
-    const { pago, facturaActualizada, totalPagadoFinal } = await prisma.$transaction(async (tx) => {
+    const { pago, facturaActualizada, totalPagadoFinal } = await prisma.$transaction(
+      async (tx) => {
       // Orden de bloqueo: factura primero, luego CxC (evita deadlocks con
       // POST /cxc/:id/pago, que sigue el mismo orden).
       await lockFactura(tx, facturaId);
@@ -312,7 +313,7 @@ router.post('/', async (req, res, next) => {
       }
 
       const monedaDelPagoTx = monedaPago || factura.moneda || 'USD';
-      const totalPagado = await sumarPagosNormalizados(factura.pagos, factura, empresaRefId);
+      const totalPagado = await sumarPagosNormalizados(factura.pagos, factura, empresaRefId, tx);
       const totalFactura = new Decimal(factura.total.toString());
       const balancePendiente = totalFactura.sub(totalPagado);
       const montoEnMonedaFactura = await convertirAFactura(
@@ -390,7 +391,7 @@ router.post('/', async (req, res, next) => {
       if (cxc) {
         await lockCuenta(tx, cxc.id);
 
-        const cobradoPrevioUSD = await sumarPagosCxcUSD(factura.pagos, factura, empresaRefId);
+        const cobradoPrevioUSD = await sumarPagosCxcUSD(factura.pagos, factura, empresaRefId, tx);
         const montoAplicarUSD = convertirMontoMoneda(
           montoAplicar,
           factura.moneda || 'USD',
@@ -416,9 +417,11 @@ router.post('/', async (req, res, next) => {
         });
       }
 
-      const totalPagadoFinal = await sumarPagosNormalizados(facturaUpd.pagos, facturaUpd, empresaRefId);
+      const totalPagadoFinal = await sumarPagosNormalizados(facturaUpd.pagos, facturaUpd, empresaRefId, tx);
       return { pago: nuevoPago, facturaActualizada: facturaUpd, totalPagadoFinal };
-    });
+    },
+    { maxWait: 10000, timeout: 30000 }
+  );
 
     // Calcular totales para la respuesta
     const balanceFinal = new Decimal(facturaActualizada.total.toString()).sub(totalPagadoFinal);
@@ -443,7 +446,8 @@ router.patch('/:id/anular', async (req, res, next) => {
     const { motivo, descripcion } = validarAnulacionPago(req);
     const empresaRefId = await getEmpresaRefId(req);
 
-    const resultado = await prisma.$transaction(async (tx) => {
+    const resultado = await prisma.$transaction(
+      async (tx) => {
       const pagoRef = await tx.pago.findFirstOrThrow({
         where: { id: req.params.id, ...pagoTenantFilter(req) },
         select: { id: true, facturaId: true },
@@ -480,7 +484,7 @@ router.patch('/:id/anular', async (req, res, next) => {
       const pagosActivos = pagosDeFactura.filter(
         pago => pago.id !== pagoRef.id && pago.estado !== ESTADOS_PAGO.ANULADO
       );
-      const totalPagado = await sumarPagosNormalizados(pagosActivos, factura, empresaRefId);
+      const totalPagado = await sumarPagosNormalizados(pagosActivos, factura, empresaRefId, tx);
 
       // Un reintento (doble clic) no debe volver a escribir ni duplicar auditoría.
       if (pagoAntes.estado === ESTADOS_PAGO.ANULADO) {
@@ -547,7 +551,7 @@ router.patch('/:id/anular', async (req, res, next) => {
       });
       if (cxc) {
         await lockCuenta(tx, cxc.id);
-        const cobradoUSD = await sumarPagosCxcUSD(pagosActivos, factura, empresaRefId);
+        const cobradoUSD = await sumarPagosCxcUSD(pagosActivos, factura, empresaRefId, tx);
         const pendienteUSD = new Decimal(cxc.montoOriginal.toString()).sub(cobradoUSD);
 
         let estadoCxc;
@@ -565,7 +569,7 @@ router.patch('/:id/anular', async (req, res, next) => {
           },
         });
       } else if (nuevoEstadoFactura !== 'PAID') {
-        const cobradoUSD = await sumarPagosCxcUSD(pagosActivos, factura, empresaRefId);
+        const cobradoUSD = await sumarPagosCxcUSD(pagosActivos, factura, empresaRefId, tx);
         const tasaUsada = await tasaCambioEfectiva(factura, empresaRefId);
         const totalFacturaUSD = convertirMontoMoneda(factura.total, factura.moneda || 'USD', 'USD', tasaUsada);
         const pendienteUSD = totalFacturaUSD.sub(cobradoUSD);
@@ -595,7 +599,9 @@ router.patch('/:id/anular', async (req, res, next) => {
         totalPagado,
         yaAnulado: false,
       };
-    });
+    },
+    { maxWait: 10000, timeout: 30000 }
+  );
 
     if (!resultado.yaAnulado) {
       invalidarCacheVentas();

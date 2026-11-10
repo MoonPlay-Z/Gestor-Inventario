@@ -9,7 +9,10 @@ import { useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
-import { Button } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
+import { useMoneda } from '../hooks/useMoneda';
+import { Button, CustomSelect } from '../components/ui';
+import { simboloMoneda } from '../utils/numero';
 
 const ESTADO_LABELS = {
   PENDING: 'Pendiente',
@@ -28,6 +31,7 @@ const ESTADO_COLORS = {
 export function CxcPage() {
   const { toggleSidebar } = useOutletContext();
   const { showToast } = useToast();
+  const { empresa } = useAuth();
   const [cuentas, setCuentas] = useState([]);
   const [resumen, setResumen] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -43,6 +47,9 @@ export function CxcPage() {
   const [filtrosAplicados, setFiltrosAplicados] = useState({});
   const [showFiltros, setShowFiltros] = useState(false);
   const [orden, setOrden] = useState('vencimiento');
+  const [monedaExhibicion, setMonedaExhibicion] = useState(empresa?.monedaExhibicion || 'USD');
+  const { usarExhibicion, setUsarExhibicion } = useMoneda();
+  const tasa = Number(empresa?.tasaDolar) || 0;
   const loadRequestId = useRef(0);
 
   const loadResumen = async () => {
@@ -140,29 +147,57 @@ export function CxcPage() {
       />
 
       <div className="p-4 md:p-6 space-y-4 cxc-page">
-        {/* Resumen Cards */}
-        {resumen && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 cxc-resumen">
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cxc-resumen-card">
-              <p className="text-sm text-gray-500">Total Pendiente</p>
-              <p className="text-2xl font-bold text-gray-900">{Utils.formatMoney(resumen.totalPendiente)}</p>
-              <p className="text-xs text-gray-400 mt-1">{resumen.cantidadPendientes} facturas</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cxc-resumen-card">
-              <p className="text-sm text-gray-500">Total Vencido</p>
-              <p className="text-2xl font-bold text-red-600">{Utils.formatMoney(resumen.totalVencido)}</p>
-              <p className="text-xs text-gray-400 mt-1">{resumen.cantidadVencidas} facturas</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cxc-resumen-card">
-              <p className="text-sm text-gray-500">0-30 días</p>
-              <p className="text-2xl font-bold text-green-600">{Utils.formatMoney(resumen.aging['0_30'])}</p>
-            </div>
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cxc-resumen-card">
-              <p className="text-sm text-gray-500">61+ días</p>
-              <p className="text-2xl font-bold text-red-600">{Utils.formatMoney(resumen.aging['61_90'])}</p>
-            </div>
+        {/* Barra superior con Tasa BCV */}
+        {tasa > 0 && (
+          <div className="flex justify-between items-center bg-white px-4 py-2.5 rounded-xl shadow-sm border border-gray-100 text-sm">
+            <span className="text-gray-600">Tasa oficial BCV: <strong className="text-gray-900">{tasa.toFixed(2)} Bs/USD</strong></span>
+            <span className="text-xs text-gray-400">Precios en Bs. con referencia en USD</span>
           </div>
         )}
+
+        {/* Resumen Cards */}
+        {resumen && (() => {
+          const calcCard = (usdVal, fallbackVal) => {
+            const usd = Number(usdVal !== undefined ? usdVal : fallbackVal) || 0;
+            const bs = tasa > 0 ? usd * tasa : 0;
+            return {
+              bsText: tasa > 0 ? `Bs. ${bs.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : `$ ${usd.toFixed(2)}`,
+              usdText: tasa > 0 ? `≈ ${Utils.formatMoney(usd, '$')}` : null,
+            };
+          };
+
+          const pend = calcCard(resumen.totalPendienteUSD, resumen.totalPendiente);
+          const venc = calcCard(resumen.totalVencidoUSD, resumen.totalVencido);
+          const a030 = calcCard(resumen.agingUSD?.['0_30'], resumen.aging?.['0_30']);
+          const a6190 = calcCard(resumen.agingUSD?.['61_90'], resumen.aging?.['61_90']);
+
+          return (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 cxc-resumen">
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cxc-resumen-card">
+                <p className="text-sm text-gray-500">Total Pendiente</p>
+                <p className="text-2xl font-bold text-gray-900">{pend.bsText}</p>
+                {pend.usdText && <p className="text-xs text-gray-500 font-medium">{pend.usdText}</p>}
+                <p className="text-xs text-gray-400 mt-1">{resumen.cantidadPendientes} facturas</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cxc-resumen-card">
+                <p className="text-sm text-gray-500">Total Vencido</p>
+                <p className="text-2xl font-bold text-red-600">{venc.bsText}</p>
+                {venc.usdText && <p className="text-xs text-gray-500 font-medium">{venc.usdText}</p>}
+                <p className="text-xs text-gray-400 mt-1">{resumen.cantidadVencidas} facturas</p>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cxc-resumen-card">
+                <p className="text-sm text-gray-500">0-30 días</p>
+                <p className="text-2xl font-bold text-green-600">{a030.bsText}</p>
+                {a030.usdText && <p className="text-xs text-gray-500 font-medium">{a030.usdText}</p>}
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 cxc-resumen-card">
+                <p className="text-sm text-gray-500">61+ días</p>
+                <p className="text-2xl font-bold text-red-600">{a6190.bsText}</p>
+                {a6190.usdText && <p className="text-xs text-gray-500 font-medium">{a6190.usdText}</p>}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Filtros */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 cxc-filtros">
@@ -208,16 +243,17 @@ export function CxcPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-                <select
+                <CustomSelect
                   value={filtros.estado}
-                  onChange={(e) => setFiltros({ ...filtros, estado: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Todos</option>
-                  <option value="PENDING">Pendiente</option>
-                  <option value="PARTIALLY_PAID">Parcial</option>
-                  <option value="PAID">Pagada</option>
-                </select>
+                  onChange={(val) => setFiltros({ ...filtros, estado: val })}
+                  options={[
+                    { value: '', label: 'Todos' },
+                    { value: 'PENDING', label: 'Pendiente' },
+                    { value: 'PARTIALLY_PAID', label: 'Parcial' },
+                    { value: 'PAID', label: 'Pagada' }
+                  ]}
+                  placeholder="Todos"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Solo vencidas</label>
@@ -253,16 +289,18 @@ export function CxcPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden cxc-listado">
           <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-end gap-2 cxc-orden">
             <label className="text-sm text-gray-600">Ordenar por</label>
-            <select
-              value={orden}
-              onChange={(e) => { setOrden(e.target.value); setPage(1); }}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="vencimiento">Vencimiento (más reciente)</option>
-              <option value="estado">Estado (por pagar primero)</option>
-              <option value="cliente">Cliente (A-Z)</option>
-              <option value="monto">Monto (mayor a menor)</option>
-            </select>
+            <div className="w-56">
+              <CustomSelect
+                value={orden}
+                onChange={(val) => { setOrden(val); setPage(1); }}
+                options={[
+                  { value: 'vencimiento', label: 'Vencimiento (más reciente)' },
+                  { value: 'estado', label: 'Estado (por pagar primero)' },
+                  { value: 'cliente', label: 'Cliente (A-Z)' },
+                  { value: 'monto', label: 'Monto (mayor a menor)' }
+                ]}
+              />
+            </div>
           </div>
           <div className="cxc-mobile-list">
             {loading ? (
@@ -288,7 +326,14 @@ export function CxcPage() {
 
                   <div className="cxc-mobile-amount">
                     <span>Monto pendiente</span>
-                    <strong>{Utils.formatMoney(cuenta.montoPendiente)}</strong>
+                    <strong className="text-gray-900">
+                      {tasa > 0
+                        ? `Bs. ${(Number(cuenta.montoPendiente) * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : Utils.formatMoney(cuenta.montoPendiente, 'USD')}
+                    </strong>
+                    <small className="text-gray-500">
+                      ≈ {Utils.formatMoney(cuenta.montoPendiente, 'USD')}
+                    </small>
                   </div>
 
                   <div className="cxc-mobile-details">
@@ -354,7 +399,14 @@ export function CxcPage() {
                         <div className="text-xs text-gray-500">{cuenta.cliente?.rifCedula}</div>
                       </td>
                       <td data-label="Monto pendiente" className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
-                        {Utils.formatMoney(cuenta.montoPendiente)}
+                        <div className="font-bold text-gray-900">
+                          {tasa > 0
+                            ? `Bs. ${(Number(cuenta.montoPendiente) * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            : Utils.formatMoney(cuenta.montoPendiente, 'USD')}
+                        </div>
+                        <div className="text-xs text-gray-500 font-normal">
+                          ≈ {Utils.formatMoney(cuenta.montoPendiente, 'USD')}
+                        </div>
                       </td>
                       <td data-label="Vencimiento" className="px-4 py-3 text-center text-sm text-gray-500">
                         {cuenta.fechaVencimiento ? Utils.formatDate(cuenta.fechaVencimiento) : '-'}

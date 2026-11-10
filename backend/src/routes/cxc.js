@@ -5,11 +5,12 @@ const { Decimal } = require('decimal.js');
 const { requireRole } = require('../middleware/auth');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { paginate, paginatedResponse } = require('../utils/pagination');
-const { tasaCambioEfectiva, pagoCxcAUsd } = require('../utils/tasaAPI');
+const { tasaCambioEfectiva, pagoCxcAUsd, convertirMoneda, monedaBasePorEmpresa, monedaExhibicionPorEmpresa, MONEDAS_PAGO } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
 const { toDecimalSeguro } = require('../utils/decimal');
 const { lockFactura, lockCuenta } = require('../utils/locks');
+const { registrar: registrarBitacora, contexto: contextoBitacora } = require('../services/bitacora');
 const { containsInsensitive, extraerTerminosBusqueda } = require('../utils/textSearch');
 const {
   esMetodoPagoValido,
@@ -62,10 +63,11 @@ const cxcTenantFilter = (req) => {
   };
 };
 
-// CuentaPorCobrar SIEMPRE almacena montos en USD (ver POST /api/facturas).
-// Normaliza cualquier pago (USD o VES) a USD. La implementación vive en la
-// fachada única (`paymentCurrency.pagoCxcAUsd`) que también usa /api/pagos: si
-// cada módulo tuviera su copia, el saldo escrito por una puerta no coincidiría
+// CuentaPorCobrar SIEMPRE almacena montos en la moneda BASE de la empresa
+// (USD por defecto, EUR con base EUR; ver `paymentCurrency.pagoCxcAUsd`).
+// Normaliza cualquier pago (USD, EUR o VES) a esa base. La implementación vive
+// en la fachada única (`paymentCurrency.pagoCxcAUsd`) que también usa /api/pagos:
+// si cada módulo tuviera su copia, el saldo escrito por una puerta no coincidiría
 // con el leído por la otra.
 const pagoAUsd = pagoCxcAUsd;
 
@@ -148,21 +150,34 @@ router.get('/resumen', async (req, res, next) => {
       }
     }
 
+    const empresaRefIdCxC = await getEmpresaRefId(req);
+    const monedaBaseCxC = await monedaBasePorEmpresa(empresaRefIdCxC);
+    const exhibicionCxC = await monedaExhibicionPorEmpresa(empresaRefIdCxC);
+
     const respuesta = {
-      totalPendiente: new Decimal(totalPendiente._sum.montoPendiente || 0).toFixed(2),
+      totalPendienteUSD: new Decimal(totalPendiente._sum.montoPendiente?.toString() || '0').toFixed(2),
+      totalPendiente: (await convertirMoneda(totalPendiente._sum.montoPendiente || 0, monedaBaseCxC, exhibicionCxC, empresaRefIdCxC)).toFixed(2),
       cantidadPendientes: totalPendiente._count,
-      totalVencido: new Decimal(totalVencido._sum.montoPendiente || 0).toFixed(2),
+      totalVencidoUSD: new Decimal(totalVencido._sum.montoPendiente?.toString() || '0').toFixed(2),
+      totalVencido: (await convertirMoneda(totalVencido._sum.montoPendiente || 0, monedaBaseCxC, exhibicionCxC, empresaRefIdCxC)).toFixed(2),
       cantidadVencidas: totalVencido._count,
-      porEstado: porEstado.map(r => ({
+      porEstado: await Promise.all(porEstado.map(async (r) => ({
         estado: r.estado,
-        monto: new Decimal(r._sum.montoPendiente || 0).toFixed(2),
+        monto: (await convertirMoneda(r._sum.montoPendiente || 0, monedaBaseCxC, exhibicionCxC, empresaRefIdCxC)).toFixed(2),
+        montoUSD: new Decimal(r._sum.montoPendiente?.toString() || '0').toFixed(2),
         cantidad: r._count
-      })),
-      aging: {
+      }))),
+      agingUSD: {
         '0_30': a0_30.toFixed(2),
         '31_60': a31_60.toFixed(2),
         '61_90': a61_90.toFixed(2),
         '90plus': a90plus.toFixed(2),
+      },
+      aging: {
+        '0_30': (await convertirMoneda(a0_30, monedaBaseCxC, exhibicionCxC, empresaRefIdCxC)).toFixed(2),
+        '31_60': (await convertirMoneda(a31_60, monedaBaseCxC, exhibicionCxC, empresaRefIdCxC)).toFixed(2),
+        '61_90': (await convertirMoneda(a61_90, monedaBaseCxC, exhibicionCxC, empresaRefIdCxC)).toFixed(2),
+        '90plus': (await convertirMoneda(a90plus, monedaBaseCxC, exhibicionCxC, empresaRefIdCxC)).toFixed(2),
       }
     };
 
@@ -472,8 +487,8 @@ router.get('/:id/conversion', async (req, res, next) => {
   try {
     const { monto, moneda = 'USD' } = req.query;
 
-    if (!['USD', 'VES'].includes(moneda)) {
-      return res.status(400).json({ error: 'Moneda inválida. Valores permitidos: USD, VES' });
+    if (!MONEDAS_PAGO.includes(moneda)) {
+      return res.status(400).json({ error: `Moneda inválida. Valores permitidos: ${MONEDAS_PAGO.join(', ')}` });
     }
 
     const cuenta = await prisma.cuentaPorCobrar.findFirst({
@@ -485,12 +500,18 @@ router.get('/:id/conversion', async (req, res, next) => {
     const empresaRefIdConv = await getEmpresaRefId(req);
     const tasaUsada = await tasaCambioEfectiva(cuenta.factura, empresaRefIdConv);
     const pendienteUSD = new Decimal(cuenta.montoPendiente.toString());
+    const monedaBaseConv = await monedaBasePorEmpresa(empresaRefIdConv);
 
     // Tope aceptable en la moneda consultada, para que el frontend ofrezca un
-    // monto por defecto que nunca dispare el error de sobrepago.
-    const maximoEnMoneda = moneda === 'VES'
-      ? pendienteUSD.mul(tasaUsada)
-      : pendienteUSD;
+    // monto por defecto que nunca dispare el error de sobrepago. Con la moneda
+    // base consultada el tope es el propio pendiente; con VES se multiplica por
+    // la tasa base→VES; con cualquier otra exhibición se convierte.
+    let maximoEnMoneda = pendienteUSD;
+    if (moneda === 'VES') {
+      maximoEnMoneda = pendienteUSD.mul(tasaUsada);
+    } else if (moneda !== monedaBaseConv) {
+      maximoEnMoneda = await convertirMoneda(pendienteUSD, monedaBaseConv, moneda, empresaRefIdConv);
+    }
 
     const respuesta = {
       cuentaId: req.params.id,
@@ -551,7 +572,7 @@ router.post('/:id/pago', async (req, res, next) => {
       console.warn('[cxc] No se pudo obtener la tasa BCV:', err.message);
     }
 
-    const { pago, cuentaActualizada, conversion } = await prisma.$transaction(async (tx) => {
+    const { pago, cuentaActualizada, conversion, factura, cuentaAntes } = await prisma.$transaction(async (tx) => {
       // Bloqueo en el mismo orden que /api/pagos (factura → cuenta) para que dos
       // abonos concurrentes sobre la misma cuenta no lean el mismo pendiente.
       const cuentaRef = await tx.cuentaPorCobrar.findFirst({
@@ -574,16 +595,17 @@ router.post('/:id/pago', async (req, res, next) => {
       const factura = cuenta.factura;
       const monedaFactura = factura.moneda || 'USD';
 
-      // Normalizar monto del pago a USD para validación y almacenamiento.
-      // CuentaPorCobrar siempre guarda montos en USD, así que la tasa debe ser la
-      // efectiva VES→USD: la de la factura si fue emitida en VES, o la tasa
-      // vigente del sistema si fue emitida en USD (tasaCambio=1 no sirve).
+      // Normalizar monto del pago a la moneda base para validación, saldo y
+      // almacenamiento. CuentaPorCobrar guarda montos en la moneda base de la
+      // empresa, así que la tasa debe ser la efectiva VES→base: la de la factura
+      // si fue emitida en VES, o la vigente de la empresa si fue emitida en la
+      // base (tasaCambio=1 no sirve como tasa real).
       const monedaDelPago = monedaPago || monedaFactura;
-      if (!['USD', 'VES'].includes(monedaDelPago)) {
-        throw createValidationError('Moneda de pago inválida. Valores permitidos: USD, VES');
+      if (!MONEDAS_PAGO.includes(monedaDelPago)) {
+        throw createValidationError(`Moneda de pago inválida. Valores permitidos: ${MONEDAS_PAGO.join(', ')}`);
       }
-      const tasaUsada = await tasaCambioEfectiva(factura, empresaRefIdPago);
-      const montoPagoUSD = await pagoAUsd({ monto: montoPagoRaw, monedaPago: monedaDelPago }, factura, empresaRefIdPago);
+      const tasaUsada = await tasaCambioEfectiva(factura, empresaRefIdPago, tx);
+      const montoPagoUSD = await pagoAUsd({ monto: montoPagoRaw, monedaPago: monedaDelPago }, factura, empresaRefIdPago, tx);
       const pendienteUSD = new Decimal(cuenta.montoPendiente.toString());
 
       // Convertir un abono en Bs a USD puede dejar un excedente de redondeo mínimo
@@ -609,14 +631,14 @@ router.post('/:id/pago', async (req, res, next) => {
           monto: montoPagoRaw.toFixed(2),
           monedaPago: monedaDelPago,
           metodoPago,
-          referenciaTransaccion: requiereReferenciaMetodo(metodoPago) ? referenciaTransaccion?.trim() : null,
+          referenciaTransaccion: referenciaTransaccion?.trim() || null,
           fechaPago: fechaPagoFinal.toISOString(),
           tasaBCV: tasaBCV ? tasaBCV.toFixed(4) : null,
           notas: notas?.trim() || `Abono desde CxC por ${req.user.nombre || req.user.username}`
         }
       });
 
-      // Actualizar CuentaPorCobrar (usa monto normalizado a USD, con tope al pendiente)
+      // Actualizar CuentaPorCobrar (usa monto normalizado a la moneda base, con tope al pendiente)
       const nuevoMontoCobrado = new Decimal(cuenta.montoCobrado.toString()).add(montoAplicarUSD);
       const nuevoPendiente = new Decimal(cuenta.montoOriginal.toString()).sub(nuevoMontoCobrado);
 
@@ -644,6 +666,8 @@ router.post('/:id/pago', async (req, res, next) => {
       return {
         pago: nuevoPago,
         cuentaActualizada: cxcUpd,
+        factura: { id: factura.id, numeroFactura: factura.numeroFactura },
+        cuentaAntes: { montoCobrado: cuenta.montoCobrado, montoPendiente: cuenta.montoPendiente },
         conversion: {
           monedaDelPago,
           montoPagoUSD,
@@ -656,6 +680,29 @@ router.post('/:id/pago', async (req, res, next) => {
     });
 
     cxcResumenCache.clear();
+
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'CXC',
+      modulo: 'cxc',
+      accion: 'ABONO_CXC',
+      entidad: 'CuentaPorCobrar',
+      entidadId: cuentaActualizada.id,
+      descripcion: `Abonó ${montoPagoRaw.toFixed(2)} ${conversion.monedaDelPago} a la cuenta de la factura #${factura.numeroFactura}`,
+      datosAnteriores: {
+        montoCobrado: cuentaAntes.montoCobrado,
+        montoPendiente: cuentaAntes.montoPendiente,
+      },
+      datosNuevos: {
+        montoCobrado: cuentaActualizada.montoCobrado,
+        montoPendiente: cuentaActualizada.montoPendiente,
+        monedaPago: conversion.monedaDelPago,
+        montoUsdAplicado: conversion.montoAplicarUSD.toFixed(2),
+        tasaUsada: conversion.tasaUsada.toNumber(),
+        metodoPago: pago.metodoPago,
+      },
+      monto: montoPagoRaw.toNumber(),
+    });
 
     res.status(201).json({
       pago,

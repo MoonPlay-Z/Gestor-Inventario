@@ -38,6 +38,7 @@ import { PruebasFacturasPage } from './pages/PruebasFacturasPage';
 import { CxcPage }            from './pages/CxcPage';
 import { CxcDetailPage }      from './pages/CxcDetailPage';
 import { PagosAnuladosPage }  from './pages/PagosAnuladosPage';
+import { BitacoraPage }       from './pages/BitacoraPage';
 
 export default function AppRoutes() {
   return (
@@ -169,6 +170,11 @@ export default function AppRoutes() {
         <Route path="/config" element={
           <ProtectedRoute allowedRoles={ROLE_GROUPS.ADMIN_ONLY}>
             <ConfigPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/bitacora" element={
+          <ProtectedRoute allowedRoles={ROLE_GROUPS.ADMIN_ONLY}>
+            <BitacoraPage />
           </ProtectedRoute>
         } />
       </Route>

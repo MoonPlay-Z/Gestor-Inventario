@@ -163,9 +163,19 @@ cd backend && npm run db:migrate
 ```bash
 cd backend
 npm install
-npm run db:generate
+npm run db:deploy
+npm run db:auditoria:deploy
 npm start
 ```
+
+`npm install` genera automáticamente los clientes Prisma operacional y de
+auditoría. Si cambias los esquemas manualmente sin reinstalar dependencias,
+ejecuta `npm run db:generate && npm run db:auditoria:generate` y reinicia el
+backend antes de probarlo.
+
+Configura `AUDIT_DATABASE_URL` con una base PostgreSQL/Neon **separada** para la
+bitácora antes de ejecutar `db:auditoria:deploy`. La migración de auditoría tiene
+su propio historial y no modifica la base operacional.
 
 ---
 
@@ -193,6 +203,15 @@ DB_PROVIDER="sqlite"
 JWT_SECRET="dev-secret-local"
 PORT=3001
 VOID_CODE="1234"
+# En desarrollo sin esta variable, la bitácora usa SQLite local separado.
+# En producción, apunta a la base Neon exclusiva para auditoría.
+# AUDIT_DATABASE_URL="postgresql://USER:PASSWORD@HOST/neondb_auditoria?sslmode=require"
+```
+
+Para inicializar la base local separada de auditoría en SQLite:
+
+```bash
+cd backend && npm run db:auditoria:sqlite:push
 ```
 
 ### Comandos útiles

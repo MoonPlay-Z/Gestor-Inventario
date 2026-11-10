@@ -122,7 +122,7 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
 
   return (
     <div className="modal-overlay open receipt-overlay" onClick={onClose}>
-      <div className="modal receipt-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px', width: '100%' }}>
+      <div className="modal receipt-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px', width: '100%' }}>
         <div className="modal-header no-print">
           <h3 className="modal-title">
             {isCotizacion ? 'Cotización' : isNotaEntrega ? 'Nota de entrega' : 'Factura'} #{numero?.toString().padStart(5, '0')}
@@ -171,58 +171,49 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
           <div style={{ borderBottom: '1px dashed #000', marginBottom: '10px' }}></div>
 
           {/* ── ÍTEMS ── */}
-          <table style={{ width: '100%', fontSize: '11px', marginBottom: '10px', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #000' }}>
-                <th style={{ textAlign: 'left', padding: '4px 2px' }}>CANT</th>
-                <th style={{ textAlign: 'left', padding: '4px 2px' }}>DESCRIPCION</th>
-                <th style={{ textAlign: 'right', padding: '4px 2px' }}>P.UNIT</th>
-                <th style={{ textAlign: 'right', padding: '4px 2px' }}>TOTAL</th>
-              </tr>
-            </thead>
-            <tbody>
-              {factura.items?.map((item, idx) => {
-                const tipoIVA = getTipoIVALetra(item);
-                return (
-                  <tr key={idx} style={{ borderBottom: '1px dotted #ccc' }}>
-                    <td style={{ padding: '4px 2px', verticalAlign: 'top' }}>
-                      {item.cantidad}
-                      {item.unidadMedida && item.unidadMedida !== 'UNIDAD' && (
-                        <span style={{ fontSize: '9px' }}> ({item.unidadMedida.substring(0, 3)})</span>
-                      )}
-                    </td>
-                    <td style={{ padding: '4px 2px', paddingRight: '4px' }}>
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #000', paddingBottom: '3px', fontWeight: 'bold', fontSize: '10px' }}>
+              <span>DESCRIPCIÓN / CANT x PRECIO</span>
+              <span>TOTAL ({simboloMoneda})</span>
+            </div>
+            {factura.items?.map((item, idx) => {
+              const tipoIVA = getTipoIVALetra(item);
+              const cant = item.cantidad;
+              const unidad = item.unidadMedida && item.unidadMedida !== 'UNIDAD' ? ` ${item.unidadMedida.substring(0, 3)}` : '';
+              const pUnit = formatValue(convertir(normalizarUSD(Number(item.precioUnitarioHistorico || 0))));
+              const totalLinea = formatValue(convertir(normalizarUSD(Number(item.totalLinea || 0))));
+              return (
+                <div key={idx} style={{ padding: '5px 0', borderBottom: '1px dotted #ccc' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                    <span style={{ fontWeight: 600, wordBreak: 'break-word', flex: 1, lineHeight: 1.25 }}>
                       {item.descripcionHistorica || item.producto?.nombre}
-                      <span style={{ 
-                        display: 'inline-block', 
-                        marginLeft: '4px',
-                        padding: '0 3px',
-                        border: '1px solid #000',
-                        fontSize: '9px',
-                        fontWeight: 'bold'
-                      }}>
-                        {tipoIVA}
-                      </span>
-                    </td>
-                    <td style={{ padding: '4px 2px', textAlign: 'right', verticalAlign: 'top' }}>
-                      {formatValue(convertir(normalizarUSD(Number(item.precioUnitarioHistorico || 0))))}
-                    </td>
-                    <td style={{ padding: '4px 2px', textAlign: 'right', verticalAlign: 'top' }}>
-                      {formatValue(convertir(normalizarUSD(Number(item.totalLinea || 0))))}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                    </span>
+                    <span style={{
+                      padding: '0 3px',
+                      border: '1px solid #000',
+                      fontSize: '9px',
+                      fontWeight: 'bold',
+                      flexShrink: 0
+                    }}>
+                      {tipoIVA}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10.5px', marginTop: '3px' }}>
+                    <span style={{ color: '#444' }}>{cant}{unidad} x {pUnit}</span>
+                    <span style={{ fontWeight: 'bold' }}>{simboloMoneda} {totalLinea}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
           <div style={{ borderBottom: '1px dashed #000', marginBottom: '10px' }}></div>
 
           {/* ── TOTALES ── */}
-          <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>SUBTOTAL:</span>
-              <span>{simboloMoneda} {formatValue(subtotal)}</span>
+              <span style={{ fontWeight: 600 }}>{simboloMoneda} {formatValue(subtotal)}</span>
             </div>
             
             {/* Base Exenta */}
@@ -262,20 +253,20 @@ export function ReceiptModal({ factura, onClose, config, type = 'factura' }) {
             )}
             
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: '14px', marginTop: '6px', paddingTop: '6px', borderTop: '2px solid #000' }}>
-              <span>TOTAL {simboloMoneda}:</span>
+              <span>TOTAL A PAGAR:</span>
               <span>{simboloMoneda} {formatValue(total)}</span>
             </div>
           </div>
 
           {/* ── INFORMACIÓN ADICIONAL ── */}
-          <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px dashed #000', fontSize: '10px' }}>
+          <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px dashed #000', fontSize: '10px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>TASA BCV: {tasaBcv.toFixed(2)} BS/USD</span>
-            </div>
-            {/* Solo mostrar la moneda seleccionada, sin mezclar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-              <span>TOTAL {monedaImpresion}:</span>
-              <span>{simboloMoneda} {formatValue(total)}</span>
+              {monedaImpresion === 'VES' ? (
+                <span>EQUIV. USD: $ {formatValue(totalUSD)}</span>
+              ) : (
+                <span>EQUIV. BS: Bs. {formatValue(totalUSD * tasaBcv)}</span>
+              )}
             </div>
             
             {/* Método de Pago */}

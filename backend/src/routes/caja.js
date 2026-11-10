@@ -10,6 +10,7 @@ const { tasaParaEmpresa } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { toDecimalSeguro } = require('../utils/decimal');
 const { ESTADOS_PAGO, esMetodoEfectivo } = require('../config/pagos');
+const { registrar: registrarBitacora, contexto: contextoBitacora } = require('../services/bitacora');
 
 const router = express.Router();
 
@@ -43,7 +44,7 @@ const buildPagosTurnoSql = ({ fechaApertura, usuarioId, tasaSistema }) => {
         WHEN p."monedaPago" = 'VES' THEN
           CASE WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
             THEN p."monto" / f."tasaCambio"
-            ELSE p."monto" / ${tasaSistema}
+            ELSE p."monto" / COALESCE(NULLIF(p."tasaBCV", 0), NULLIF(${tasaSistema}, 0), 1)
           END
         ELSE p."monto"
       END) AS TEXT) AS total_usd,
@@ -99,7 +100,69 @@ router.get('/status', async (req, res, next) => {
       orderBy: { fechaApertura: 'desc' }
     });
 
-    res.json(cajaAbierta || { status: 'CLOSED' });
+    if (!cajaAbierta) {
+      return res.json({ status: 'CLOSED' });
+    }
+
+    let montoInicialVES = 0;
+    try {
+      if (cajaAbierta.arqueoDetalle) {
+        const parsed = JSON.parse(cajaAbierta.arqueoDetalle);
+        montoInicialVES = parsed?.fondoInicial?.VES ?? parsed?.arqueo?.ves?.fondoInicial ?? 0;
+      }
+    } catch {}
+
+    let ingresosEfectivo = cajaAbierta.ingresosEfectivo;
+    let ingresosBanco = cajaAbierta.ingresosBanco;
+    let ingresosEfectivoVES = cajaAbierta.ingresosEfectivoVES;
+    let ingresosBancoVES = cajaAbierta.ingresosBancoVES;
+
+    // Si la caja está abierta, agregar los ingresos del turno en tiempo real
+    if (cajaAbierta.estado === 'OPEN') {
+      try {
+        const fechaApertura = new Date(cajaAbierta.fechaApertura).toISOString();
+        const usuarioId = cajaAbierta.usuarioId;
+        const tasaSistema = await tasaParaEmpresa(await resolverEmpresaRefId(req));
+        const pagosAgregados = await prisma.$queryRaw(buildPagosTurnoSql({
+          fechaApertura,
+          usuarioId,
+          tasaSistema,
+        }));
+
+        let liveEfectivoUSD = new Decimal(0);
+        let liveBancoUSD = new Decimal(0);
+        let liveEfectivoVES = new Decimal(0);
+        let liveBancoVES = new Decimal(0);
+
+        for (const row of pagosAgregados) {
+          const usd = new Decimal(row.total_usd || 0);
+          const ves = new Decimal(row.total_ves || 0);
+          if (esMetodoEfectivo(row.metodo)) {
+            liveEfectivoUSD = liveEfectivoUSD.add(usd);
+            liveEfectivoVES = liveEfectivoVES.add(ves);
+          } else {
+            liveBancoUSD = liveBancoUSD.add(usd);
+            liveBancoVES = liveBancoVES.add(ves);
+          }
+        }
+
+        ingresosEfectivo = liveEfectivoUSD.toFixed(2);
+        ingresosBanco = liveBancoUSD.toFixed(2);
+        ingresosEfectivoVES = liveEfectivoVES.gt(0) ? liveEfectivoVES.toFixed(2) : '0.00';
+        ingresosBancoVES = liveBancoVES.gt(0) ? liveBancoVES.toFixed(2) : '0.00';
+      } catch (_) {
+        // En caso de fallo no bloquear status
+      }
+    }
+
+    res.json({
+      ...cajaAbierta,
+      ingresosEfectivo,
+      ingresosBanco,
+      ingresosEfectivoVES,
+      ingresosBancoVES,
+      montoInicialVES: Number(montoInicialVES).toFixed(2),
+    });
   } catch (err) {
     next(err);
   }
@@ -108,17 +171,31 @@ router.get('/status', async (req, res, next) => {
 // 2. Abrir Caja (para el usuario actual)
 router.post('/open', async (req, res, next) => {
   try {
-    const { montoInicial, observaciones } = req.body;
+    const montoUSDInput = req.body.montoInicialUSD !== undefined ? req.body.montoInicialUSD : req.body.montoInicial;
+    const montoVESInput = req.body.montoInicialVES !== undefined ? req.body.montoInicialVES : 0;
+    const { observaciones } = req.body;
     const userId = req.user?.id;
 
     if (!userId) throw createValidationError('Usuario no autenticado');
 
-    // `new Decimal('abc')` lanza DecimalError y `new Decimal(null)` también,
-    // lo que devolvía un 500. Se convierte a texto y se valida antes de construir.
-    const montoInicialDecimal = toDecimalSeguro(montoInicial, 0);
-    if (!montoInicialDecimal.isFinite() || montoInicialDecimal.lt(0)) {
-      throw createValidationError('El monto inicial debe ser un número positivo');
+    // Validación Decimal segura para USD y VES
+    const montoInicialUSD = toDecimalSeguro(montoUSDInput, 0);
+    const montoInicialVES = toDecimalSeguro(montoVESInput, 0);
+
+    if (!montoInicialUSD.isFinite() || montoInicialUSD.lt(0)) {
+      throw createValidationError('El monto inicial en USD debe ser un número mayor o igual a 0');
     }
+    if (!montoInicialVES.isFinite() || montoInicialVES.lt(0)) {
+      throw createValidationError('El monto inicial en Bs. (VES) debe ser un número mayor o igual a 0');
+    }
+
+    const arqueoInicialObj = {
+      fondoInicial: {
+        USD: montoInicialUSD.toNumber(),
+        VES: montoInicialVES.toNumber(),
+      }
+    };
+    const arqueoDetalleStr = JSON.stringify(arqueoInicialObj);
 
     const empresaId = await resolverEmpresaRefId(req);
 
@@ -153,8 +230,9 @@ router.post('/open', async (req, res, next) => {
         data: {
           usuarioId: userId,
           empresaId,
-          montoInicial: montoInicialDecimal.toFixed(2),
-          observaciones: observaciones?.trim() || null
+          montoInicial: montoInicialUSD.toFixed(2),
+          observaciones: observaciones?.trim() || null,
+          arqueoDetalle: arqueoDetalleStr,
         },
         include: {
           usuario: { select: { id: true, username: true, nombre: true } }
@@ -162,7 +240,28 @@ router.post('/open', async (req, res, next) => {
       });
     });
 
-    res.status(201).json(nuevaCaja);
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'CAJA',
+      modulo: 'caja',
+      accion: 'CAJA_ABIERTA',
+      entidad: 'CierreCaja',
+      entidadId: nuevaCaja.id,
+      descripcion: `Abrió caja con fondo inicial ${montoInicialUSD.toFixed(2)} USD y ${montoInicialVES.toFixed(2)} Bs.`,
+      datosNuevos: {
+        montoInicialUSD: montoInicialUSD.toFixed(2),
+        montoInicialVES: montoInicialVES.toFixed(2),
+        observaciones: nuevaCaja.observaciones,
+        fechaApertura: nuevaCaja.fechaApertura,
+      },
+      monto: nuevaCaja.montoInicial,
+    });
+
+    res.status(201).json({
+      ...nuevaCaja,
+      montoInicialUSD: montoInicialUSD.toFixed(2),
+      montoInicialVES: montoInicialVES.toFixed(2),
+    });
   } catch (err) {
     next(err);
   }
@@ -287,9 +386,22 @@ router.get('/preview', async (req, res, next) => {
     const montoInicialUSD = new Decimal(cajaAbierta.montoInicial.toString());
     const montoEsperadoEfectivo = montoInicialUSD.add(ingresosEfectivoUSD);
 
+    let montoInicialVES = 0;
+    try {
+      if (cajaAbierta.arqueoDetalle) {
+        const parsed = JSON.parse(cajaAbierta.arqueoDetalle);
+        montoInicialVES = parsed?.fondoInicial?.VES ?? parsed?.arqueo?.ves?.fondoInicial ?? 0;
+      }
+    } catch {}
+
     res.json({
-      caja: cajaAbierta,
+      caja: {
+        ...cajaAbierta,
+        montoInicialVES: Number(montoInicialVES).toFixed(2),
+      },
       montoInicialUSD: montoInicialUSD.toFixed(2),
+      montoInicialVES: Number(montoInicialVES).toFixed(2),
+      fondoInicialVES: Number(montoInicialVES),
       desglose: {
         efectivo:     efectivoUSD.toFixed(2),
         pagoMovil:    pagoMovilUSD.toFixed(2),
@@ -415,6 +527,24 @@ router.post('/close', async (req, res, next) => {
       // cierre pasan a la vez, la segunda espera el lock de fila y, al reevaluar
       // la condición tras el commit de la primera, afecta 0 filas. Así se evita
       // el doble cierre (antes ambas devolvían 200 y reescribían el arqueo).
+      // Merge arqueoDetalle: preservar fondoInicial guardado al abrir la caja.
+      // Antes se reemplazaba el JSON completo y se perdía { fondoInicial: { USD, VES } }.
+      let arqueoDetalleParaGuardar = arqueoDetalleStr;
+      if (arqueoDetalleStr) {
+        try {
+          const arqueoExistente = cajaAbierta.arqueoDetalle
+            ? JSON.parse(cajaAbierta.arqueoDetalle)
+            : {};
+          const fondoInicial = arqueoExistente.fondoInicial || {};
+          const arqueoNuevo = JSON.parse(arqueoDetalleStr);
+          // Mantener fondoInicial de apertura si el payload de cierre no lo trae
+          arqueoDetalleParaGuardar = JSON.stringify({
+            ...arqueoNuevo,
+            fondoInicial: Object.keys(fondoInicial).length > 0 ? fondoInicial : (arqueoNuevo.fondoInicial || {}),
+          });
+        } catch { /* si el JSON es inválido, usar tal cual */ }
+      }
+
       const cerrados = await tx.cierreCaja.updateMany({
         where: { id: cajaAbierta.id, estado: 'OPEN' },
         data: {
@@ -428,7 +558,7 @@ router.post('/close', async (req, res, next) => {
           observaciones: observaciones
             ? `${cajaAbierta.observaciones ? cajaAbierta.observaciones + '\n' : ''}${observaciones}${advertenciaMonto ? ` ⚠ ${advertenciaMonto}` : ''}`
             : (cajaAbierta.observaciones || advertenciaMonto ? `${cajaAbierta.observaciones ? cajaAbierta.observaciones + '\n' : ''}${advertenciaMonto || ''}`.trim() || null : null),
-          ...(arqueoDetalleStr ? { arqueoDetalle: arqueoDetalleStr } : {}),
+          ...(arqueoDetalleParaGuardar ? { arqueoDetalle: arqueoDetalleParaGuardar } : {}),
         },
       });
 
@@ -453,6 +583,31 @@ router.post('/close', async (req, res, next) => {
           estado: true,
         }
       });
+    });
+
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'CAJA',
+      modulo: 'caja',
+      accion: 'CAJA_CERRADA',
+      entidad: 'CierreCaja',
+      entidadId: cajaCerrada.id,
+      descripcion: `Cerró caja con ${cajaCerrada.montoFinal} USD (efectivo ${cajaCerrada.ingresosEfectivo}, banco ${cajaCerrada.ingresosBanco})`,
+      datosAnteriores: {
+        estado: 'OPEN',
+        montoInicial: cajaCerrada.montoInicial,
+        fechaApertura: cajaCerrada.fechaApertura,
+      },
+      datosNuevos: {
+        estado: 'CLOSED',
+        montoFinal: cajaCerrada.montoFinal,
+        ingresosEfectivo: cajaCerrada.ingresosEfectivo,
+        ingresosBanco: cajaCerrada.ingresosBanco,
+        ingresosEfectivoVES: cajaCerrada.ingresosEfectivoVES,
+        ingresosBancoVES: cajaCerrada.ingresosBancoVES,
+        fechaCierre: cajaCerrada.fechaCierre,
+      },
+      monto: cajaCerrada.montoFinal,
     });
 
     res.json(cajaCerrada);
@@ -520,7 +675,21 @@ router.get('/', async (req, res, next) => {
       }),
       prisma.cierreCaja.count({ where }),
     ]);
-    res.json(paginatedResponse(cierres, total, page, limit));
+    const cierresEnriquecidos = cierres.map(c => {
+      let montoInicialVES = 0;
+      try {
+        if (c.arqueoDetalle) {
+          const parsed = JSON.parse(c.arqueoDetalle);
+          montoInicialVES = parsed?.fondoInicial?.VES ?? parsed?.arqueo?.ves?.fondoInicial ?? 0;
+        }
+      } catch {}
+      return {
+        ...c,
+        montoInicialVES: Number(montoInicialVES).toFixed(2),
+      };
+    });
+
+    res.json(paginatedResponse(cierresEnriquecidos, total, page, limit));
   } catch (err) {
     next(err);
   }

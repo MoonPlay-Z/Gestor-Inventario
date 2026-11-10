@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { CustomSelect } from '../components/ui';
 import styles from './GananciasPage.module.css';
 
 const PERIODOS = [
@@ -58,26 +59,24 @@ export function GananciasPage() {
       <h1 className={styles.title}>Ganancias</h1>
 
       <div className={styles.filters}>
-        <select
-          value={periodo}
-          onChange={(e) => {
-            setPeriodo(e.target.value);
-            if (e.target.value === 'anual') {
-              setFecha(new Date().getFullYear().toString());
-            } else if (e.target.value === 'mensual') {
-              const now = new Date();
-              setFecha(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
-            } else {
-              const now = new Date();
-              setFecha(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`);
-            }
-          }}
-          className={styles.select}
-        >
-          {PERIODOS.map((p) => (
-            <option key={p.value} value={p.value}>{p.label}</option>
-          ))}
-        </select>
+        <div style={{ minWidth: '150px' }}>
+          <CustomSelect
+            value={periodo}
+            onChange={(val) => {
+              setPeriodo(val);
+              if (val === 'anual') {
+                setFecha(new Date().getFullYear().toString());
+              } else if (val === 'mensual') {
+                const now = new Date();
+                setFecha(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`);
+              } else {
+                const now = new Date();
+                setFecha(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`);
+              }
+            }}
+            options={PERIODOS}
+          />
+        </div>
 
         {periodo === 'anual' ? (
           <input

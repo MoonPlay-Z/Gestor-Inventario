@@ -87,7 +87,7 @@ export const METODOS_PAGO_POS = Object.freeze([
   {
     value: METODOS_PAGO.CASHEA,
     label: 'Cashea',
-    moneda: 'USD',
+    moneda: 'VES',
     requiereReferencia: true,
     icon: 'mdi:shopping',
   },

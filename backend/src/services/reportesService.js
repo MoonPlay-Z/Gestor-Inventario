@@ -23,7 +23,7 @@ const {
   cantidadEnKg,
 } = require('./unidades');
 const { paginate, paginatedResponse } = require('../utils/pagination');
-const { tasaParaEmpresa } = require('../utils/tasaAPI');
+const { tasaParaEmpresa, convertirMoneda, monedaBasePorEmpresa, monedaExhibicionPorEmpresa } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const { ESTADOS_PAGO } = require('../config/pagos');
 
@@ -216,7 +216,7 @@ function normalizarAUSD(monto, moneda, tasaCambio) {
   return m;
 }
 
-async function getProductosConPerdida(inicio, fin, tenantFilter) {
+async function getProductosConPerdida(inicio, fin, tenantFilter, empresaId = null) {
   const whereClause = buildTenantSql(tenantFilter);
   const ventaUSD = `(CASE
     WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
@@ -229,11 +229,12 @@ async function getProductosConPerdida(inicio, fin, tenantFilter) {
   // (precioUnitarioHistorico - costo) * cantidad, que no coincide con el
   // subtotal cobrado cuando la línea tuvo descuento o redondeo, y hacía que el
   // total de pérdidas no correspondiera con la ganancia del reporte.
-  const costoUSD = `(CASE
-    WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-    THEN COALESCE(p."costoCompra", 0) * ${cantidadKg} / f."tasaCambio"
-    ELSE COALESCE(p."costoCompra", 0) * ${cantidadKg}
-  END)`;
+  // Costo histórico en USD de la línea. `costoUnitarioHistoricoUSD` se guarda
+  // al emitir la factura y NO depende de la moneda de la factura (siempre USD);
+  // por eso no se divide por `tasaCambio`. Antes se usaba el costo actual del
+  // producto y además se dividía por la tasa en facturas VES, lo que dejaba el
+  // costo en casi cero e inflaba la ganancia de todo el reporte.
+  const costoUSD = `(COALESCE(item."costoUnitarioHistoricoUSD", p."costoCompra", 0) * ${cantidadKg})`;
   const gananciaUSD = `(${ventaUSD} - ${costoUSD})`;
   // Tolerancia de medio cent, la misma que cxc.js y pagos.js aplican al cerrar
   // saldos. Sin ella, una línea que pierde $0.0006 aparece en la tabla de
@@ -258,7 +259,6 @@ async function getProductosConPerdida(inicio, fin, tenantFilter) {
     WHERE f."fechaEmision" >= ${tsFrag(inicio)}
       AND f."fechaEmision" <= ${tsFrag(fin)}
       AND f."estado" != 'VOIDED'
-      AND item."productoId" IS NOT NULL
       ${whereClause}
       AND ${Prisma.raw(gananciaUSD)} < ${TOLERANCIA_PERDIDA}
     ORDER BY f."fechaEmision" ASC, f."numeroFactura" ASC
@@ -271,16 +271,21 @@ async function getProductosConPerdida(inicio, fin, tenantFilter) {
     return (redondeado.isZero() ? new Decimal(0) : redondeado).toFixed(2);
   };
 
-  return rows.map(row => ({
+  const empresaRefIdPerd = await resolverEmpresaRefId({ user: { empresaRefId: empresaId || null } });
+  const monedaBasePerd = await monedaBasePorEmpresa(empresaRefIdPerd);
+  const exhibicionPerd = await monedaExhibicionPorEmpresa(empresaRefIdPerd);
+  const convertirPerd = (monto) => convertirMoneda(monto, monedaBasePerd, exhibicionPerd, empresaRefIdPerd);
+
+  return await Promise.all(rows.map(async (row) => ({
     facturaId: Number(row.factura_id),
     fechaHora: row.fecha_hora,
     cliente: row.cliente || '—',
     producto: row.producto || '—',
     cantidad: row.cantidad.toString(),
     unidad: row.unidad,
-    subtotal: a2(row.subtotal_usd),
-    ganancia: a2(row.ganancia_usd),
-  }));
+    subtotal: (await convertirPerd(row.subtotal_usd)).toFixed(2),
+    ganancia: (await convertirPerd(row.ganancia_usd)).toFixed(2),
+  })));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -299,6 +304,13 @@ async function getVentasReporte(req) {
   const { inicio, fin, inicioAnterior, finAnterior, etiqueta } = getFechasPeriodo(periodo, fecha);
   const tenantFilter = getTenantFilter(req);
 
+  // Multimoneda: los reportes de ventas se entregan en la moneda de exhibición
+  // de la empresa (el backend es la fuente de verdad del switch).
+  const empresaRefIdVentas = await resolverEmpresaRefId(req);
+  const monedaBaseVentas = await monedaBasePorEmpresa(empresaRefIdVentas);
+  const exhibicionVentas = await monedaExhibicionPorEmpresa(empresaRefIdVentas);
+  const convertirVentas = (monto) => convertirMoneda(monto, monedaBaseVentas, exhibicionVentas, empresaRefIdVentas);
+
   // Consulta principal: totales del período actual y agrupación en paralelo
   const [totalesActual, agrupacion] = await Promise.all([
     prisma.$queryRaw`
@@ -313,11 +325,12 @@ async function getVentasReporte(req) {
         AND f."estado" != 'VOIDED'
         ${buildTenantSql(tenantFilter)}
     `,
-    getAgrupacionVentas(periodo, inicio, fin, tenantFilter)
+    getAgrupacionVentas(periodo, inicio, fin, tenantFilter, empresaRefIdVentas)
   ]);
 
   // Comparación con período anterior
   let comparacion = null;
+  let comparacionSubtotal = null;
   if (comparar === 'true') {
     const totalesAnterior = await prisma.$queryRaw`
       SELECT
@@ -327,7 +340,14 @@ async function getVentasReporte(req) {
             THEN f."total" / f."tasaCambio"
             ELSE f."total"
           END
-        ), 0) AS total_usd
+        ), 0) AS total_usd,
+        COALESCE(SUM(
+          CASE
+            WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
+            THEN f."subtotal" / f."tasaCambio"
+            ELSE f."subtotal"
+          END
+        ), 0) AS subtotal_usd
       FROM facturas f
       WHERE f."fechaEmision" >= ${tsFrag(inicioAnterior)}
         AND f."fechaEmision" <= ${tsFrag(finAnterior)}
@@ -337,9 +357,19 @@ async function getVentasReporte(req) {
 
     const totalActual = Number(totalesActual[0]?.total_usd || 0);
     const totalAnterior = Number(totalesAnterior[0]?.total_usd || 0);
+    const totalActualConv = await convertirVentas(totalActual);
+    const totalAnteriorConv = await convertirVentas(totalAnterior);
     comparacion = {
-      ...calcularComparacion(totalActual, totalAnterior),
-      totalAnterior: totalAnterior.toFixed(2),
+      ...calcularComparacion(Number(totalActualConv.toFixed(2)), Number(totalAnteriorConv.toFixed(2))),
+      totalAnterior: Number(totalAnteriorConv.toFixed(2)).toFixed(2),
+    };
+    // Comparación de ingresos SIN impuestos, que es la base de la ganancia y
+    // del margen. La de arriba sigue siendo sobre el total facturado (gráfico).
+    const subtotalActualConv = await convertirVentas(Number(totalesActual[0]?.subtotal_usd || 0));
+    const subtotalAnteriorConv = await convertirVentas(Number(totalesAnterior[0]?.subtotal_usd || 0));
+    comparacionSubtotal = {
+      ...calcularComparacion(Number(subtotalActualConv.toFixed(2)), Number(subtotalAnteriorConv.toFixed(2))),
+      subtotalAnterior: Number(subtotalAnteriorConv.toFixed(2)).toFixed(2),
     };
   }
 
@@ -351,13 +381,14 @@ async function getVentasReporte(req) {
   const resultado = {
     periodo,
     etiqueta,
-    total: totalUSD.toFixed(2),
-    impuestos: impuestosUSD.toFixed(2),
-    subtotal: subtotalUSD.toFixed(2),
+    total: (await convertirVentas(totalUSD)).toFixed(2),
+    impuestos: (await convertirVentas(impuestosUSD)).toFixed(2),
+    subtotal: (await convertirVentas(subtotalUSD)).toFixed(2),
     cantidadFacturas: cantidad,
-    promedioVenta: cantidad > 0 ? totalUSD.dividedBy(cantidad).toFixed(2) : '0.00',
+    promedioVenta: cantidad > 0 ? (await convertirVentas(totalUSD)).dividedBy(cantidad).toFixed(2) : '0.00',
     agrupacion,
     comparacion,
+    comparacionSubtotal,
   };
 
   // Guardar en caché
@@ -369,7 +400,7 @@ async function getVentasReporte(req) {
 /**
  * Agrupa ventas por día, semana o mes según el período.
  */
-async function getAgrupacionVentas(periodo, inicio, fin, tenantFilter) {
+async function getAgrupacionVentas(periodo, inicio, fin, tenantFilter, empresaId = null) {
   let groupBy, selectExpr;
 
   // Expresiones de agrupación por período, ancladas a hora de Venezuela.
@@ -431,11 +462,16 @@ async function getAgrupacionVentas(periodo, inicio, fin, tenantFilter) {
     ORDER BY periodo ASC
   `;
 
-  return resultados.map(row => ({
+  const empresaRefIdAgrup = await resolverEmpresaRefId({ user: { empresaRefId: empresaId || null } });
+  const monedaBaseAgrup = await monedaBasePorEmpresa(empresaRefIdAgrup);
+  const exhibicionAgrup = await monedaExhibicionPorEmpresa(empresaRefIdAgrup);
+  const convertirAgrup = (monto) => convertirMoneda(monto, monedaBaseAgrup, exhibicionAgrup, empresaRefIdAgrup);
+
+  return await Promise.all(resultados.map(async (row) => ({
     fecha: row.periodo,
-    total: new Decimal(row.total_usd || 0).toFixed(2),
+    total: (await convertirAgrup(row.total_usd || 0)).toFixed(2),
     cantidad: Number(row.cantidad),
-  }));
+  })));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -448,6 +484,7 @@ async function getGananciasReporte(req) {
   const { inicio, fin, inicioAnterior, finAnterior, etiqueta } = getFechasPeriodo(periodo, fecha);
   const tenantFilter = getTenantFilter(req);
   const whereClause = buildTenantSql(tenantFilter);
+  const empresaRefIdGanancias = await resolverEmpresaRefId(req);
 
   const ETIQUETA_GANANCIA = {
     diario: 'Ganancia del Día',
@@ -456,7 +493,7 @@ async function getGananciasReporte(req) {
     anual: 'Ganancia del Año',
   };
 
-  const gananciaPorProducto = await getGananciaPorProducto(inicio, fin, tenantFilter);
+  const gananciaPorProducto = await getGananciaPorProducto(inicio, fin, tenantFilter, empresaRefIdGanancias);
 
   // Suma de la agregación por producto: una sola definición de ingresos,
   // costo y ganancia para el resumen y para la tabla.
@@ -467,43 +504,45 @@ async function getGananciasReporte(req) {
   const ingresosTotal = sumaPorProducto('ingresos');
   const costoVendido = sumaPorProducto('costo');
   const gananciaTotal = sumaPorProducto('ganancia');
-
-  // Conteo de facturas con y sin costo histórico. Son conteos, no sumas: no
-  // dependen de la agregación por producto y deben seguir contando solo las
-  // facturas cuyas líneas tienen producto (las otras no tienen costo conocido).
+  // Conteo de facturas con y sin costo conocido. El costo histórico de la
+  // línea manda: sigue disponible aunque el producto se haya eliminado o su
+  // costo actual sea otro.
   const [facturasConCostoData, facturasSinCostoData] = await Promise.all([
     prisma.$queryRaw`
       SELECT COUNT(DISTINCT f.id) AS n
       FROM facturas f
       INNER JOIN items_factura item ON item."facturaId" = f.id
+      LEFT JOIN productos p ON p.id = item."productoId"
       WHERE f."fechaEmision" >= ${tsFrag(inicio)}
         AND f."fechaEmision" <= ${tsFrag(fin)}
         AND f."estado" != 'VOIDED'
         ${whereClause}
-        AND item."productoId" IS NOT NULL
+        AND (item."costoUnitarioHistoricoUSD" IS NOT NULL OR p."costoCompra" IS NOT NULL)
     `,
     prisma.$queryRaw`
       SELECT COUNT(DISTINCT f.id) AS n
       FROM facturas f
       INNER JOIN items_factura item ON item."facturaId" = f.id
+      LEFT JOIN productos p ON p.id = item."productoId"
       WHERE f."fechaEmision" >= ${tsFrag(inicio)}
         AND f."fechaEmision" <= ${tsFrag(fin)}
         AND f."estado" != 'VOIDED'
         ${whereClause}
-        AND item."productoId" IS NULL
+        AND item."costoUnitarioHistoricoUSD" IS NULL
+        AND p."costoCompra" IS NULL
     `,
   ]);
 
   const facturasConCosto = Number(facturasConCostoData[0]?.n || 0);
   const facturasSinCosto = Number(facturasSinCostoData[0]?.n || 0);
   const gananciaDisponible = facturasConCosto > 0 || facturasSinCosto === 0;
-  const productosConPerdida = await getProductosConPerdida(inicio, fin, tenantFilter);
+  const productosConPerdida = await getProductosConPerdida(inicio, fin, tenantFilter, empresaRefIdGanancias);
 
   let comparacion = null;
   if (comparar === 'true') {
     // El período anterior se agrega con la MISMA función, para que la
     // comparación no mezcle dos fórmulas distintas de ganancia.
-    const porProductoAnterior = await getGananciaPorProducto(inicioAnterior, finAnterior, tenantFilter);
+    const porProductoAnterior = await getGananciaPorProducto(inicioAnterior, finAnterior, tenantFilter, empresaRefIdGanancias);
     const gananciaAnterior = porProductoAnterior.reduce(
       (acc, p) => acc.plus(new Decimal(p.ganancia || 0)),
       new Decimal(0)
@@ -514,6 +553,13 @@ async function getGananciasReporte(req) {
       gananciaAnterior: gananciaAnterior.toFixed(2),
     };
   }
+
+  // Multimoneda: `gananciaPorProducto` ya regresa las filas en la moneda de
+  // exhibición, así que los totales se suman y se entregan ya convertidos
+  // (sin pasar la conversion dos veces).
+  const empresaRefIdGan = await resolverEmpresaRefId(req);
+  const monedaBaseGan = await monedaBasePorEmpresa(empresaRefIdGan);
+  const exhibicionGan = await monedaExhibicionPorEmpresa(empresaRefIdGan);
 
   return {
     periodo,
@@ -533,7 +579,7 @@ async function getGananciasReporte(req) {
   };
 }
 
-async function getGananciaPorProducto(inicio, fin, tenantFilter) {
+async function getGananciaPorProducto(inicio, fin, tenantFilter, empresaId = null) {
   const whereClause = buildTenantSql(tenantFilter);
 
   // Cada línea se convierte UNA vez a su valor en USD y a su costo, y las tres
@@ -555,14 +601,10 @@ async function getGananciaPorProducto(inicio, fin, tenantFilter) {
         THEN item."subtotalLinea" / f."tasaCambio"
         ELSE item."subtotalLinea"
       END AS ingresos_usd,
-      -- Una línea sin producto no tiene costo de inventario conocido: se deja
-      -- en 0 y no se inventa un sustituto.
-      CASE
-        WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-        THEN COALESCE(p."costoCompra", 0) *
-             ${Prisma.raw(cantidadEnKgSQL('item'))} / f."tasaCambio"
-        ELSE COALESCE(p."costoCompra", 0) * ${Prisma.raw(cantidadEnKgSQL('item'))}
-      END AS costo_usd
+      -- Costo histórico (USD) de la línea. Es inmutable: cambiar el costo del
+      -- producto hoy no debe reescribir la ganancia de ventas pasadas.
+      COALESCE(item."costoUnitarioHistoricoUSD", p."costoCompra", 0) *
+        ${Prisma.raw(cantidadEnKgSQL('item'))} AS costo_usd
     FROM items_factura item
     INNER JOIN facturas f ON f.id = item."facturaId"
     LEFT JOIN productos p ON p.id = item."productoId"
@@ -592,19 +634,30 @@ async function getGananciaPorProducto(inicio, fin, tenantFilter) {
     ORDER BY ganancia_usd DESC
   `;
 
-  return rows.map(row => {
+  const empresaRefIdGanProd = await resolverEmpresaRefId({ user: { empresaRefId: empresaId || null } });
+  const monedaBaseGanProd = await monedaBasePorEmpresa(empresaRefIdGanProd);
+  const exhibicionGanProd = await monedaExhibicionPorEmpresa(empresaRefIdGanProd);
+  const convertirGanProd = (monto) => convertirMoneda(monto, monedaBaseGanProd, exhibicionGanProd, empresaRefIdGanProd);
+
+  return await Promise.all(rows.map(async (row) => {
     const esSinProducto = Number(row.sin_producto) === 1;
+    // Redondear primero ingresos y costo y restar después: así cada fila
+    // cumple exactamente `ingresos - costo = ganancia` y la suma de las filas
+    // coincide con los totales del resumen (no se pierde un centavo por
+    // redondeos independientes).
+    const ingresos = new Decimal(row.ingresos_usd.toString()).toDecimalPlaces(2);
+    const costo = new Decimal(row.costo_usd.toString()).toDecimalPlaces(2);
     return {
       productoId: esSinProducto ? null : row.producto_id,
       nombre: esSinProducto ? 'Productos sin clasificar' : row.nombre,
       sku: esSinProducto ? '—' : row.sku,
       unidad: esSinProducto ? '—' : row.unidad_medida,
       cantidadVendida: Number(row.cantidad_vendida).toFixed(2),
-      ingresos: new Decimal(row.ingresos_usd.toString()).toFixed(2),
-      costo: new Decimal(row.costo_usd.toString()).toFixed(2),
-      ganancia: new Decimal(row.ganancia_usd.toString()).toFixed(2),
+      ingresos: (await convertirGanProd(ingresos)).toFixed(2),
+      costo: (await convertirGanProd(costo)).toFixed(2),
+      ganancia: (await convertirGanProd(ingresos.minus(costo))).toFixed(2),
     };
-  });
+  }));
 }
 
 async function getDetalleVentasReporte(req) {
@@ -613,8 +666,16 @@ async function getDetalleVentasReporte(req) {
   const { inicio, fin, etiqueta } = getFechasPeriodo(periodo, fecha);
   const tenantFilter = getTenantFilter(req);
   const puedeVerGanancia = req.user?.rol !== 'CAJA';
+
+  // Multimoneda: el backend es la fuente de verdad del switch; el detalle se
+  // entrega en la moneda de exhibición de la empresa.
+  const empresaRefIdVen = await resolverEmpresaRefId(req);
+  const monedaBaseVen = await monedaBasePorEmpresa(empresaRefIdVen);
+  const exhibicionVen = await monedaExhibicionPorEmpresa(empresaRefIdVen);
+  const convertirVen = (monto) => convertirMoneda(monto, monedaBaseVen, exhibicionVen, empresaRefIdVen);
+
   const productosConPerdida = puedeVerGanancia
-    ? await getProductosConPerdida(inicio, fin, tenantFilter)
+    ? await getProductosConPerdida(inicio, fin, tenantFilter, empresaRefIdVen)
     : [];
 
   // Totales del PERÍODO completo, no de la página. El detalle se muestra
@@ -630,7 +691,7 @@ async function getDetalleVentasReporte(req) {
         AND f."estado" != 'VOIDED'
         ${buildTenantSql(tenantFilter)}
     `,
-    puedeVerGanancia ? getGananciaPorProducto(inicio, fin, tenantFilter) : Promise.resolve([]),
+    puedeVerGanancia ? getGananciaPorProducto(inicio, fin, tenantFilter, empresaRefIdVen) : Promise.resolve([]),
     puedeVerGanancia
       ? prisma.$queryRaw`
           SELECT
@@ -721,12 +782,15 @@ async function getDetalleVentasReporte(req) {
 
     if (puedeVerGanancia) {
       for (const item of factura.items) {
-        const costoCompra = item.producto?.costoCompra;
-        if (!item.productoId || costoCompra === null || costoCompra === undefined) {
+        // Costo histórico de la línea (USD, guardado al emitir la factura).
+        // Antes se usaba el costo actual del producto, así que editar el costo
+        // hoy reescribía la ganancia de ventas de meses anteriores.
+        const costoUnitario = item.costoUnitarioHistoricoUSD ?? item.producto?.costoCompra;
+        if (costoUnitario === null || costoUnitario === undefined) {
           costoDesconocido = true;
           continue;
         }
-        const costo = new Decimal(costoCompra.toString());
+        const costo = new Decimal(costoUnitario.toString());
         // Normaliza gramos a kilos para no inflar la ganancia 1000x.
         const cantidad = cantidadEnKg(
           item.cantidad,
@@ -765,16 +829,24 @@ async function getDetalleVentasReporte(req) {
     });
   }
 
+  const detalleConv = await Promise.all(detalle.map(async (d) => ({
+    ...d,
+    montoTotal: d.montoTotal != null ? (await convertirVen(d.montoTotal)).toFixed(2) : d.montoTotal,
+    ganancia: d.ganancia != null ? (await convertirVen(d.ganancia)).toFixed(2) : d.ganancia,
+  })));
+
   return {
     periodo,
     etiqueta,
-    moneda: 'USD',
-    totalIngresos: totalIngresosPeriodo.toFixed(2),
+    moneda: exhibicionVen,
+    totalIngresos: (await convertirVen(totalIngresosPeriodo)).toFixed(2),
+    // `gananciaPeriodoTotal` ya sale de filas convertidas a exhibición
+    // (getGananciaPorProducto), así que no se convierte de nuevo.
     gananciaTotal: puedeVerGanancia && gananciaDisponible ? gananciaPeriodoTotal.toFixed(2) : null,
     facturasConCosto,
     facturasSinCosto,
     productosConPerdida,
-    detalle,
+    detalle: detalleConv,
     paginacion: {
       page,
       limit,
@@ -838,21 +910,26 @@ async function getInversionReporte(req) {
     `,
   ]);
 
+  const empresaRefIdInv = await resolverEmpresaRefId(req);
+  const monedaBaseInv = await monedaBasePorEmpresa(empresaRefIdInv);
+  const exhibicionInv = await monedaExhibicionPorEmpresa(empresaRefIdInv);
+  const convertirInv = (monto) => convertirMoneda(monto, monedaBaseInv, exhibicionInv, empresaRefIdInv);
+
   return {
-    valorInventario: Number(valorTotal[0]?.valor_total || 0).toFixed(2),
+    valorInventario: (await convertirInv(valorTotal[0]?.valor_total || 0)).toFixed(2),
     totalProductos: Number(valorTotal[0]?.total_productos || 0),
     productosConStock: Number(valorTotal[0]?.con_stock || 0),
     productosSinStock: Number(valorTotal[0]?.sin_stock || 0),
-    productosMasInvertidos: productosMasInvertidos.map(p => ({
+    productosMasInvertidos: await Promise.all(productosMasInvertidos.map(async (p) => ({
       nombre: p.nombre,
       stock: Number(p.stock),
       costoUnitario: Number(p.costo_unitario).toFixed(2),
-      valorTotal: Number(p.valor_total).toFixed(2),
-    })),
-    inversionPorCategoria: inversionPorCategoria.map(c => ({
+      valorTotal: (await convertirInv(p.valor_total)).toFixed(2),
+    }))),
+    inversionPorCategoria: await Promise.all(inversionPorCategoria.map(async (c) => ({
       categoria: c.categoria,
-      valor: Number(c.valor).toFixed(2),
-    })),
+      valor: (await convertirInv(c.valor)).toFixed(2),
+    }))),
   };
 }
 
@@ -882,8 +959,8 @@ async function getProductosTop(req) {
       COALESCE(SUM(
         CASE
           WHEN f."moneda" = 'VES' AND f."tasaCambio" > 0
-          THEN if."totalLinea" / f."tasaCambio"
-          ELSE if."totalLinea"
+          THEN if."subtotalLinea" / f."tasaCambio"
+          ELSE if."subtotalLinea"
         END
       ), 0) AS ingresos_usd
     FROM items_factura if
@@ -916,14 +993,21 @@ async function getProductosTop(req) {
     ) t
   `;
 
+  const empresaRefIdTop = await resolverEmpresaRefId(req);
+  const monedaBaseTop = await monedaBasePorEmpresa(empresaRefIdTop);
+  const exhibicionTop = await monedaExhibicionPorEmpresa(empresaRefIdTop);
+  const convertirTop = (monto) => convertirMoneda(monto, monedaBaseTop, exhibicionTop, empresaRefIdTop);
+
+  const rowsConv = await Promise.all(productos.map(async (p) => ({
+    nombre: p.nombre,
+    sku: p.sku,
+    unidad: p.unidad_medida,
+    cantidadVendida: Number(p.cantidad_vendida),
+    ingresos: (await convertirTop(p.ingresos_usd || 0)).toFixed(2),
+  })));
+
   return paginatedResponse(
-    productos.map(p => ({
-      nombre: p.nombre,
-      sku: p.sku,
-      unidad: p.unidad_medida,
-      cantidadVendida: Number(p.cantidad_vendida),
-      ingresos: Number(p.ingresos_usd || 0).toFixed(2),
-    })),
+    rowsConv,
     Number(total[0]?.n || 0),
     page,
     limit
@@ -979,13 +1063,20 @@ async function getClientesTop(req) {
     ) t
   `;
 
+  const empresaRefIdTop = await resolverEmpresaRefId(req);
+  const monedaBaseTop = await monedaBasePorEmpresa(empresaRefIdTop);
+  const exhibicionTop = await monedaExhibicionPorEmpresa(empresaRefIdTop);
+  const convertirTop = (monto) => convertirMoneda(monto, monedaBaseTop, exhibicionTop, empresaRefIdTop);
+
+  const clientesConv = await Promise.all(clientes.map(async (c) => ({
+    nombre: c.nombre,
+    rif: c.rif,
+    cantidadFacturas: Number(c.cantidad_facturas),
+    totalCompras: (await convertirTop(c.total_compras_usd || 0)).toFixed(2),
+  })));
+
   return paginatedResponse(
-    clientes.map(c => ({
-      nombre: c.nombre,
-      rif: c.rif,
-      cantidadFacturas: Number(c.cantidad_facturas),
-      totalCompras: Number(c.total_compras_usd || 0).toFixed(2),
-    })),
+    clientesConv,
     Number(total[0]?.n || 0),
     page,
     limit
@@ -1041,24 +1132,35 @@ async function getCajaReporte(req) {
     return acc;
   }, { total: 0, cantidad: 0 });
 
+  // Multimoneda: el reporte de caja entrega los montos en la moneda de
+  // exhibición de la empresa (el backend es la fuente de verdad del switch).
+  const empresaRefIdCaja = await resolverEmpresaRefId(req);
+  const monedaBaseCaja = await monedaBasePorEmpresa(empresaRefIdCaja);
+  const exhibicionCaja = await monedaExhibicionPorEmpresa(empresaRefIdCaja);
+  const convertirCaja = (monto) => convertirMoneda(monto, monedaBaseCaja, exhibicionCaja, empresaRefIdCaja);
+
+  const desglose = await Promise.all(pagos.map(async (p) => ({
+    metodo: p.metodo,
+    moneda: p.moneda,
+    metodoLabel: getMetodoLabel(p.metodo, p.moneda),
+    total: Number(p.total_recibido || 0).toFixed(2),
+    totalUSD: (await convertirCaja(p.total_usd || 0)).toFixed(2),
+    cantidad: Number(p.cantidad),
+  })));
+
   return {
     periodo,
-    desglose: pagos.map(p => ({
-      metodo: p.metodo,
-      moneda: p.moneda,
-      metodoLabel: getMetodoLabel(p.metodo, p.moneda),
-      total: Number(p.total_recibido || 0).toFixed(2),
-      totalUSD: Number(p.total_usd || 0).toFixed(2),
-      cantidad: Number(p.cantidad),
-    })),
-    totalGeneral: totales.total.toFixed(2),
+    desglose,
+    totalGeneral: (await convertirCaja(totales.total)).toFixed(2),
     totalTransacciones: totales.cantidad,
   };
 }
 
 function getMetodoLabel(metodo, moneda) {
   const label = METODOS_PAGO_INFO[metodo]?.label || metodo;
-  return moneda ? `${label} (${moneda === 'VES' ? 'Bs.' : 'USD'})` : label;
+  if (!moneda) return label;
+  const simbolo = moneda === 'VES' ? 'Bs.' : moneda === 'EUR' ? '€' : moneda === 'USD' ? 'US$' : moneda;
+  return `${label} (${simbolo})`;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1098,10 +1200,20 @@ async function getImpuestosReporte(req) {
   const totalImpuestos = Number(impuestos[0]?.total_impuestos || 0);
   const baseImponible = Number(impuestos[0]?.base_imponible || 0);
 
+  // Multimoneda: el reporte de impuestos se entrega en la moneda de exhibición
+  // de la empresa (el backend es la fuente de verdad del switch).
+  const empresaRefIdImp = await resolverEmpresaRefId(req);
+  const monedaBaseImp = await monedaBasePorEmpresa(empresaRefIdImp);
+  const exhibicionImp = await monedaExhibicionPorEmpresa(empresaRefIdImp);
+  const convertirImp = (monto) => convertirMoneda(monto, monedaBaseImp, exhibicionImp, empresaRefIdImp);
+
+  const totalImpuestosConv = await convertirImp(totalImpuestos);
+  const baseImponibleConv = await convertirImp(baseImponible);
+
   return {
     periodo,
-    totalImpuestos: totalImpuestos.toFixed(2),
-    baseImponible: baseImponible.toFixed(2),
+    totalImpuestos: totalImpuestosConv.toFixed(2),
+    baseImponible: baseImponibleConv.toFixed(2),
     tasaEfectiva: baseImponible > 0 ? ((totalImpuestos / baseImponible) * 100).toFixed(2) : '0.00',
   };
 }

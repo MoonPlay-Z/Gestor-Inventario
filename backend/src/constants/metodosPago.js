@@ -124,7 +124,7 @@ const METODOS_PAGO_INFO = Object.freeze({
   },
   [METODOS_PAGO.CASHEA]: {
     label: 'Cashea',
-    monedaDefecto: 'USD',
+    monedaDefecto: 'VES',
     requiereReferencia: true,
     esFinanciamiento: false,
     descripcion: 'Plataforma Cashea (Compra ahora, paga después)',

@@ -22,6 +22,7 @@ export function CashRegisterReport({ cierre, preview, onClose, config }) {
   const punto = parseFloat(preview?.desglose?.punto ?? 0);
   const transferencia = parseFloat(preview?.desglose?.transferencia ?? 0);
   const montoInicial = parseFloat(preview?.montoInicialUSD ?? cierre.montoInicial ?? 0);
+  const montoInicialVES = parseFloat(preview?.montoInicialVES ?? preview?.fondoInicialVES ?? cierre.montoInicialVES ?? 0);
   const totalEfectivo = montoInicial + efectivo;
   const totalBanco = pagoMovil + punto + transferencia;
   const totalIngresos = efectivo + totalBanco;
@@ -102,6 +103,12 @@ export function CashRegisterReport({ cierre, preview, onClose, config }) {
               Cuadre de Efectivo
             </div>
             {row('Monto Base Inicial', montoInicial)}
+            {montoInicialVES > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', fontSize: '12px', color: '#555' }}>
+                <span>Monto Base Inicial (Bs.)</span>
+                <span>{Utils.formatMoney(montoInicialVES, 'Bs.')}</span>
+              </div>
+            )}
             {row('+ Ingresos Efectivo', efectivo)}
             {row('= Esperado en Caja', totalEfectivo, true)}
             {cierre.estado === 'CLOSED' && (

@@ -23,6 +23,7 @@ import cashCheckIcon from '@iconify/icons-mdi/cash-check';
 import closeCircleIcon from '@iconify/icons-mdi/close-circle-outline';
 import downloadIcon from '@iconify/icons-mdi/download';
 import searchIcon from '@iconify/icons-mdi/magnify';
+import historyIcon from '@iconify/icons-mdi/history';
 
 const ROL_LABEL = {
   SUPER_ADMIN: 'Super Admin',
@@ -237,6 +238,12 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
                     className="sidebar-mobile-list-link sidebar-mobile-tone-rose"
                     description="Permisos, cajas y terminales" />
                 )}
+                {coincideBusqueda('Bitácora', 'Historial', 'Auditoría') && (
+                  <NavItem to="/bitacora" icon={historyIcon} label="Bitácora"
+                    roles={ROLE_GROUPS.ADMIN_ONLY} onClick={closeMobile} isCollapsed={false}
+                    className="sidebar-mobile-list-link sidebar-mobile-tone-slate"
+                    description="Actividad de ventas, inventario y caja" />
+                )}
               </NavSection>
             </div>
 
@@ -314,6 +321,8 @@ export function Sidebar({ isMobileOpen, isCollapsed, setIsMobileOpen, toggleSide
               <NavItem to="/clientes" icon={accountGroupIcon} label="Clientes"
                 roles={ROLE_GROUPS.VENTAS} onClick={closeMobile} isCollapsed={false} />
               <NavItem to="/usuarios" icon={accountKeyIcon} label="Usuarios / Cajas"
+                roles={ROLE_GROUPS.ADMIN_ONLY} onClick={closeMobile} isCollapsed={false} />
+              <NavItem to="/bitacora" icon={historyIcon} label="Bitácora"
                 roles={ROLE_GROUPS.ADMIN_ONLY} onClick={closeMobile} isCollapsed={false} />
             </NavSection>
 

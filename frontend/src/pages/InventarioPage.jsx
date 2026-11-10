@@ -4,8 +4,10 @@ import { useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
-import { Button, FieldError, FormError } from '../components/ui';
+import { useAuth } from '../context/AuthContext';
+import { Button, FieldError, FormError, CustomSelect } from '../components/ui';
 import { ValidationRules, getErrorMessage } from '../utils/validation';
+import { aNumero, precioVentaReal } from '../utils/numero';
 
 const EMPTY_FORM = {
   sku: '', nombre: '', descripcion: '', imagenUrl: '', categoria: 'General',
@@ -60,6 +62,8 @@ const formatearCantidad = (valor) =>
 export function InventarioPage() {
   const { toggleSidebar } = useOutletContext();
   const { showToast } = useToast();
+  const { empresa } = useAuth();
+  const tasaDolar = Number(empresa?.tasaDolar) || 1;
   const [productos, setProductos] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -298,6 +302,9 @@ export function InventarioPage() {
   };
 
   const totalPages = Math.ceil(total / LIMIT);
+  // `metricas` llega con decimales como string; convertir antes de comparar.
+  const stockBajoTotal = aNumero(metricas?.productosStockBajo);
+  const valorInactivos = aNumero(metricas?.valorInactivos);
 
   return (
     <>
@@ -326,34 +333,62 @@ export function InventarioPage() {
           <div className="metric-card accent">
             <div className="metric-icon"><Icon icon="mdi:cash" className="h-6 w-6" /></div>
             <div>
-              <div className="metric-value">{metricas ? Utils.formatMoney(metricas.valorTotalVenta) : '...'}</div>
+              <div className="metric-value">{metricas ? Utils.formatMoney(metricas.valorTotalVenta, 'USD') : '...'}</div>
               <div className="metric-label">Valor Total Inventario</div>
+              {metricas && tasaDolar > 1 && (
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  ≈ Bs. {(Number(metricas.valorTotalVenta) * tasaDolar).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              )}
+              {valorInactivos > 0 && (
+                <div
+                  style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}
+                  title="Mercancía de productos desactivados; no entra en el total"
+                >
+                  + {Utils.formatMoney(metricas.valorInactivos, 'USD')} en {metricas.productosInactivosConStock} inactivo(s)
+                </div>
+              )}
             </div>
           </div>
           <div className="metric-card success">
             <div className="metric-icon"><Icon icon="mdi:trending-up" className="h-6 w-6" /></div>
             <div>
-              <div className="metric-value">{metricas ? Utils.formatMoney(metricas.gananciaPotencial) : '...'}</div>
-              <div className="metric-label">Ganancias Netas</div>
+              <div className="metric-value">{metricas ? Utils.formatMoney(metricas.gananciaPotencial, 'USD') : '...'}</div>
+              <div className="metric-label">Ganancia Bruta Potencial</div>
+              {metricas && tasaDolar > 1 && (
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  ≈ Bs. {(Number(metricas.gananciaPotencial) * tasaDolar).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              )}
             </div>
           </div>
           <div className="metric-card warning">
             <div className="metric-icon"><Icon icon="mdi:package-variant" className="h-6 w-6" /></div>
             <div>
-              <div className="metric-value">{metricas ? Utils.formatMoney(metricas.valorTotalCosto) : '...'}</div>
+              <div className="metric-value">{metricas ? Utils.formatMoney(metricas.valorTotalCosto, 'USD') : '...'}</div>
               <div className="metric-label">Valor Invertido (Costo)</div>
+              {metricas && tasaDolar > 1 && (
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  ≈ Bs. {(Number(metricas.valorTotalCosto) * tasaDolar).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              )}
             </div>
           </div>
-          <div className="metric-card danger inventario-metrica-stock">
-            <div className="metric-icon"><Icon icon="mdi:alert" className="h-6 w-6" /></div>
+          <div className={`metric-card ${stockBajoTotal > 0 ? 'danger' : 'success'} inventario-metrica-stock`}>
+            <div className="metric-icon"><Icon icon={stockBajoTotal > 0 ? 'mdi:alert' : 'mdi:check-circle'} className="h-6 w-6" /></div>
             <div>
               <div className="metric-value">{metricas ? metricas.productosStockBajo : '...'}</div>
               <div className="metric-label">Stock Bajo</div>
+              {metricas && (
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  {aNumero(metricas.productosSinStock)} agotado(s) · {aNumero(metricas.productosPorReponer)} por reponer
+                </div>
+              )}
             </div>
           </div>
         </div>
 
-        {alertas && (alertas.conIva.length > 0 || alertas.costoMayorAVenta.length > 0) && (
+        {alertas && alertas.costoMayorAVenta.length > 0 && (
           <div className="card inventario-alerta" style={{
             padding: '1rem 1.25rem',
             marginBottom: '1rem',
@@ -369,12 +404,10 @@ export function InventarioPage() {
               <Icon icon="mdi:alert-circle" style={{ color: 'var(--warning, #f59e0b)', fontSize: '1.5rem' }} />
               <div>
                 <div style={{ fontWeight: 700, fontSize: '0.9375rem' }}>
-                  {alertas.conIva.length + alertas.costoMayorAVenta.length} producto(s) requieren atencion
+                  {alertas.costoMayorAVenta.length} producto(s) se venden por debajo del costo
                 </div>
                 <div style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                  {alertas.conIva.length > 0 && <span>{alertas.conIva.length} con IVA</span>}
-                  {alertas.conIva.length > 0 && alertas.costoMayorAVenta.length > 0 && <span> · </span>}
-                  {alertas.costoMayorAVenta.length > 0 && <span>{alertas.costoMayorAVenta.length} con costo mayor a venta</span>}
+                  Revisá el precio de venta o el costo de compra: cada venta genera pérdida.
                 </div>
               </div>
             </div>
@@ -391,17 +424,17 @@ export function InventarioPage() {
               <input type="text" className="form-control" placeholder="Buscar por nombre, SKU, categoría..."
                 value={search} onChange={handleSearchChange} style={{ flex: 1, minWidth: '220px' }} />
             </div>
-            <select
-              className="form-select inventario-categoria"
-              style={{ width: 'auto', minWidth: '150px' }}
-              value={categoriaFiltro}
-              onChange={(e) => { setCategoriaFiltro(e.target.value); setPage(1); }}
-            >
-              <option value="">Todas las categorías</option>
-              {categorias.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+            <div style={{ width: 'auto', minWidth: '180px' }}>
+              <CustomSelect
+                value={categoriaFiltro}
+                onChange={(val) => { setCategoriaFiltro(val); setPage(1); }}
+                options={[
+                  { value: '', label: 'Todas las categorías' },
+                  ...categorias.map(cat => ({ value: cat, label: cat }))
+                ]}
+                placeholder="Todas las categorías"
+              />
+            </div>
             <div className="inventario-filtros-checks">
               <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 <input type="checkbox" checked={soloStockBajo} onChange={(e) => { setSoloStockBajo(e.target.checked); setPage(1); }} style={{ accentColor: 'var(--danger)' }} />
@@ -428,16 +461,29 @@ export function InventarioPage() {
               <thead>
                 <tr>
                   <th>Imagen</th><th>SKU</th><th>Nombre / Categoría</th><th>Precio USD</th>
-                  <th>Costo</th><th>Ganancia</th><th>IVA %</th><th>Stock</th><th>Mín.</th>
+                  <th>Precio BS</th><th>Costo</th><th>Ganancia</th><th>IVA %</th><th>Stock</th><th>Mín.</th>
                   <th>Estado</th><th>Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={11} className="empty-state">Cargando productos...</td></tr>
+                  <tr><td colSpan={12} className="empty-state">Cargando productos...</td></tr>
                 ) : productos.length === 0 ? (
-                  <tr><td colSpan={11} className="empty-state">No se encontraron productos</td></tr>
-                ) : productos.map(p => (
+                  <tr><td colSpan={12} className="empty-state">No se encontraron productos</td></tr>
+                ) : productos.map((p) => {
+                  // Los decimales llegan como string: convertir antes de comparar
+                  // (`"6" > "12"` es true y pintaba una alerta falsa).
+                  const precioReal = precioVentaReal(p);
+                  const costo = aNumero(p.costoCompra);
+                  const ganancia = precioReal - costo;
+                  const margenNegativo = costo > precioReal;
+                  const tasaImpuesto = aNumero(p.tasaImpuesto);
+                  const tasaEmpresa = Number(p.tasaCambio) || tasaDolar || 1;
+                  const precioVes = p.precioVes
+                    ? (p.esVentaPorPeso && p.precioPorKiloVes ? aNumero(p.precioPorKiloVes) : aNumero(p.precioVes))
+                    : (precioReal * tasaEmpresa);
+
+                  return (
                   <tr key={p.id}>
                     <td>
                       {p.imagenUrl ? (
@@ -458,29 +504,42 @@ export function InventarioPage() {
                       <div style={{ fontWeight: 600 }}>{p.nombre}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{p.categoria}</div>
                     </td>
-                    <td style={{ fontWeight: 700, color: 'var(--accent)' }}>{Utils.formatMoney(p.precioVenta)}</td>
-                    <td style={{ color: 'var(--text-secondary)' }}>{Utils.formatMoney(p.costoCompra)}</td>
+                    <td
+                      style={{ fontWeight: 700, color: 'var(--accent)' }}
+                      title={p.esVentaPorPeso ? 'Precio por kilo en USD ($)' : 'Precio de venta en USD ($)'}
+                    >
+                      {Utils.formatMoney(precioReal, 'USD')}
+                      {p.esVentaPorPeso && <span style={{ fontSize: '0.7rem', fontWeight: 500 }}> /kg</span>}
+                    </td>
+                    <td
+                      style={{ fontWeight: 600, color: 'var(--success)' }}
+                      title={p.esVentaPorPeso ? 'Precio por kilo en Bolívares (Bs.)' : 'Precio de venta en Bolívares (Bs.)'}
+                    >
+                      {Utils.formatMoney(precioVes, 'VES')}
+                      {p.esVentaPorPeso && <span style={{ fontSize: '0.7rem', fontWeight: 500 }}> /kg</span>}
+                    </td>
+                    <td style={{ color: 'var(--text-secondary)' }}>{Utils.formatMoney(costo, 'USD')}</td>
                     <td style={{
                       fontWeight: 600,
-                      color: p.costoCompra > p.precioVenta ? 'var(--danger)' : 'var(--success)',
+                      color: margenNegativo ? 'var(--danger)' : 'var(--success)',
                     }}>
                       {/* El flex va en un span interno: aplicar display:flex al
                           <td> lo saca del layout de tabla y desalinea todas las
                           columnas siguientes. */}
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        {Utils.formatMoney(p.precioVenta - p.costoCompra)}
-                        {p.costoCompra > p.precioVenta && (
+                        {Utils.formatMoney(ganancia, 'USD')}
+                        {margenNegativo && (
                           <Icon icon="mdi:alert-circle" style={{ color: 'var(--danger)', fontSize: '0.85em' }} />
                         )}
                       </span>
                     </td>
                     <td style={{
-                      fontWeight: p.tasaImpuesto > 0 ? 700 : 400,
-                      color: p.tasaImpuesto > 0 ? 'var(--warning, #f59e0b)' : 'var(--text-secondary)',
+                      fontWeight: tasaImpuesto > 0 ? 700 : 400,
+                      color: tasaImpuesto > 0 ? 'var(--warning, #f59e0b)' : 'var(--text-secondary)',
                     }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        {p.tasaImpuesto}%
-                        {p.tasaImpuesto > 0 && (
+                        {tasaImpuesto}%
+                        {tasaImpuesto > 0 && (
                           <Icon icon="mdi:receipt" style={{ color: 'var(--warning, #f59e0b)', fontSize: '0.85em' }} />
                         )}
                       </span>
@@ -511,7 +570,8 @@ export function InventarioPage() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -524,7 +584,15 @@ export function InventarioPage() {
               const unidad = producto.esVentaPorPeso
                 ? 'kg'
                 : UNIDADES_CORTAS[producto.unidadMedida] || 'unidades';
-              const ganancia = producto.precioVenta - producto.costoCompra;
+              const precioReal = precioVentaReal(producto);
+              const costo = aNumero(producto.costoCompra);
+              const ganancia = precioReal - costo;
+              const margenNegativo = costo > precioReal;
+              const tasaImpuesto = aNumero(producto.tasaImpuesto);
+              const tasaEmpresa = Number(producto.tasaCambio) || tasaDolar || 1;
+              const precioVes = producto.precioVes
+                ? (producto.esVentaPorPeso && producto.precioPorKiloVes ? aNumero(producto.precioPorKiloVes) : aNumero(producto.precioVes))
+                : (precioReal * tasaEmpresa);
               const claseStock = producto.stockBajoMinimo ? ' inventario-producto--stock-bajo' : '';
 
               return (
@@ -553,27 +621,33 @@ export function InventarioPage() {
                   <div className="inventario-producto-detalles">
                     <div>
                       <span>Precio USD</span>
-                      <strong className="inventario-valor-venta">{Utils.formatMoney(producto.precioVenta)}</strong>
-                      <small>Precio de venta</small>
+                      <strong className="inventario-valor-venta">{Utils.formatMoney(precioReal, 'USD')}</strong>
+                      <small>{producto.esVentaPorPeso ? 'Precio por kilo ($)' : 'Precio de venta ($)'}</small>
                     </div>
                     <div>
-                      <span>Costo</span>
-                      <strong>{Utils.formatMoney(producto.costoCompra)}</strong>
+                      <span>Precio BS</span>
+                      <strong style={{ color: 'var(--success)' }}>{Utils.formatMoney(precioVes, 'VES')}</strong>
+                      <small>Al cambio oficial</small>
+                    </div>
+                    <div>
+                      <span>Costo (USD)</span>
+                      <strong>{Utils.formatMoney(costo, 'USD')}</strong>
                       <small>Costo de compra</small>
                     </div>
                     <div>
-                      <span>Ganancia</span>
-                      <strong className={ganancia < 0 ? 'inventario-valor-negativo' : 'inventario-valor-positivo'}>
-                        {Utils.formatMoney(ganancia)}
+                      <span>Ganancia (USD)</span>
+                      <strong className={margenNegativo ? 'inventario-valor-negativo' : 'inventario-valor-positivo'}>
+                        {Utils.formatMoney(ganancia, 'USD')}
+                        {margenNegativo && <Icon icon="mdi:alert-circle" aria-hidden="true" />}
                       </strong>
-                      <small>Por unidad de medida</small>
+                      <small>{producto.esVentaPorPeso ? 'Por kilo' : 'Por unidad de medida'}</small>
                     </div>
                     <div>
                       <span>IVA %</span>
-                      <strong className={Number(producto.tasaImpuesto) > 0 ? 'inventario-valor-iva' : ''}>
-                        {Number(producto.tasaImpuesto) > 0 ? `${producto.tasaImpuesto}%` : 'Exento'}
+                      <strong className={tasaImpuesto > 0 ? 'inventario-valor-iva' : ''}>
+                        {tasaImpuesto > 0 ? `${tasaImpuesto}%` : 'Exento'}
                       </strong>
-                      <small>{Number(producto.tasaImpuesto) > 0 ? 'Impuesto aplicado' : 'Sin impuesto'}</small>
+                      <small>{tasaImpuesto > 0 ? 'Impuesto aplicado' : 'Sin impuesto'}</small>
                     </div>
                   </div>
 
@@ -664,10 +738,13 @@ export function InventarioPage() {
             <div className="modal-body">
               {alertas.conIva.length > 0 && (
                 <div style={{ marginBottom: '1.5rem' }}>
-                  <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--warning, #f59e0b)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <h4 style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <Icon icon="mdi:receipt" className="h-4 w-4" />
                     Productos con IVA ({alertas.conIva.length})
                   </h4>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 0.75rem' }}>
+                    Informativo: tener IVA no es un problema.
+                  </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     {alertas.conIva.map(p => (
                       <div key={p.id} style={{
@@ -683,7 +760,7 @@ export function InventarioPage() {
                           <div style={{ fontWeight: 600 }}>{p.nombre}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{p.sku}</div>
                         </div>
-                        <span style={{ fontWeight: 700, color: 'var(--warning, #f59e0b)' }}>{p.tasaImpuesto}%</span>
+                        <span style={{ fontWeight: 700, color: 'var(--text-secondary)' }}>{p.tasaImpuesto}%</span>
                       </div>
                     ))}
                   </div>
@@ -710,11 +787,12 @@ export function InventarioPage() {
                         <div>
                           <div style={{ fontWeight: 600 }}>{p.nombre}</div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                            Costo: {Utils.formatMoney(p.costoCompra)} &gt; Venta: {Utils.formatMoney(p.precioVenta)}
+                            Costo: {Utils.formatMoney(p.costoCompra, 'USD')} &gt; Venta: {Utils.formatMoney(p.precioReal ?? p.precioVenta, 'USD')}
+                            {p.esVentaPorPeso ? ' /kg' : ''}
                           </div>
                         </div>
                         <span style={{ fontWeight: 700, color: 'var(--danger)', whiteSpace: 'nowrap', marginLeft: '0.5rem' }}>
-                          -{Utils.formatMoney(p.diferencia)}
+                          -{Utils.formatMoney(p.diferencia, 'USD')}
                         </span>
                       </div>
                     ))}
@@ -807,12 +885,11 @@ export function InventarioPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: '0.75rem' }}>
                     <div className="form-group">
                       <label className="form-label">Unidad de Medida</label>
-                      <select className="form-control" value={form.unidadMedida}
-                        onChange={e => setForm(f => ({ ...f, unidadMedida: e.target.value }))}>
-                        {UNIDADES_MEDIDA.map(u => (
-                          <option key={u.value} value={u.value}>{u.label}</option>
-                        ))}
-                      </select>
+                      <CustomSelect
+                        value={form.unidadMedida}
+                        onChange={val => setForm(f => ({ ...f, unidadMedida: val }))}
+                        options={UNIDADES_MEDIDA}
+                      />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Venta por Peso</label>
@@ -874,19 +951,29 @@ export function InventarioPage() {
                     <div className="form-group">
                       <label className="form-label">
                         Precio de Venta (USD) <span style={{ color: 'var(--danger)' }}>*</span>
-                        <span className="help-icon" title="Precio al que se vende el producto al cliente. Es el monto final que paga el comprador.">?</span>
+                        <span className="help-icon" title="Precio al que se vende el producto al cliente en dólares.">?</span>
                       </label>
                       <input type="number" step="0.01" min="0.01" className={`form-control${fieldErrors.precioVenta ? ' is-invalid' : ''}`}
                         value={form.precioVenta} onChange={e => setForm(f => ({ ...f, precioVenta: e.target.value }))} required />
+                      {aNumero(form.precioVenta) > 0 && tasaDolar > 1 && (
+                        <span style={{ fontSize: '0.72rem', color: 'var(--success)', marginTop: '2px', display: 'block' }}>
+                          ≈ Bs. {(aNumero(form.precioVenta) * tasaDolar).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      )}
                       {fieldErrors.precioVenta && <div className="form-error">{fieldErrors.precioVenta}</div>}
                     </div>
                     <div className="form-group">
                       <label className="form-label">
                         Costo de Compra (USD)
-                        <span className="help-icon" title="Precio al que se adquirió el producto del proveedor. Se usa para calcular la ganancia.">?</span>
+                        <span className="help-icon" title="Precio al que se adquirió el producto del proveedor en dólares.">?</span>
                       </label>
                       <input type="number" step="0.01" min="0" className="form-control" value={form.costoCompra}
                         onChange={e => setForm(f => ({ ...f, costoCompra: e.target.value }))} />
+                      {aNumero(form.costoCompra) > 0 && tasaDolar > 1 && (
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '2px', display: 'block' }}>
+                          ≈ Bs. {(aNumero(form.costoCompra) * tasaDolar).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      )}
                     </div>
                     <div className="form-group">
                       <label className="form-label">
@@ -918,11 +1005,14 @@ export function InventarioPage() {
                     {editTarget && (
                       <div className="form-group">
                         <label className="form-label">Estado</label>
-                        <select className="form-control" value={form.activo ? 'true' : 'false'}
-                          onChange={e => setForm(f => ({ ...f, activo: e.target.value === 'true' }))}>
-                          <option value="true">Activo</option>
-                          <option value="false">Inactivo</option>
-                        </select>
+                        <CustomSelect
+                          value={form.activo ? 'true' : 'false'}
+                          onChange={val => setForm(f => ({ ...f, activo: val === 'true' }))}
+                          options={[
+                            { value: 'true', label: 'Activo' },
+                            { value: 'false', label: 'Inactivo' }
+                          ]}
+                        />
                       </div>
                     )}
                   </div>
@@ -955,12 +1045,15 @@ export function InventarioPage() {
                 </p>
                 <div className="form-group">
                   <label className="form-label">Operación</label>
-                  <select className="form-control" value={stockForm.operacion}
-                    onChange={e => setStockForm(f => ({ ...f, operacion: e.target.value }))}>
-                    <option value="add">+ Sumar</option>
-                    <option value="sub">- Restar</option>
-                    <option value="set">= Establecer</option>
-                  </select>
+                  <CustomSelect
+                    value={stockForm.operacion}
+                    onChange={val => setStockForm(f => ({ ...f, operacion: val }))}
+                    options={[
+                      { value: 'add', label: '+ Sumar' },
+                      { value: 'sub', label: '- Restar' },
+                      { value: 'set', label: '= Establecer' }
+                    ]}
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Cantidad</label>
@@ -970,11 +1063,14 @@ export function InventarioPage() {
                 {stockTarget.esVentaPorPeso && (
                   <div className="form-group">
                     <label className="form-label">Unidad ingresada</label>
-                    <select className="form-control" value={stockForm.unidadMedida || 'KILOGRAMO'}
-                      onChange={e => setStockForm(f => ({ ...f, unidadMedida: e.target.value }))}>
-                      <option value="KILOGRAMO">Kilogramos</option>
-                      <option value="GRAMO">Gramos</option>
-                    </select>
+                    <CustomSelect
+                      value={stockForm.unidadMedida || 'KILOGRAMO'}
+                      onChange={val => setStockForm(f => ({ ...f, unidadMedida: val }))}
+                      options={[
+                        { value: 'KILOGRAMO', label: 'Kilogramos' },
+                        { value: 'GRAMO', label: 'Gramos' }
+                      ]}
+                    />
                     <small style={{ color: 'var(--text-muted)' }}>El stock se guarda siempre en kg.</small>
                   </div>
                 )}

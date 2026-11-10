@@ -5,6 +5,7 @@ const { requireRole } = require('../middleware/auth');
 const { createValidationError, createBusinessError } = require('../middleware/errorHandler');
 const { paginate, paginatedResponse } = require('../utils/pagination');
 const { getRegistrationMetadata } = require('../utils/registrationMetadata');
+const { registrar: registrarBitacora, contexto: contextoBitacora } = require('../services/bitacora');
 
 const router = express.Router();
 
@@ -98,6 +99,17 @@ router.post('/', async (req, res, next) => {
       }
     });
 
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'ADMIN',
+      modulo: 'usuarios',
+      accion: 'USUARIO_CREADO',
+      entidad: 'Usuario',
+      entidadId: nuevoUsuario.id,
+      descripcion: `Creó el usuario ${nuevoUsuario.username} (${nuevoUsuario.rol})`,
+      datosNuevos: nuevoUsuario,
+    });
+
     res.status(201).json(nuevoUsuario);
   } catch (err) {
     next(err);
@@ -153,6 +165,27 @@ router.put('/:id', async (req, res, next) => {
       }
     });
 
+    const camposAuditables = ['nombre', 'rol', 'activo'];
+    const datosAnteriores = Object.fromEntries(
+      camposAuditables.map((campo) => [campo, targetUser[campo]])
+    );
+    const datosNuevos = Object.fromEntries(
+      camposAuditables.map((campo) => [campo, actualizado[campo]])
+    );
+    if (updateData.passwordHash) datosNuevos.passwordActualizada = true;
+
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'ADMIN',
+      modulo: 'usuarios',
+      accion: 'USUARIO_MODIFICADO',
+      entidad: 'Usuario',
+      entidadId: actualizado.id,
+      descripcion: `Modificó el usuario ${actualizado.username}`,
+      datosAnteriores,
+      datosNuevos,
+    });
+
     res.json(actualizado);
   } catch (err) {
     next(err);
@@ -177,6 +210,18 @@ router.delete('/:id', async (req, res, next) => {
       where: { id },
       data: { activo: false },
       select: { id: true, username: true, activo: true }
+    });
+
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'ADMIN',
+      modulo: 'usuarios',
+      accion: 'USUARIO_DESACTIVADO',
+      entidad: 'Usuario',
+      entidadId: actualizado.id,
+      descripcion: `Desactivó el usuario ${actualizado.username}`,
+      datosAnteriores: { activo: targetUser.activo },
+      datosNuevos: { activo: actualizado.activo },
     });
 
     res.json({ message: 'Usuario desactivado correctamente', usuario: actualizado });

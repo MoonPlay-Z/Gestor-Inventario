@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import styles from './GananciasReportPage.module.css';
+import { simboloMoneda, formatMoneda } from '../utils/numero';
 
 const PERIODOS = [
   { value: 'diario', label: 'Diario', fecha: () => {
@@ -28,10 +29,8 @@ const ETIQUETA_GANANCIA = {
   anual: 'Ganancia del Ano',
 };
 
-function formatMoney(val, symbol = '$') {
-  const num = parseFloat(val) || 0;
-  const formatted = num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  return `${symbol}${formatted}`;
+function formatMoney(val, moneda = monedaExhibicion) {
+  return formatMoneda(val, moneda);
 }
 
 function MiniBar({ value, max, color }) {
@@ -47,7 +46,7 @@ function MiniBar({ value, max, color }) {
 }
 
 export function GananciasReportPage() {
-  const { token } = useAuth();
+  const { token, empresa } = useAuth();
   const { showToast } = useToast();
 
   const [periodo, setPeriodo] = useState('mensual');
@@ -59,6 +58,7 @@ export function GananciasReportPage() {
   const [datos, setDatos] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currencySymbol, setCurrencySymbol] = useState('$');
+  const [monedaExhibicion, setMonedaExhibicion] = useState(empresa?.monedaExhibicion || 'USD');
   const [paginaProductos, setPaginaProductos] = useState(1);
   const [paginaPerdidas, setPaginaPerdidas] = useState(1);
 
@@ -72,7 +72,10 @@ export function GananciasReportPage() {
       ]);
       if (configRes.ok) {
         const cfg = await configRes.json();
-        if (cfg?.moneda?.simbolo) setCurrencySymbol(cfg.moneda.simbolo);
+        const monedaCfg = cfg?.moneda || {};
+        const exhibicion = monedaCfg.monedaExhibicion || monedaCfg.monedaBase || 'USD';
+        setMonedaExhibicion(exhibicion);
+        setCurrencySymbol(simboloMoneda(exhibicion));
       }
       if (!gananciasRes.ok) throw new Error('Error al cargar ganancias');
       const data = await gananciasRes.json();

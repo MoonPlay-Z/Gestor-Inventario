@@ -62,6 +62,13 @@ npm run db:migrate:sqlite    # migrate from PostgreSQL to SQLite
 npm run db:verify:sqlite     # verify SQLite data integrity
 ```
 
+**Bitácora de auditoría:** usa una base independiente con `AUDIT_DATABASE_URL`
+en producción (Neon PostgreSQL). Los esquemas y las migraciones viven en
+`backend/prisma/auditoria/`; generar el cliente con `npm run db:auditoria:generate`
+y desplegar con `npm run db:auditoria:deploy`. En desarrollo sin esa variable,
+usa `backend/prisma/auditoria/bitacora.db`; inicialízala con
+`npm run db:auditoria:sqlite:push`.
+
 ## Prisma engines
 
 `schema.prisma` declares `binaryTargets = ["native", "debian-openssl-3.0.x", "windows"]`. After `prisma generate`, verify both Linux and Windows engines exist:
@@ -117,11 +124,19 @@ Uses `decimal.js` for all monetary math. Invoices support dual currency (`moneda
 - `tasaEfectivaFactura(factura, empresaId)` — invoice rate for VES invoices, company rate for USD invoices.
 - `convertirMontoMoneda` / `convertirAFactura` / `normalizarPagoAFactura` / `sumarPagosNormalizados` — the conversions.
 
+**Moneda de exhibición:** por ahora la base es USD y la exhibición solo puede ser USD o VES. `Empresa.monedaExhibicion` persiste la preferencia de la empresa; el switch del POS entre base/exhibición se guarda por empresa en `localStorage`. Aplicar `20261106000000_add_empresa_monedas` antes de desplegar.
+
 **Every module** (facturas, CxC, cotizaciones, caja, inventario, reportes, dashboard) must resolve the rate through `tasaAPI`. The rate is **per company** — never use the global `config.json` rate or a hardcoded value in a request path. Raw-SQL payment aggregations (dashboard in `app.js`, `getCajaReporte` in `reportesService.js`, `buildPagosTurnoSql` in `caja.js`) normalize Bs payments with the company rate: `WHEN p."monedaPago"='VES' THEN CASE WHEN f."moneda"='VES' AND f."tasaCambio">0 THEN p."monto"/f."tasaCambio" ELSE p."monto"/tasaSistema END ELSE p."monto"`.
 
 `CuentaPorCobrar` amounts (`montoOriginal` / `montoCobrado` / `montoPendiente`) are **always USD-normalized**, so `cxc.js` converts payments to USD via a local `pagoAUsd()` helper rather than to the invoice currency.
 
 **Rounding tolerance:** both `cxc.js` and `pagos.js` accept a payment that exceeds the pendiente by ≤ `0.005` USD (half a cent) and cap the applied amount at the pendiente. Without it, a Bs payment can never exactly match a sub-cent USD balance (e.g. 10 Bs = 0.0116 USD vs 0.01 USD pendiente) and gets rejected with a self-contradictory "0.01 excede 0.01" message. Larger overpayments are still rejected.
+
+**Decimales serializados como string:** Prisma entrega los `Decimal` como **string** al navegador (`{ "precioVenta": "12", "costoCompra": "6" }`) y `decimal.js` tiene `valueOf()` que también devuelve string. Nunca compararlos con `<`/`>`: `"6" > "12"` y `new Decimal('6') > new Decimal('12')` dan `true`. En el frontend convertir con `aNumero()`/`precioVentaReal()` de `frontend/src/utils/numero.js`; en el backend usar `.gt()`/`.lt()` o `Number()`.
+
+**Venta por peso:** para un producto con `esVentaPorPeso`, el precio real es `precioPorKilo` (así lo cobra `facturas.js` y `PosPage.jsx`), no `precioVenta`. Cualquier métrica, margen o alerta de "costo > venta" debe valorar con `COALESCE(NULLIF("precioPorKilo", 0), "precioVenta")`.
+
+**Ganancia en reportes:** se calcula con `ItemFactura.costoUnitarioHistoricoUSD` (USD, congelado al emitir la factura), no con el `Producto.costoCompra` actual; editar el costo hoy no debe reescribir la ganancia de ventas pasadas. Ese costo **no** se divide por `tasaCambio` (ya está en USD). Los ingresos usados para la ganancia son `subtotalLinea` sin IVA, normalizados a USD con la tasa de la factura. La tarjeta "Ingresos" muestra el subtotal sin IVA y, aparte, lo cobrado en caja (`getCajaReporte`).
 
 ## Frontend dev server
 
@@ -220,6 +235,46 @@ No hay linter, formateador ni CI. El resto se verifica manualmente contra la app
 - **Anulación lógica de pagos:** `PATCH /api/pagos/:id/anular` exige motivo (`FRAUDE`, `ERROR_MONTO`, `COBRO_DUPLICADO`, `DEVOLUCION`, `OTRO`), descripción obligatoria (mínimo 10 caracteres, máximo 500) y código de supervisor para rol `CAJA`. Los pagos nunca se eliminan físicamente (`DELETE /api/pagos/:id` responde `405 Method Not Allowed`).
 - **Visualización de motivos y descripciones:** La justificación de anulación se expone en el detalle de la cuenta (`CxcDetailPage`), en la bandeja `/pagos-anulados` (`PagosAnuladosPage`) y con modal detallado en el historial de facturación (`VentasPage`).
 
+## Patrón Canónico de Cálculo y Trabajo: Ventas y Abonos
+
+Este patrón es la **regla obligatoria** para la emisión de ventas y el registro de abonos en el backend y frontend:
+
+### 1. Ventas (Emisión de Facturas y POS)
+- **Moneda Base:** Internamente las cuentas y precios base están en **USD**. Al facturar en `USD`, el total principal se guarda en USD (`factura.total`). En el response se adjunta `totalUSD` y `totalVES` (`total * tasaCambio`).
+- **Cálculo de Ítems (`Decimal.js`):**
+  - Si `esVentaPorPeso = true`: Precio base = `precioPorKilo`. Si la unidad enviada es `g`, `cantidadKg = cantidad / 1000`.
+  - `subtotalLinea = precioUnitario * cantidad`.
+  - `impuestoLinea = subtotalLinea * (tasaImpuesto / 100)`.
+  - `totalLinea = subtotalLinea + impuestoLinea`.
+- **Venta de Contado:** Requiere método de pago válido no financiado. Se emite con estado `PAID`, se genera el registro en `Pago` inmediatamente y **NO** crea registro en `CuentaPorCobrar`. Stock se decrementa atómicamente dentro de la transacción.
+- **Venta Financiada / Crédito:** Si `cuotas > 1` o `metodoPago = 'FINANCIAMIENTO'`:
+  - Se emite con estado `PENDING`.
+  - Se crea automáticamente la `CuentaPorCobrar` con `montoOriginal = totalFactura (en moneda base USD)`, `montoCobrado = 0.00`, `montoPendiente = montoOriginal`, estado = `PENDING`.
+
+### 2. Abonos (Pagos y Cuentas por Cobrar)
+- **Fachada Única de Tasa:** Todo cálculo de conversión USD↔VES usa `tasaAPI.js` (`tasaCambioEfectiva` o `tasaParaEmpresa`). Nunca usar `factura.tasaCambio` si la factura fue emitida en USD (en USD vale 1.0).
+- **Moneda de Abono:**
+  - Si el abono es en **USD**: Se aplica directo al saldo pendiente en USD.
+  - Si el abono es en **VES**: Se normaliza a USD dividiendo entre la tasa efectiva (`montoVES / tasa`).
+- **Tolerancia de Redondeo (0.005 USD):**
+  - Medio centavo de dólar para evitar que diferencias mínimas de conversión en bolívares rechacen abonos válidos.
+  - Si `montoAbonoUSD > montoPendiente + 0.005`: Se **rechaza** con error de sobrepago.
+  - Si `montoAbonoUSD > montoPendiente` pero dentro de la tolerancia: El monto aplicado se capa exactamente a `montoPendiente` para saldar a `0.00`.
+- **Transición de Estados y Locks:**
+  - Orden estricto de lock en la base de datos: `lockFactura(tx)` primero, luego `lockCuenta(tx)` (previene deadlocks).
+  - Si `montoPendiente <= 0`: `CuentaPorCobrar` pasa a `PAID` y `Factura` pasa a `PAID`.
+  - Si `montoCobrado > 0` y `montoPendiente > 0`: Pasan a `PARTIALLY_PAID`.
+- **Anulación de Pagos (`PATCH /api/pagos/:id/anular`):**
+  - Requiere motivo, descripción (≥ 10 caracteres) y confirmación `'anular'`.
+  - No borra el registro; marca `estado = 'ANULADO'`.
+  - Recalcula atómicamente el saldo pendiente con los pagos activos restantes usando `sumarPagosCxcUSD`. Restaura el estado a `PARTIALLY_PAID` o `PENDING`.
+
+### 3. Suite de Verificación Automatizada
+Ejecutar la suite completa de 28 validaciones de ventas y abonos con:
+```bash
+cd backend && npm run test:ventas-abonos
+```
+
 ## Conventions
 
 - **Pagination**: list endpoints take `page`/`limit`; use `backend/src/utils/pagination.js` (`paginate()` + `paginatedResponse()`).
@@ -287,6 +342,6 @@ Cada `Empresa` tiene su propia configuración: `tasaDolar` (Float), `monedaSimbo
 
 OpenCode's OmniRoute adapter reads `OMNIROUTE_API_KEY` for authentication and optionally `OMNIROUTE_BASE_URL` (default `http://localhost:20128/v1`). The FreeLLMAPI provider uses `http://127.0.0.1:3001/v1` and reads its unified key from `FREELLMAPI_API_KEY`; set keys in the environment that launches OpenCode, not in project config.
 
-Required: `DATABASE_URL`, `JWT_SECRET` (app exits if missing). Optional: `PORT` (default 3001), `EMPRESA_NOMBRE`, `EMPRESA_RIF`, `EMPRESA_DIRECCION`, `EMPRESA_TELEFONO`, `EMPRESA_EMAIL`, `MONEDA_SIMBOLO`, `MONEDA_CODIGO`, `B2B_API_KEY`, `ALLOWED_ORIGINS`, `DB_PROVIDER`, `NODE_ENV`, `ELECTRON_ENV`, `TASA_DOLAR_AUTO_UPDATE` (poner `false` para desactivar el job diario de la tasa), `RESEND_API_KEY` (activa el envío real de avisos de pago), `ADMIN_EMAIL_FROM` y `ADMIN_NOTIFICACION_EMAIL`.
+Required: `DATABASE_URL`, `JWT_SECRET` (app exits if missing) and `AUDIT_DATABASE_URL` in production (separate PostgreSQL/Neon database; local development defaults to a separate SQLite file). Optional: `PORT` (default 3001), `EMPRESA_NOMBRE`, `EMPRESA_RIF`, `EMPRESA_DIRECCION`, `EMPRESA_TELEFONO`, `EMPRESA_EMAIL`, `MONEDA_SIMBOLO`, `MONEDA_CODIGO`, `B2B_API_KEY`, `ALLOWED_ORIGINS`, `DB_PROVIDER`, `NODE_ENV`, `ELECTRON_ENV`, `TASA_DOLAR_AUTO_UPDATE` (poner `false` para desactivar el job diario de la tasa), `RESEND_API_KEY` (activa el envío real de avisos de pago), `ADMIN_EMAIL_FROM` y `ADMIN_NOTIFICACION_EMAIL`.
 
 Frontend (solo desarrollo): `VITE_API_URL` (base de la API, por defecto `/api`), `VITE_PROXY_TARGET` (URL completa del backend para el proxy de Vite) y `BACKEND_PORT` (solo el puerto). Los dos últimos existen para poder mover el backend sin tocar `vite.config.js` — ver *Frontend dev server*.

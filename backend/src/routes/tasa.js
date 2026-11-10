@@ -9,6 +9,7 @@ const {
   guardarTasaManual,
   setModoTasa,
 } = require('../utils/tasaAPI');
+const { registrar: registrarBitacora, contexto: contextoBitacora } = require('../services/bitacora');
 
 /**
  * API estructurada de la tasa de cambio (VES por USD).
@@ -82,11 +83,27 @@ router.post('/actualizar', requireRole('EMPRESA'), async (req, res, next) => {
     const empresaId = await empresaDeSesion(req, res);
     if (!empresaId) return;
 
+    const antes = await estadoTasaEmpresa(empresaId);
     const resultado = await actualizarTasaEmpresa(empresaId);
     if (!resultado || resultado.tasa == null) {
       return res.status(503).json({ error: mensajeError(resultado, 'No se pudo actualizar la tasa') });
     }
-    res.json(await estadoTasaEmpresa(empresaId));
+    const despues = await estadoTasaEmpresa(empresaId);
+
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'CONFIGURACION',
+      modulo: 'tasa',
+      accion: 'TASA_ACTUALIZADA_BCV',
+      entidad: 'Empresa',
+      entidadId: empresaId,
+      descripcion: `Actualizó la tasa desde el BCV: ${antes?.tasa ?? '—'} → ${despues?.tasa ?? '—'} VES/USD`,
+      datosAnteriores: { tasa: antes?.tasa, modo: antes?.modo },
+      datosNuevos: { tasa: despues?.tasa, modo: despues?.modo, fuente: despues?.fuente },
+      monto: despues?.tasa,
+    });
+
+    res.json(despues);
   } catch (err) { next(err); }
 });
 
@@ -99,18 +116,41 @@ router.put('/', requireRole('EMPRESA'), async (req, res, next) => {
 
     const { tasaDolar, modo } = req.body || {};
 
+    const antes = await estadoTasaEmpresa(empresaId);
+    let resultado;
+    let accion;
+
     if (modo !== undefined) {
       if (!MODOS.includes(modo)) {
         return res.status(400).json({ error: `El modo de tasa debe ser ${MODOS.join(' o ')}` });
       }
-      return res.json(await setModoTasa(empresaId, modo));
+      resultado = await setModoTasa(empresaId, modo);
+      accion = 'TASA_MODO_MODIFICADO';
+    } else if (tasaDolar !== undefined) {
+      resultado = await guardarTasaManual(empresaId, tasaDolar);
+      accion = 'TASA_MODIFICADA';
+    } else {
+      return res.status(400).json({ error: 'Debe enviar tasaDolar o modo' });
     }
 
-    if (tasaDolar !== undefined) {
-      return res.json(await guardarTasaManual(empresaId, tasaDolar));
-    }
+    const despues = await estadoTasaEmpresa(empresaId);
 
-    res.status(400).json({ error: 'Debe enviar tasaDolar o modo' });
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'CONFIGURACION',
+      modulo: 'tasa',
+      accion,
+      entidad: 'Empresa',
+      entidadId: empresaId,
+      descripcion: accion === 'TASA_MODO_MODIFICADO'
+        ? `Cambió el modo de tasa a ${despues?.modo}`
+        : `Guardó la tasa manual: ${antes?.tasa ?? '—'} → ${despues?.tasa ?? '—'} VES/USD`,
+      datosAnteriores: { tasa: antes?.tasa, modo: antes?.modo },
+      datosNuevos: { tasa: despues?.tasa, modo: despues?.modo, fuente: despues?.fuente },
+      monto: despues?.tasa,
+    });
+
+    return res.json(resultado);
   } catch (err) {
     if (err.status === 400) return res.status(400).json({ error: err.message });
     next(err);

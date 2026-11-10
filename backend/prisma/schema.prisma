@@ -79,6 +79,15 @@ model Empresa {
   // saber si la tasa almacenada ya es la de hoy.
   tasaDolarModo          String    @default("AUTO")
   tasaDolarActualizadaEn DateTime?
+  // ── Multimoneda ──
+  // Moneda BASE (registro/inventario/precios): solo USD o EUR. Es la unidad a
+  // la que se anclan los montos guardados y contra la que se convierten las
+  // exhibiciones (VES principalmente).
+  monedaBase             String    @default("USD")
+  // Moneda de EXHIBICIÓN: la que se ve en ventas, reportes, CxC, presupuestos y
+  // facturas (USD, EUR o VES). Se elige por empresa y el switch visual permite
+  // ver el equivalente en la moneda base.
+  monedaExhibicion       String    @default("USD")
   activo                 Boolean   @default(true)
   subscriptionStatus     String    @default("trialing")
   planType               String?

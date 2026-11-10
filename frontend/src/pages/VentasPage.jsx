@@ -5,7 +5,7 @@ import { useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
-import { Button } from '../components/ui';
+import { Button, CustomSelect } from '../components/ui';
 import { ReceiptModal } from '../components/ui/ReceiptModal';
 import { useAuth } from '../context/AuthContext';
 import { getMotivoAnulacionLabel, getMetodoPagoLabel } from '../constants/pagos';
@@ -13,7 +13,7 @@ import { getMotivoAnulacionLabel, getMetodoPagoLabel } from '../constants/pagos'
 export function VentasPage() {
   const { toggleSidebar } = useOutletContext();
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const { user, empresa } = useAuth();
   const [facturas, setFacturas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -28,6 +28,7 @@ export function VentasPage() {
   const loadRequestId = useRef(0);
 
   const [config, setConfig] = useState(null);
+  const [monedaExhibicion, setMonedaExhibicion] = useState(empresa?.monedaExhibicion || 'USD');
   const [showReceipt, setShowReceipt] = useState(false);
   const [selectedFactura, setSelectedFactura] = useState(null);
   const [modalAnulados, setModalAnulados] = useState(null);
@@ -161,26 +162,47 @@ export function VentasPage() {
       <div className="page-body">
         <div className="card" style={{ marginBottom: '16px', padding: '14px 16px', borderLeft: '3px solid var(--accent)' }}>
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Período
-              <select className="form-control" value={periodo} onChange={e => { setPeriodo(e.target.value); setPage(1); }}>
-                <option value="todos">Todos</option>
-                <option value="hoy">Hoy</option>
-                <option value="semana">Esta semana</option>
-                <option value="mes">Este mes</option>
-                <option value="mesEspecifico">Mes específico</option>
-                <option value="anio">Año</option>
-              </select>
-            </label>
-            {periodo === 'mesEspecifico' && (
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Mes
-                <select className="form-control" value={mes} onChange={e => { setMes(parseInt(e.target.value)); setPage(1); }}>
-                  {['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'].map((m, i) => (
-                    <option key={i + 1} value={i + 1}>{m}</option>
-                  ))}
-                </select>
+            <div style={{ minWidth: '150px' }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                Período
               </label>
+              <CustomSelect
+                value={periodo}
+                onChange={(val) => { setPeriodo(val); setPage(1); }}
+                options={[
+                  { value: 'todos', label: 'Todos' },
+                  { value: 'hoy', label: 'Hoy' },
+                  { value: 'semana', label: 'Esta semana' },
+                  { value: 'mes', label: 'Este mes' },
+                  { value: 'mesEspecifico', label: 'Mes específico' },
+                  { value: 'anio', label: 'Año' }
+                ]}
+              />
+            </div>
+            {periodo === 'mesEspecifico' && (
+              <div style={{ minWidth: '140px' }}>
+                <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                  Mes
+                </label>
+                <CustomSelect
+                  value={mes}
+                  onChange={(val) => { setMes(parseInt(val, 10)); setPage(1); }}
+                  options={[
+                    { value: 1, label: 'Enero' },
+                    { value: 2, label: 'Febrero' },
+                    { value: 3, label: 'Marzo' },
+                    { value: 4, label: 'Abril' },
+                    { value: 5, label: 'Mayo' },
+                    { value: 6, label: 'Junio' },
+                    { value: 7, label: 'Julio' },
+                    { value: 8, label: 'Agosto' },
+                    { value: 9, label: 'Septiembre' },
+                    { value: 10, label: 'Octubre' },
+                    { value: 11, label: 'Noviembre' },
+                    { value: 12, label: 'Diciembre' }
+                  ]}
+                />
+              </div>
             )}
             {(periodo === 'mesEspecifico' || periodo === 'anio') && (
               <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -188,16 +210,23 @@ export function VentasPage() {
                 <input type="number" className="form-control" value={anio} onChange={e => { setAnio(parseInt(e.target.value) || new Date().getFullYear()); setPage(1); }} style={{ width: '110px' }} />
               </label>
             )}
-            <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Estado
-              <select className="form-control" value={estadoFiltro} onChange={e => { setEstadoFiltro(e.target.value); setPage(1); }}>
-                <option value="">Todos</option>
-                <option value="PAID">Pagada</option>
-                <option value="PENDING">Pendiente</option>
-                <option value="PARTIALLY_PAID">Abonada</option>
-                <option value="VOIDED">Anulada</option>
-              </select>
-            </label>
+            <div style={{ minWidth: '150px' }}>
+              <label style={{ display: 'block', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                Estado
+              </label>
+              <CustomSelect
+                value={estadoFiltro}
+                onChange={(val) => { setEstadoFiltro(val); setPage(1); }}
+                options={[
+                  { value: '', label: 'Todos' },
+                  { value: 'PAID', label: 'Pagada' },
+                  { value: 'PENDING', label: 'Pendiente' },
+                  { value: 'PARTIALLY_PAID', label: 'Abonada' },
+                  { value: 'VOIDED', label: 'Anulada' }
+                ]}
+                placeholder="Todos"
+              />
+            </div>
             <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Buscar cliente, usuario o producto
               <input
@@ -268,7 +297,7 @@ export function VentasPage() {
                       </td>
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', color: 'var(--text-secondary)' }}>{Utils.formatDateTime(f.fechaEmision)}</td>
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', fontWeight: 700, textAlign: 'right' }}>
-                        {(() => { const totalUSD = Utils.montoUsdFactura(f, config?.moneda?.tasaDolar); return Utils.formatMoney(totalUSD); })()}
+                        {(() => { const totalUSD = Utils.montoUsdFactura(f, config?.moneda?.tasaDolar); return Utils.formatMoney(totalUSD, 'USD'); })()}
                       </td>
                       <td style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)', color: 'var(--success)', fontWeight: 600, textAlign: 'right' }}>
                         {(() => {
@@ -396,7 +425,7 @@ export function VentasPage() {
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '6px' }}>
                     <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                      {Utils.formatMoney(pago.monto)} {pago.monedaPago} · {getMetodoPagoLabel(pago.metodoPago)}
+                      {Utils.formatMoney(pago.monto, pago.monedaPago || 'USD')} · {getMetodoPagoLabel(pago.metodoPago)}
                     </span>
                     <span className="badge badge-danger">ANULADO</span>
                   </div>

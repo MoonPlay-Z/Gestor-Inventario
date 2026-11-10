@@ -8,9 +8,10 @@ const { requireRole } = require('../middleware/auth');
 const { toDecimalSeguro } = require('../utils/decimal');
 const { aUnidadBase } = require('../utils/unidades');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
-const { tasaParaEmpresa } = require('../utils/tasaAPI');
+const { tasaParaEmpresa, convertirAMoneda, monedaBasePorEmpresa, monedaExhibicionPorEmpresa } = require('../utils/tasaAPI');
 const { paginate } = require('../utils/pagination');
 const { containsInsensitive, extraerTerminosBusqueda } = require('../utils/textSearch');
+const { registrar: registrarBitacora, contexto: contextoBitacora } = require('../services/bitacora');
 
 const UNIDADES_VALIDAS = [
   'UNIDAD', 'KILOGRAMO', 'GRAMO', 'LITRO', 'MILILITRO',
@@ -39,28 +40,54 @@ router.get('/metricas', async (req, res, next) => {
       return res.status(401).json({ error: 'Usuario no autenticado' });
     }
 
-    const metricas = await prisma.$queryRaw`
-      SELECT
-        COALESCE(SUM("stockActual" * "precioVenta"), 0) AS valor_total_venta,
-        COALESCE(SUM("stockActual" * "costoCompra"), 0) AS valor_total_costo,
-        COALESCE(SUM("stockActual" * ("precioVenta" - "costoCompra")), 0) AS ganancia_potencial,
-        COUNT(*) AS total_productos,
-        COUNT(CASE WHEN "stockActual" > 0 THEN 1 END) AS productos_con_stock,
-        COUNT(CASE WHEN "stockActual" = 0 THEN 1 END) AS productos_sin_stock,
-        COUNT(CASE WHEN "stockActual" <= "stockMinimo" THEN 1 END) AS productos_stock_bajo
-      FROM productos
-      WHERE "empresaId" = ${empresaId}
-        AND activo = true
-    `;
+    // Precio real de venta. En los productos de venta por peso el POS cobra
+    // `precioPorKilo` (ver facturas.js), no `precioVenta`; valorar con
+    // `precioVenta` descuadraba el inventario justo en los productos pesados.
+    const [metricas, inactivosConStock] = await Promise.all([
+      prisma.$queryRaw`
+        SELECT
+          COALESCE(SUM("stockActual" * COALESCE(NULLIF("precioPorKilo", 0), "precioVenta")), 0) AS valor_total_venta,
+          COALESCE(SUM("stockActual" * "costoCompra"), 0) AS valor_total_costo,
+          COALESCE(SUM("stockActual" * (COALESCE(NULLIF("precioPorKilo", 0), "precioVenta") - "costoCompra")), 0) AS ganancia_potencial,
+          COUNT(*) AS total_productos,
+          COUNT(CASE WHEN "stockActual" > 0 THEN 1 END) AS productos_con_stock,
+          COUNT(CASE WHEN "stockActual" = 0 THEN 1 END) AS productos_sin_stock,
+          COUNT(CASE WHEN "stockActual" <= "stockMinimo" THEN 1 END) AS productos_stock_bajo,
+          COUNT(CASE WHEN "stockActual" > 0 AND "stockActual" <= "stockMinimo" THEN 1 END) AS productos_por_reponer,
+          COUNT(CASE WHEN "stockActual" < 0 THEN 1 END) AS productos_stock_negativo
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = true
+      `,
+      // Mercancía real que quedó fuera del total por estar desactivada.
+      prisma.$queryRaw`
+        SELECT
+          COUNT(*) AS cantidad,
+          COALESCE(SUM("stockActual" * COALESCE(NULLIF("precioPorKilo", 0), "precioVenta")), 0) AS valor
+        FROM productos
+        WHERE "empresaId" = ${empresaId}
+          AND activo = false
+          AND "stockActual" > 0
+      `,
+    ]);
+
+    const empresaRefIdProd = await resolverEmpresaRefId(req);
+    const tasaEmpresa = await tasaParaEmpresa(empresaRefIdProd);
+    const tasaNum = Number(tasaEmpresa) > 0 ? Number(tasaEmpresa) : 1;
 
     res.json({
       valorTotalVenta: new Decimal(metricas[0]?.valor_total_venta || 0).toFixed(2),
       valorTotalCosto: new Decimal(metricas[0]?.valor_total_costo || 0).toFixed(2),
       gananciaPotencial: new Decimal(metricas[0]?.ganancia_potencial || 0).toFixed(2),
+      tasaCambio: tasaNum,
       totalProductos: Number(metricas[0]?.total_productos || 0),
       productosConStock: Number(metricas[0]?.productos_con_stock || 0),
       productosSinStock: Number(metricas[0]?.productos_sin_stock || 0),
       productosStockBajo: Number(metricas[0]?.productos_stock_bajo || 0),
+      productosPorReponer: Number(metricas[0]?.productos_por_reponer || 0),
+      productosStockNegativo: Number(metricas[0]?.productos_stock_negativo || 0),
+      productosInactivosConStock: Number(inactivosConStock[0]?.cantidad || 0),
+      valorInactivos: new Decimal(inactivosConStock[0]?.valor || 0).toFixed(2),
     });
   } catch (err) {
     next(err);
@@ -80,7 +107,6 @@ router.get('/integridad', async (req, res, next) => {
     const [
       stockNegativo,
       costoMayorVenta,
-      ivaSinTasa,
       precioCero,
       costoCero,
       skuDuplicados,
@@ -101,29 +127,21 @@ router.get('/integridad', async (req, res, next) => {
         ORDER BY "stockActual" ASC
       `,
 
-      // 2. Productos con costo mayor a precio de venta (pérdida garantizada)
+      // 2. Productos con costo mayor a precio de venta (pérdida garantizada).
+      //    El precio de venta real es `precioPorKilo` en los productos que se
+      //    venden por peso; comparar solo con `precioVenta` ocultaba casos.
       prisma.$queryRaw`
-        SELECT id, sku, nombre, "precioVenta", "costoCompra",
-               ("costoCompra" - "precioVenta") AS perdida_unitaria
+        SELECT id, sku, nombre, "precioVenta", "precioPorKilo", "esVentaPorPeso", "costoCompra",
+               COALESCE(NULLIF("precioPorKilo", 0), "precioVenta") AS precio_real,
+               ("costoCompra" - COALESCE(NULLIF("precioPorKilo", 0), "precioVenta")) AS perdida_unitaria
         FROM productos
         WHERE "empresaId" = ${empresaId}
           AND activo = true
-          AND "costoCompra" > "precioVenta"
+          AND "costoCompra" > COALESCE(NULLIF("precioPorKilo", 0), "precioVenta")
         ORDER BY perdida_unitaria DESC
       `,
 
-      // 3. Productos con IVA > 0 pero tasaImpuesto = 0 (inconsistencia)
-      prisma.$queryRaw`
-        SELECT id, sku, nombre, "tasaImpuesto"
-        FROM productos
-        WHERE "empresaId" = ${empresaId}
-          AND activo = true
-          AND "tasaImpuesto" = 0
-          AND "precioVenta" > 0
-        ORDER BY nombre ASC
-      `,
-
-      // 4. Productos con precio de venta = 0 o NULL
+      // 3. Productos con precio de venta = 0 o NULL
       prisma.$queryRaw`
         SELECT id, sku, nombre, "precioVenta"
         FROM productos
@@ -133,7 +151,7 @@ router.get('/integridad', async (req, res, next) => {
         ORDER BY nombre ASC
       `,
 
-      // 5. Productos con costo = 0 (puede ser válido pero vale la pena revisar)
+      // 4. Productos con costo = 0 (puede ser válido pero vale la pena revisar)
       prisma.$queryRaw`
         SELECT id, sku, nombre, "costoCompra", "precioVenta"
         FROM productos
@@ -143,7 +161,7 @@ router.get('/integridad', async (req, res, next) => {
         ORDER BY nombre ASC
       `,
 
-      // 6. SKUs duplicados dentro de la misma empresa
+      // 5. SKUs duplicados dentro de la misma empresa
       prisma.$queryRaw`
         SELECT sku, COUNT(*) as cantidad, array_agg(id) as ids, array_agg(nombre) as nombres
         FROM productos
@@ -154,7 +172,7 @@ router.get('/integridad', async (req, res, next) => {
         ORDER BY cantidad DESC
       `,
 
-      // 7. Productos sin categoría (NULL o vacío)
+      // 6. Productos sin categoría (NULL o vacío)
       prisma.$queryRaw`
         SELECT id, sku, nombre, categoria
         FROM productos
@@ -164,17 +182,19 @@ router.get('/integridad', async (req, res, next) => {
         ORDER BY nombre ASC
       `,
 
-      // 8. Productos sin unidad de medida
+      // 7. Productos sin unidad de medida. `unidadMedida` es un enum en
+      //    PostgreSQL: compararlo con '' lanza 22P02 (invalid input value for
+      //    enum), así que se compara como texto.
       prisma.$queryRaw`
         SELECT id, sku, nombre, "unidadMedida"
         FROM productos
         WHERE "empresaId" = ${empresaId}
           AND activo = true
-          AND ("unidadMedida" IS NULL OR "unidadMedida" = '')
+          AND COALESCE(CAST("unidadMedida" AS TEXT), '') = ''
         ORDER BY nombre ASC
       `,
 
-      // 9. Productos "venta por peso" sin precio por kilo
+      // 8. Productos "venta por peso" sin precio por kilo
       prisma.$queryRaw`
         SELECT id, sku, nombre, "esVentaPorPeso", "precioPorKilo", "unidadMedida"
         FROM productos
@@ -185,7 +205,7 @@ router.get('/integridad', async (req, res, next) => {
         ORDER BY nombre ASC
       `,
 
-      // 10. Stock mínimo inválido (negativo)
+      // 9. Stock mínimo inválido (negativo)
       prisma.$queryRaw`
         SELECT id, sku, nombre, "stockActual", "stockMinimo"
         FROM productos
@@ -195,7 +215,7 @@ router.get('/integridad', async (req, res, next) => {
         ORDER BY "stockMinimo" ASC
       `,
 
-      // 11. Productos inactivos que aún tienen stock > 0
+      // 10. Productos inactivos que aún tienen stock > 0
       prisma.$queryRaw`
         SELECT id, sku, nombre, "stockActual", "stockMinimo"
         FROM productos
@@ -205,7 +225,7 @@ router.get('/integridad', async (req, res, next) => {
         ORDER BY "stockActual" DESC
       `,
 
-      // 12. Total de productos para estadísticas
+      // 11. Total de productos para estadísticas
       prisma.$queryRaw`
         SELECT
           COUNT(*) as total,
@@ -244,21 +264,9 @@ router.get('/integridad', async (req, res, next) => {
           sku: p.sku,
           nombre: p.nombre,
           precioVenta: Number(p.precioVenta),
+          precioReal: Number(p.precio_real),
           costoCompra: Number(p.costoCompra),
           perdidaUnitaria: Number(p.perdida_unitaria),
-        })),
-      },
-      {
-        codigo: 'IVA_SIN_TASA',
-        titulo: 'Productos con IVA pero tasa en 0%',
-        descripcion: 'Productos que deberían tener IVA pero la tasa está en 0',
-        severidad: 'media',
-        cantidad: ivaSinTasa.length,
-        datos: ivaSinTasa.map(p => ({
-          id: p.id,
-          sku: p.sku,
-          nombre: p.nombre,
-          tasaImpuesto: Number(p.tasaImpuesto),
         })),
       },
       {
@@ -416,12 +424,13 @@ router.get('/alertas', async (req, res, next) => {
         ORDER BY nombre ASC
       `,
       prisma.$queryRaw`
-        SELECT id, sku, nombre, "tasaImpuesto", "precioVenta", "costoCompra", "unidadMedida",
-          ("costoCompra" - "precioVenta") AS diferencia
+        SELECT id, sku, nombre, "tasaImpuesto", "precioVenta", "precioPorKilo", "esVentaPorPeso", "costoCompra", "unidadMedida",
+          COALESCE(NULLIF("precioPorKilo", 0), "precioVenta") AS precio_real,
+          ("costoCompra" - COALESCE(NULLIF("precioPorKilo", 0), "precioVenta")) AS diferencia
         FROM productos
         WHERE "empresaId" = ${empresaId}
           AND activo = true
-          AND "costoCompra" > "precioVenta"
+          AND "costoCompra" > COALESCE(NULLIF("precioPorKilo", 0), "precioVenta")
         ORDER BY diferencia DESC
       `,
     ]);
@@ -442,6 +451,7 @@ router.get('/alertas', async (req, res, next) => {
         nombre: p.nombre,
         tasaImpuesto: Number(p.tasaImpuesto),
         precioVenta: Number(p.precioVenta),
+        precioReal: Number(p.precio_real),
         costoCompra: Number(p.costoCompra),
         unidadMedida: p.unidadMedida,
         diferencia: Number(p.diferencia),
@@ -483,7 +493,7 @@ router.get('/', async (req, res, next) => {
         condiciones.push('"tasaImpuesto" > 0');
       }
       if (alertaCostoVenta === 'true') {
-        condiciones.push('"costoCompra" > "precioVenta"');
+        condiciones.push('"costoCompra" > COALESCE(NULLIF("precioPorKilo", 0), "precioVenta")');
       }
       if (stockBajo === 'true') {
         condiciones.push('"stockActual" <= "stockMinimo"');
@@ -525,7 +535,32 @@ router.get('/', async (req, res, next) => {
         stockBajoMinimo: Number(p.stockActual) <= Number(p.stockMinimo),
       }));
 
-      return res.json({ data: productos, total: Number(totalRaw[0].count), page: pageNumber, limit: take });
+      const empresaRefIdProd = await resolverEmpresaRefId(req);
+      const tasaEmpresa = await tasaParaEmpresa(empresaRefIdProd);
+      const tasaNum = Number(tasaEmpresa) > 0 ? Number(tasaEmpresa) : 1;
+
+      const dataConv = productos.map((p) => {
+        const pVentaUsd = new Decimal(p.precioVenta?.toString() || '0');
+        const pCostoUsd = new Decimal(p.costoCompra?.toString() || '0');
+        const pKiloUsd = p.precioPorKilo != null ? new Decimal(p.precioPorKilo.toString()) : null;
+        return {
+          ...p,
+          precioVenta: pVentaUsd.toFixed(2),
+          costoCompra: pCostoUsd.toFixed(2),
+          precioUsd: pVentaUsd.toFixed(2),
+          costoUsd: pCostoUsd.toFixed(2),
+          precioVes: (pVentaUsd.toNumber() * tasaNum).toFixed(2),
+          costoVes: (pCostoUsd.toNumber() * tasaNum).toFixed(2),
+          tasaCambio: tasaNum,
+          ...(pKiloUsd != null ? {
+            precioPorKilo: pKiloUsd.toFixed(2),
+            precioPorKiloUsd: pKiloUsd.toFixed(2),
+            precioPorKiloVes: (pKiloUsd.toNumber() * tasaNum).toFixed(2),
+          } : {}),
+        };
+      });
+
+      return res.json({ data: dataConv, total: Number(totalRaw[0].count), page: pageNumber, limit: take });
     }
 
     // Sin stockBajo ni alertaCostoVenta: usar Prisma ORM normal
@@ -582,7 +617,32 @@ router.get('/', async (req, res, next) => {
       stockBajoMinimo: Number(p.stockActual) <= Number(p.stockMinimo),
     }));
 
-    res.json({ data: productos, total, page: pageNumber, limit });
+    const empresaRefIdProd = await resolverEmpresaRefId(req);
+    const tasaEmpresa = await tasaParaEmpresa(empresaRefIdProd);
+    const tasaNum = Number(tasaEmpresa) > 0 ? Number(tasaEmpresa) : 1;
+
+    const dataConv = productos.map((p) => {
+      const pVentaUsd = new Decimal(p.precioVenta?.toString() || '0');
+      const pCostoUsd = new Decimal(p.costoCompra?.toString() || '0');
+      const pKiloUsd = p.precioPorKilo != null ? new Decimal(p.precioPorKilo.toString()) : null;
+      return {
+        ...p,
+        precioVenta: pVentaUsd.toFixed(2),
+        costoCompra: pCostoUsd.toFixed(2),
+        precioUsd: pVentaUsd.toFixed(2),
+        costoUsd: pCostoUsd.toFixed(2),
+        precioVes: (pVentaUsd.toNumber() * tasaNum).toFixed(2),
+        costoVes: (pCostoUsd.toNumber() * tasaNum).toFixed(2),
+        tasaCambio: tasaNum,
+        ...(pKiloUsd != null ? {
+          precioPorKilo: pKiloUsd.toFixed(2),
+          precioPorKiloUsd: pKiloUsd.toFixed(2),
+          precioPorKiloVes: (pKiloUsd.toNumber() * tasaNum).toFixed(2),
+        } : {}),
+      };
+    });
+
+    res.json({ data: dataConv, total, page: pageNumber, limit });
   } catch (err) { next(err); }
 });
 
@@ -642,15 +702,23 @@ router.get('/lookup/:codigo', async (req, res, next) => {
 
     // Tasa vigente de la empresa (AUTO: BCV del día; MANUAL: la guardada).
     // Se resuelve por empresa: usar la tasa global servía la de otro tenant.
-    const tasaBcv = await tasaParaEmpresa(await resolverEmpresaRefId(req));
+    const empresaRefIdLookup = await resolverEmpresaRefId(req);
+    const tasaBcv = await tasaParaEmpresa(empresaRefIdLookup);
 
-    const precioUsd = new Decimal(producto.precioVenta.toString());
-    const precioVes = precioUsd.mul(tasaBcv);
+    // Multimoneda: el precio se registra en la moneda base y se entrega con su
+    // conversión a la moneda de exhibición de la empresa (el switch visual).
+    const monedaBaseLookup = await monedaBasePorEmpresa(empresaRefIdLookup);
+    const exhibicionLookup = await monedaExhibicionPorEmpresa(empresaRefIdLookup);
+    const precioBase = new Decimal(producto.precioVenta.toString());
+    const precioExhibicion = await convertirAMoneda(precioBase, exhibicionLookup, empresaRefIdLookup);
+    const precioVes = await convertirAMoneda(precioBase, 'VES', empresaRefIdLookup);
 
     res.json({
       ...producto,
-      precioUsd,
-      precioVes,
+      precioBase: precioBase.toFixed(2),
+      precioUsd: precioBase.toFixed(2),
+      precioExhibicion: precioExhibicion.toFixed(2),
+      precioVes: precioVes.toFixed(2),
       tasaBcv: Number(tasaBcv.toString()),
       stockBajoMinimo: Number(producto.stockActual) <= Number(producto.stockMinimo)
     });
@@ -813,6 +881,20 @@ router.post('/', async (req, res, next) => {
       },
     });
     res.status(201).json(producto);
+
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'INVENTARIO',
+      modulo: 'productos',
+      accion: 'PRODUCTO_CREADO',
+      entidad: 'Producto',
+      entidadId: producto.id,
+      descripcion: `Creó el producto "${producto.nombre}" (SKU ${producto.sku}) con precio ${producto.precioVenta} y stock ${producto.stockActual}`,
+      datosNuevos: {
+        nombre: producto.nombre, sku: producto.sku,
+        precioVenta: producto.precioVenta, stockActual: producto.stockActual,
+      },
+    });
   } catch (err) { next(err); }
 });
 
@@ -867,6 +949,7 @@ router.put('/:id', async (req, res, next) => {
     }
 
     const empresaId = req.user.empresaId || req.user.id;
+    const antes = await prisma.producto.findFirst({ where: { id: req.params.id, empresaId } });
     const producto = await prisma.producto.updateMany({
       where: { id: req.params.id, empresaId },
       data: {
@@ -896,7 +979,35 @@ router.put('/:id', async (req, res, next) => {
     if (producto.count === 0) {
       throw createBusinessError('Producto no encontrado o no pertenece a tu empresa');
     }
-    res.json(await prisma.producto.findFirst({ where: { id: req.params.id, empresaId } }));
+    const despues = await prisma.producto.findFirst({ where: { id: req.params.id, empresaId } });
+
+    if (antes && despues) {
+      const campos = ['nombre', 'sku', 'precioVenta', 'costoCompra', 'stockActual', 'stockMinimo', 'categoria', 'activo', 'unidadMedida', 'precioPorKilo', 'toleranciaPeso'];
+      const cambios = {};
+      for (const campo of campos) {
+        if (String(antes[campo] ?? '') !== String(despues[campo] ?? '')) {
+          cambios[campo] = { antes: antes[campo], despues: despues[campo] };
+        }
+      }
+      if (Object.keys(cambios).length > 0) {
+        const resumen = Object.entries(cambios)
+          .map(([campo, c]) => `${campo} ${c.antes ?? '—'} → ${c.despues ?? '—'}`)
+          .join(', ');
+        registrarBitacora({
+          contexto: contextoBitacora(req),
+          categoria: 'INVENTARIO',
+          modulo: 'productos',
+          accion: cambios.precioVenta ? 'PRODUCTO_PRECIO_MODIFICADO' : cambios.stockActual ? 'PRODUCTO_STOCK_MODIFICADO' : 'PRODUCTO_MODIFICADO',
+          entidad: 'Producto',
+          entidadId: despues.id,
+          descripcion: `Modificó el producto "${despues.nombre}": ${resumen}`,
+          datosAnteriores: Object.fromEntries(Object.entries(cambios).map(([k, v]) => [k, v.antes])),
+          datosNuevos: { ...Object.fromEntries(Object.entries(cambios).map(([k, v]) => [k, v.despues])), cambios },
+        });
+      }
+    }
+
+    res.json(despues);
   } catch (err) { next(err); }
 });
 
@@ -935,7 +1046,21 @@ router.patch('/:id/stock', async (req, res, next) => {
     if (actualizado.count === 0) {
       throw createBusinessError('Producto no encontrado o no pertenece a tu empresa');
     }
-    res.json(await prisma.producto.findUnique({ where: { id: req.params.id } }));
+    const actualizadoProducto = await prisma.producto.findUnique({ where: { id: req.params.id } });
+
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'INVENTARIO',
+      modulo: 'productos',
+      accion: 'PRODUCTO_STOCK_MODIFICADO',
+      entidad: 'Producto',
+      entidadId: req.params.id,
+      descripcion: `Ajustó el stock de "${producto.nombre}" (${operacion}) de ${producto.stockActual} a ${actualizadoProducto?.stockActual}`,
+      datosAnteriores: { stockActual: producto.stockActual },
+      datosNuevos: { stockActual: actualizadoProducto?.stockActual, operacion, cantidad: qty.toString(), unidadMedida: unidadMedida || producto.unidadMedida },
+    });
+
+    res.json(actualizadoProducto);
   } catch (err) { next(err); }
 });
 
@@ -943,6 +1068,7 @@ router.patch('/:id/stock', async (req, res, next) => {
 router.delete('/:id', async (req, res, next) => {
   try {
     const empresaId = req.user.empresaId || req.user.id;
+    const antes = await prisma.producto.findFirst({ where: { id: req.params.id, empresaId }, select: { id: true, nombre: true, sku: true } });
     const resultado = await prisma.producto.updateMany({
       where: { id: req.params.id, empresaId },
       data: { activo: false },
@@ -950,6 +1076,19 @@ router.delete('/:id', async (req, res, next) => {
     if (resultado.count === 0) {
       throw createBusinessError('Producto no encontrado o no pertenece a tu empresa');
     }
+
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'INVENTARIO',
+      modulo: 'productos',
+      accion: 'PRODUCTO_ELIMINADO',
+      entidad: 'Producto',
+      entidadId: req.params.id,
+      descripcion: `Eliminó (desactivó) el producto "${antes?.nombre || req.params.id}"${antes?.sku ? ` (SKU ${antes.sku})` : ''}`,
+      datosAnteriores: { activo: true, nombre: antes?.nombre, sku: antes?.sku },
+      datosNuevos: { activo: false },
+    });
+
     res.status(204).send();
   } catch (err) { next(err); }
 });

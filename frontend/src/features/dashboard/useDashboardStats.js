@@ -36,7 +36,9 @@ export function useDashboardStats(periodo, { alFallar } = {}) {
 
     if (solicitudActual !== solicitudActualRef.current) return;
 
-    if (config.status === 'fulfilled' && config.value?.moneda?.simbolo) {
+    if (config.status === 'fulfilled' && config.value?.empresa?.monedaExhibicion) {
+      setMoneda(config.value.empresa.monedaExhibicion);
+    } else if (config.status === 'fulfilled' && config.value?.moneda?.simbolo) {
       setMoneda(config.value.moneda.simbolo);
     }
 

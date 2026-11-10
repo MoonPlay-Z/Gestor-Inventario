@@ -7,13 +7,14 @@ const { invalidarCacheVentas } = require('../services/reportesService');
 const { requireRole } = require('../middleware/auth');
 const { obtenerSiguienteNumeroFactura } = require('../utils/numeracionFacturas');
 const { paginate } = require('../utils/pagination');
-const { MONEDAS_PAGO, convertirMontoMoneda, sumarPagosNormalizados, normalizarPagoAFactura } = require('../utils/tasaAPI');
+const { MONEDAS_PAGO, convertirMontoMoneda, sumarPagosNormalizados, normalizarPagoAFactura, convertirAMoneda, convertirMoneda, monedaExhibicionPorEmpresa } = require('../utils/tasaAPI');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
-const { tasaParaEmpresa } = require('../utils/tasaAPI');
+const { tasaParaEmpresa, monedaBasePorEmpresa } = require('../utils/tasaAPI');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
 const { containsInsensitive, extraerTerminosBusqueda } = require('../utils/textSearch');
 const { ESTADOS_PAGO } = require('../config/pagos');
 const { registrarAuditoria } = require('../utils/auditLog');
+const { registrar: registrarBitacora, contexto: contextoBitacora } = require('../services/bitacora');
 const { lockFactura } = require('../utils/locks');
 const cxcRouter = require('./cxc');
 const {
@@ -195,14 +196,22 @@ router.get('/', async (req, res, next) => {
     }
 
     // Agregar campos derivados (estaVencida, saldoPendiente y anulaciones)
-    const facturasConEstado = facturas.map(f => {
+    const tasaSistemaListado = await tasaParaEmpresa(empresaRefIdListado);
+    const facturasConEstado = facturas.map((f) => {
       const totalPagado = pagosMap.get(f.id) || new Decimal(0);
-      const saldoPendiente = new Decimal(f.total.toString()).sub(totalPagado);
-      
+      const totalBase = new Decimal(f.total.toString());
+      const saldoBase = totalBase.sub(totalPagado);
+      const tasaF = Number(f.tasaCambio) > 0 ? Number(f.tasaCambio) : Number(tasaSistemaListado);
+
       return {
         ...f,
+        subtotal: new Decimal(f.subtotal.toString()).toFixed(2),
+        impuestoTotal: new Decimal(f.impuestoTotal.toString()).toFixed(2),
+        total: totalBase.toFixed(2),
+        totalUSD: (f.moneda === 'VES' && tasaF > 0 ? totalBase.div(tasaF) : totalBase).toFixed(2),
+        totalVES: (f.moneda === 'VES' ? totalBase : totalBase.mul(tasaF)).toFixed(2),
         estaVencida: ['PENDING', 'PARTIALLY_PAID'].includes(f.estado) && new Date(f.fechaVencimiento) < hoy,
-        saldoPendiente: saldoPendiente.toFixed(2),
+        saldoPendiente: saldoBase.toFixed(2),
         totalPagado: totalPagado.toFixed(2),
         pagosAnulados: pagosAnuladosMap.get(f.id) || [],
       };
@@ -288,8 +297,18 @@ router.get('/:id', async (req, res, next) => {
     const balancePendiente = new Decimal(factura.total.toString()).sub(totalPagado);
     const hoy = new Date();
 
+    const empresaRefIdDetalle = await getEmpresaRefId(req);
+    const tasaSistemaDetalle = await tasaParaEmpresa(empresaRefIdDetalle);
+    const tasaF = Number(factura.tasaCambio) > 0 ? Number(factura.tasaCambio) : Number(tasaSistemaDetalle);
+    const totalDec = new Decimal(factura.total.toString());
+
     res.json({
       ...factura,
+      subtotal: new Decimal(factura.subtotal.toString()).toFixed(2),
+      impuestoTotal: new Decimal(factura.impuestoTotal.toString()).toFixed(2),
+      total: totalDec.toFixed(2),
+      totalUSD: (factura.moneda === 'VES' && tasaF > 0 ? totalDec.div(tasaF) : totalDec).toFixed(2),
+      totalVES: (factura.moneda === 'VES' ? totalDec : totalDec.mul(tasaF)).toFixed(2),
       totalPagado: totalPagado.toFixed(2),
       balancePendiente: balancePendiente.toFixed(2),
       estaVencida: ['PENDING', 'PARTIALLY_PAID'].includes(factura.estado) && new Date(factura.fechaVencimiento) < hoy,
@@ -308,20 +327,32 @@ router.post('/', async (req, res, next) => {
     const empresaId = req.user?.empresaId || req.user?.id;
     const empresaRefId = await getEmpresaRefId(req);
 
-    // Tasa de la empresa (AUTO: BCV del día; MANUAL: la guardada). Si el
-    // cliente no envía `tasaCambio` se usa la vigente: nunca un valor
-    // hardcodeado, que produciría facturas con una tasa inexistente.
-    const tasaFacturacion = tasaCambio != null
-      ? new Decimal(String(tasaCambio))
-      : await tasaParaEmpresa(empresaRefId);
-    if (!tasaFacturacion.isFinite() || tasaFacturacion.lte(0)) {
-      throw createValidationError('La tasa de cambio debe ser mayor a cero');
+    // ── Turno de caja ─────────────────────────────────────────────────────────
+    // El frontend ya bloquea la UI, pero el backend debe exigirlo para evitar
+    // facturas (y pagos) con caja cerrada si se llama a la API directamente.
+    const cierreAbierto = await prisma.cierreCaja.findFirst({
+      where: { usuarioId: req.user.id, estado: 'OPEN' },
+    });
+    if (!cierreAbierto) {
+      throw createBusinessError(
+        'No hay un turno de caja abierto. Abre el turno antes de facturar.',
+        { caja: 'Abre el turno desde Cierre de Caja' }
+      );
     }
-    if (!['USD', 'VES'].includes(moneda)) {
-      throw createValidationError('La moneda de la factura debe ser USD o VES');
+
+    // Tasa de cambio: fuente de verdad es la tasa de la empresa
+    // (tasaParaEmpresa resuelve empresa → global → BCV, nunca un valor
+    // hardcodeado). Se ignora la tasa enviada por el cliente para evitar
+    // facturar con una tasa ajena a la empresa.
+    const tasaFacturacion = await tasaParaEmpresa(empresaRefId);
+    if (!tasaFacturacion.isFinite() || tasaFacturacion.lte(0)) {
+      throw createValidationError('La tasa de cambio de la empresa no está configurada');
+    }
+    if (!['USD', 'EUR', 'VES'].includes(moneda)) {
+      throw createValidationError('La moneda de la factura debe ser USD, EUR o VES');
     }
     if (metodoPago === 'CASH' && !MONEDAS_PAGO.includes(monedaPago)) {
-      throw createValidationError('La moneda del efectivo debe ser USD o VES');
+      throw createValidationError(`La moneda del efectivo debe ser ${MONEDAS_PAGO.join(' / ')}`);
     }
 
     // ── Idempotencia ──────────────────────────────────────────────────────────
@@ -363,18 +394,48 @@ router.post('/', async (req, res, next) => {
     if (isNaN(fVencimiento.getTime())) throw createValidationError('La fecha de vencimiento es inválida');
 
     const cuotasTotales = [2, 3, 4].includes(parseInt(cuotas)) ? parseInt(cuotas) : 1;
-    const esFinanciada = cuotasTotales > 1 || esMetodoFinanciado(metodoPago) || !metodoPago;
-    const esPagoContado = Boolean(metodoPago && !esMetodoFinanciado(metodoPago));
 
-    if (metodoPago && !esMetodoPagoValido(metodoPago)) {
-      throw createValidationError('Método de pago inválido');
+    // Si no se envía metodoPago pero hay cuotas > 1, se asume FINANCIAMIENTO.
+    // Una venta de contado (cuotas = 1) SIEMPRE requiere metodoPago válido.
+    if (cuotasTotales === 1) {
+      if (!metodoPago || !esMetodoPagoValido(metodoPago)) {
+        throw createValidationError(
+          'El método de pago es obligatorio para venta de contado',
+          { metodoPago: 'Seleccione un método de pago válido' }
+        );
+      }
+    } else if (metodoPago && !esMetodoPagoValido(metodoPago)) {
+      throw createValidationError(
+        'Método de pago inválido',
+        { metodoPago: 'Seleccione un método de pago válido' }
+      );
     }
-    if (metodoPago && requiereReferenciaMetodo(metodoPago) && !referenciaTransaccion?.trim()) {
+
+    if (requiereReferenciaMetodo(metodoPago) && !referenciaTransaccion?.trim()) {
       throw createValidationError('La referencia es obligatoria para este método de pago');
     }
+
+    const esFinanciada = cuotasTotales > 1 || esMetodoFinanciado(metodoPago);
+    const esPagoContado = !esFinanciada;
+
     // Financiada no puede ser pagada de contado simultáneamente
     if (esFinanciada && esPagoContado) {
       throw createValidationError('Una factura financiada no puede marcarse como pagada al contado en el mismo acto');
+    }
+
+    // ── Validar que el cliente pertenezca a la empresa emisora ────────────────
+    const cliente = await prisma.cliente.findUnique({
+      where: { id: clienteId },
+      select: { id: true, empresaId: true, razonSocial: true },
+    });
+    if (!cliente) {
+      throw createValidationError('El cliente no existe', { clienteId: 'Cliente no encontrado' });
+    }
+    if (cliente.empresaId !== empresaId) {
+      throw createValidationError(
+        'El cliente no pertenece a tu empresa',
+        { clienteId: 'Cliente de otra empresa' }
+      );
     }
 
     // ── Cargar y validar productos ────────────────────────────────────────────
@@ -385,7 +446,7 @@ router.post('/', async (req, res, next) => {
 
     const productoMap = Object.fromEntries(productosDB.map(p => [p.id, p]));
 
-    // Validar existencia y stock
+    // Validar existencia de cada ítem
     for (const item of items) {
       if (!item.productoId) throw createValidationError('Todos los ítems deben tener un producto');
       const cantidadNumerica = Number(item.cantidad);
@@ -402,21 +463,30 @@ router.post('/', async (req, res, next) => {
       if (!producto) {
         throw createValidationError(`El producto con ID "${item.productoId}" no existe o está inactivo`);
       }
-      
-      // Validar stock con soporte para venta por peso (kg/g)
+    }
+
+    // Acumular cantidades por producto (mismo producto puede repetirse en el
+    // carrito). Se convierte a kg para venta por peso para comparar con stock.
+    const cantidadesAcumuladas = new Map();
+    for (const item of items) {
+      const producto = productoMap[item.productoId];
       const cantidadSolicitada = parseFloat(item.cantidad);
-      const unidadPeso = item.unidadPeso || 'kg'; // Unidad de peso enviada por el frontend
+      const unidadPeso = item.unidadPeso || 'kg';
       let cantidadEnKg = cantidadSolicitada;
-      
-      // Si el producto es venta por peso y la unidad es gramos, convertir a kg
       if (producto.esVentaPorPeso && unidadPeso === 'g') {
         cantidadEnKg = cantidadSolicitada / 1000;
       }
-      
+      const prev = cantidadesAcumuladas.get(item.productoId) || 0;
+      cantidadesAcumuladas.set(item.productoId, prev + cantidadEnKg);
+    }
+
+    // Validar stock contra la cantidad acumulada por producto
+    for (const [productoId, cantidadSolicitada] of cantidadesAcumuladas) {
+      const producto = productoMap[productoId];
       const stockActual = parseFloat(producto.stockActual);
-      if (stockActual < cantidadEnKg) {
+      if (stockActual < cantidadSolicitada) {
         throw createBusinessError(
-          `Stock insuficiente para "${producto.nombre}": disponible ${stockActual} kg, solicitado ${cantidadEnKg} kg (${cantidadSolicitada} ${unidadPeso})`
+          `Stock insuficiente para "${producto.nombre}": disponible ${stockActual} kg, solicitado ${cantidadSolicitada} kg`
         );
       }
     }
@@ -489,7 +559,8 @@ router.post('/', async (req, res, next) => {
     // ── Transacción atómica ───────────────────────────────────────────────────
     let factura;
     try {
-      factura = await prisma.$transaction(async (tx) => {
+      factura = await prisma.$transaction(
+        async (tx) => {
       const numeroFactura = await obtenerSiguienteNumeroFactura(tx);
 
       // 1. Crear factura con ítems
@@ -559,9 +630,16 @@ router.post('/', async (req, res, next) => {
         },
       });
 
-      // 1.5. Crear CuentaPorCobrar asociada EXCLUSIVAMENTE si es financiada (montos siempre en USD normalizado)
+      // 1.5. Crear CuentaPorCobrar asociada EXCLUSIVAMENTE si es financiada (montos siempre en la moneda base de la empresa)
       if (!esPagoContado) {
-        const totalFacturaUSD = convertirMontoMoneda(totalFactura, moneda, 'USD', tasaFacturacion);
+        // La CxC guarda montos en la moneda BASE (USD por defecto, EUR con base
+        // EUR); la factura puede estar en VES/EUR/USD, así que se normaliza.
+        const totalFacturaBase = convertirMontoMoneda(
+          totalFactura,
+          moneda,
+          await monedaBasePorEmpresa(empresaRefId),
+          tasaFacturacion
+        );
 
         await tx.cuentaPorCobrar.create({
           data: {
@@ -569,9 +647,9 @@ router.post('/', async (req, res, next) => {
             facturaId: nuevaFactura.id,
             clienteId,
             usuarioId: req.user?.id || null,
-            montoOriginal: totalFacturaUSD.toFixed(2),
+            montoOriginal: totalFacturaBase.toFixed(2),
             montoCobrado: '0.00',
-            montoPendiente: totalFacturaUSD.toFixed(2),
+            montoPendiente: totalFacturaBase.toFixed(2),
             fechaEmision: nuevaFactura.fechaEmision,
             fechaVencimiento: fVencimiento.toISOString(),
             estado: 'PENDING',
@@ -583,9 +661,9 @@ router.post('/', async (req, res, next) => {
       // 2. Crear el registro de pago inmediato si aplica (CONTADO)
       if (esPagoContado) {
         const monedaRecibida = monedaPago || (
-          [METODOS_PAGO.EFECTIVO_VES, METODOS_PAGO.BIOPAGO, METODOS_PAGO.PAGO_MOVIL].includes(metodoPago)
+          [METODOS_PAGO.EFECTIVO_VES, METODOS_PAGO.BIOPAGO, METODOS_PAGO.PAGO_MOVIL, METODOS_PAGO.CASHEA].includes(metodoPago)
             ? 'VES'
-            : [METODOS_PAGO.EFECTIVO_USD, METODOS_PAGO.BINANCE, METODOS_PAGO.CASHEA].includes(metodoPago)
+            : [METODOS_PAGO.EFECTIVO_USD, METODOS_PAGO.BINANCE].includes(metodoPago)
               ? 'USD'
               : moneda
         );
@@ -644,7 +722,9 @@ router.post('/', async (req, res, next) => {
       }
 
       return nuevaFactura;
-    });
+    },
+    { maxWait: 10000, timeout: 30000 }
+  );
     } catch (txErr) {
       // Carrera real: dos peticiones con la misma clave pueden pasar la
       // verificación anterior si llegan lo bastante cerca. El índice único
@@ -677,8 +757,36 @@ router.post('/', async (req, res, next) => {
 
     invalidarCacheVentas();
 
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'VENTAS',
+      modulo: 'facturas',
+      accion: 'VENTA_EMITIDA',
+      entidad: 'Factura',
+      entidadId: factura.id,
+      descripcion: `Emitió factura #${factura.numeroFactura}${factura.cliente?.razonSocial ? ` a ${factura.cliente.razonSocial}` : ''} por ${factura.moneda} ${factura.total}`,
+      datosNuevos: {
+        numeroFactura: factura.numeroFactura,
+        cliente: factura.cliente ? { id: factura.cliente.id, razonSocial: factura.cliente.razonSocial } : null,
+        total: factura.total,
+        moneda: factura.moneda,
+        tasaCambio: factura.tasaCambio,
+        items: (factura.items || []).map((item) => ({
+          productoId: item.productoId,
+          descripcion: item.descripcionHistorica,
+          cantidad: item.cantidad,
+          precioUnitario: item.precioUnitarioHistorico,
+          totalLinea: item.totalLinea,
+        })),
+      },
+      monto: factura.total,
+    });
+
     res.status(201).json({
       ...factura,
+      subtotal: new Decimal(factura.subtotal.toString()).toFixed(2),
+      impuestoTotal: new Decimal(factura.impuestoTotal.toString()).toFixed(2),
+      total: totalFactura.toFixed(2),
       totalPagado: esPagoContado ? totalFactura.toFixed(2) : '0.00',
       balancePendiente: esPagoContado ? '0.00' : totalFactura.toFixed(2),
       cuotasTotales,
@@ -750,7 +858,9 @@ router.patch('/:id/anular', async (req, res, next) => {
     const tasaSistemaActual = await tasaParaEmpresa(empresaRefId);
 
     // Transacción atómica: anular factura + anular pagos + restaurar stock + auditoría
-    const anulada = await prisma.$transaction(async (tx) => {
+    let cxcEliminadas = 0;
+    const anulada = await prisma.$transaction(
+      async (tx) => {
       await lockFactura(tx, req.params.id);
 
       const factura = await tx.factura.findFirstOrThrow({
@@ -854,9 +964,10 @@ router.patch('/:id/anular', async (req, res, next) => {
       }
 
       // 3. Eliminar CuentaPorCobrar asociada si existía
-      await tx.cuentaPorCobrar.deleteMany({
+      const cxcEliminada = await tx.cuentaPorCobrar.deleteMany({
         where: { facturaId: req.params.id }
       });
+      cxcEliminadas = cxcEliminada.count;
 
       // 4. Restaurar stock de los productos con verificación de empresa
       for (const item of factura.items) {
@@ -903,10 +1014,45 @@ router.patch('/:id/anular', async (req, res, next) => {
       });
 
       return updated;
-    });
+    },
+    { maxWait: 10000, timeout: 30000 }
+  );
 
     invalidarCacheVentas();
     cxcRouter.invalidarCacheCxcResumen?.();
+
+    registrarBitacora({
+      contexto: contextoBitacora(req),
+      categoria: 'VENTAS',
+      modulo: 'facturas',
+      accion: 'VENTA_ANULADA',
+      entidad: 'Factura',
+      entidadId: anulada.id,
+      descripcion: `Anuló la factura #${anulada.numeroFactura}${anulada.cliente?.razonSocial ? ` de ${anulada.cliente.razonSocial}` : ''} (${motivoFinal})`,
+      datosAnteriores: { estado: 'EMITIDA', total: anulada.total, moneda: anulada.moneda },
+      datosNuevos: {
+        estado: 'VOIDED',
+        motivoAnulacion: motivoFinal,
+        descripcionAnulacion: descripcionFinal,
+        anuladoPor: anulada.anuladoPor,
+        fechaAnulacion: anulada.fechaAnulacion,
+      },
+      monto: anulada.total,
+    });
+
+    if (cxcEliminadas > 0) {
+      registrarBitacora({
+        contexto: contextoBitacora(req),
+        categoria: 'CXC',
+        modulo: 'cxc',
+        accion: 'CXC_ANULADA',
+        entidad: 'CuentaPorCobrar',
+        entidadId: anulada.id,
+        descripcion: `Cuenta por cobrar de la factura #${anulada.numeroFactura} eliminada por anulación de la venta`,
+        datosNuevos: { facturaId: anulada.id, cuentasEliminadas: cxcEliminadas },
+      });
+    }
+
     res.json(anulada);
   } catch (err) { next(err); }
 });

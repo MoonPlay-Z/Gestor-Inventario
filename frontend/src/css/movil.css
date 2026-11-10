@@ -1314,7 +1314,7 @@ html {
   .cxc-detail-card { padding: 18px; }
   .cxc-cliente-grid > div,
   .cxc-factura-resumen > div { min-width: 0; overflow-wrap: anywhere; }
-  .cxc-saldo-card { position: sticky; top: 76px; }
+  .cxc-saldo-card { position: static; }
   .cxc-saldo-datos > div { gap: 10px; }
   .cxc-saldo-datos > div > span:last-child { text-align: right; overflow-wrap: anywhere; }
   .cxc-form-card input,
