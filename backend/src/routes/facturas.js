@@ -559,7 +559,8 @@ router.post('/', async (req, res, next) => {
     // ── Transacción atómica ───────────────────────────────────────────────────
     let factura;
     try {
-      factura = await prisma.$transaction(async (tx) => {
+      factura = await prisma.$transaction(
+        async (tx) => {
       const numeroFactura = await obtenerSiguienteNumeroFactura(tx);
 
       // 1. Crear factura con ítems
@@ -721,7 +722,9 @@ router.post('/', async (req, res, next) => {
       }
 
       return nuevaFactura;
-    });
+    },
+    { maxWait: 10000, timeout: 30000 }
+  );
     } catch (txErr) {
       // Carrera real: dos peticiones con la misma clave pueden pasar la
       // verificación anterior si llegan lo bastante cerca. El índice único
@@ -856,7 +859,8 @@ router.patch('/:id/anular', async (req, res, next) => {
 
     // Transacción atómica: anular factura + anular pagos + restaurar stock + auditoría
     let cxcEliminadas = 0;
-    const anulada = await prisma.$transaction(async (tx) => {
+    const anulada = await prisma.$transaction(
+      async (tx) => {
       await lockFactura(tx, req.params.id);
 
       const factura = await tx.factura.findFirstOrThrow({
@@ -1010,7 +1014,9 @@ router.patch('/:id/anular', async (req, res, next) => {
       });
 
       return updated;
-    });
+    },
+    { maxWait: 10000, timeout: 30000 }
+  );
 
     invalidarCacheVentas();
     cxcRouter.invalidarCacheCxcResumen?.();
