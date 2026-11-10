@@ -13,6 +13,7 @@ import { useCxcResumen } from '../features/dashboard/useCxcResumen';
 import { construirGraficoIngresos } from '../features/dashboard/graficoIngresos';
 import { Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -46,8 +47,14 @@ const PERIODOS = [
 ];
 
 /** Widget de Cuentas por Cobrar (solo presentación). */
-const ResumenCxc = ({ resumen, moneda }) => {
+const ResumenCxc = ({ resumen, moneda, tasa }) => {
   if (!resumen) return null;
+
+  const esVES = moneda === 'VES' || moneda === 'Bs.';
+  const valorConvertido = (val) => {
+    const num = Number(val || 0);
+    return esVES && tasa > 0 ? num * tasa : num;
+  };
 
   // Los tramos del backend NO se llaman como parecen: `0_30` es lo que aún no
   // vence, `31_60` es 1-30 días vencido, `61_90` es 31-60 y `90plus` es 61+.
@@ -78,7 +85,14 @@ const ResumenCxc = ({ resumen, moneda }) => {
         {tarjetas.map(({ etiqueta, valor, detalle, color }) => (
           <div key={etiqueta} style={{ padding: '12px', background: 'var(--bg-secondary)', borderRadius: '10px', textAlign: 'center' }}>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>{etiqueta}</div>
-            <div style={{ fontSize: '1.25rem', fontWeight: 700, color, marginTop: '4px' }}>{Utils.formatMoney(valor || 0, moneda)}</div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 700, color, marginTop: '4px' }}>
+              {Utils.formatMoney(valorConvertido(valor), moneda)}
+            </div>
+            {esVES && tasa > 0 && Number(valor || 0) > 0 && (
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
+                ≈ $ {Number(valor || 0).toFixed(2)}
+              </div>
+            )}
             {detalle && (
               <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{detalle}</div>
             )}
@@ -92,6 +106,8 @@ const ResumenCxc = ({ resumen, moneda }) => {
 export function DashboardPage() {
   const { toggleSidebar } = useOutletContext();
   const { showToast } = useToast();
+  const { empresa } = useAuth();
+  const tasa = Number(empresa?.tasaDolar) || 0;
   const [periodo, setPeriodo] = useState('mes');
 
   const alFallar = useCallback(
@@ -135,7 +151,7 @@ export function DashboardPage() {
       <div className="page-body dash-body">
         <DolarWidget />
 
-        <ResumenCxc resumen={cxcResumen} moneda={moneda} />
+        <ResumenCxc resumen={cxcResumen} moneda={moneda} tasa={tasa} />
 
         {/* Un fallo de red ya no deja la página en blanco: se muestra el
             estado de error y se conservan las métricas anteriores si había. */}

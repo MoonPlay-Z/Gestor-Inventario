@@ -1,8 +1,36 @@
 # Plan de implementación — Panel de Auditoría (Bitácora)
 
-**Estado:** plan aprobado, pendiente de ejecución  
+**Estado:** implementación parcial; despliegue y escalabilidad pendientes
 **Creado:** 2026-10-16  
 **Depende de:** commit `82c3b6a` (arreglos de reportes)
+
+## Estado de implementación — 2026-10-30
+
+Ya existe una primera versión en el código:
+
+- Modelo Prisma `Bitacora`, migración PostgreSQL y esquema SQLite.
+- Cola asíncrona con sanitizado, hash encadenado, reintentos y errores de descarte visibles en logs.
+- Middleware HTTP de mutaciones/exportaciones con método, ruta sin query, estado y duración.
+- Captura explícita de ventas, pagos, CxC, caja, productos, tasa, configuración,
+  creación/modificación de usuarios e intentos de inicio de sesión.
+- API paginada, filtros, verificación de los últimos 500 registros y panel `/bitacora`.
+- Triggers para impedir `UPDATE`/`DELETE` (y `TRUNCATE` en PostgreSQL).
+
+La decisión de almacenamiento quedó confirmada: producción usa una **base Neon
+separada** mediante `AUDIT_DATABASE_URL`, con esquema y migraciones propios.
+En desarrollo, si la variable no está definida, se usa un archivo SQLite local
+separado. La bitácora ya no forma parte del esquema operacional.
+
+Siguen pendientes las particiones mensuales, la retención y el interceptador
+genérico de Prisma. La cola/hash se serializa dentro de un proceso; ejecutar
+varios escritores simultáneos requiere coordinación en BD antes de escalar
+horizontalmente.
+
+Para producción, configura `AUDIT_DATABASE_URL`, regenera ambos clientes y aplica
+`cd backend && npm run db:auditoria:deploy` además de `npm run db:deploy` para la
+base operacional. En desarrollo SQLite, ejecuta
+`cd backend && npm run db:auditoria:sqlite:push` para crear la tabla e instalar
+los triggers de protección.
 
 ---
 
@@ -35,17 +63,20 @@ Debe responder preguntas concretas:
 
 ## 3. Estado actual
 
-**Lo que ya existe:**
-- El modelo `AuditLog` en `schema.prisma` con `accion`, `entidad`, `entidadId`, `datosAnteriores`, `datosNuevos`, `ipAddress`, `userAgent`
-- La tabla `audit_logs` con **6 registros**, todos del 2026-10-06 y escritos a mano (`CORRECCION_PRECIO_TOMATE`)
-- `ROLE_GROUPS.ADMIN_ONLY` en `frontend/src/components/ui/RoleGuard.jsx`
+**Legado:**
+- El modelo `AuditLog` y su tabla `audit_logs` permanecen para conservar los registros históricos previos.
+- `ROLE_GROUPS.ADMIN_ONLY` limita el acceso a `EMPRESA` y `SUPER_ADMIN`.
 
-**Lo que falta:**
-- Ningún código escribe en `audit_logs`. No hay middleware, no hay captura de IP
-- No existe endpoint de consulta ni panel
-- El modelo actual no tiene los campos que este plan requiere
+**Bitácora nueva:**
+- El modelo `Bitacora`, el cliente Prisma y las migraciones viven en `prisma/auditoria/`, separados del esquema operacional.
+- Las rutas de consulta y el panel `/bitacora` están conectados a `AUDIT_DATABASE_URL`.
+- La tabla es append-only mediante triggers; la API verifica una ventana de 500 registros.
 
-**Conclusión:** la tabla existe pero está abandonada. Se puede reemplazar por completo.
+**Falta para completar el plan:**
+- Interceptador de Prisma y captura de todas las lecturas; el middleware actual limita el volumen auditando mutaciones autenticadas y exportaciones.
+- Script de verificación del histórico completo, particionado mensual y política de retención.
+- Notificación administrativa de cola llena/descarte (hoy se reporta en los logs del backend).
+- Configurar la base Neon y aplicar su migración de producción.
 
 ---
 
@@ -104,23 +135,23 @@ CREATE INDEX idx_bitacora_accion       ON bitacora (accion);
 
 ### 5.1 Cliente de base de datos
 
-`backend/src/db/auditoriaDb.js` — instancia de Prisma propia apuntando a `AUDIT_DATABASE_URL`, siguiendo el patrón de `backend/src/db/prisma.js` (soporte SQLite para desarrollo).
+`backend/src/db/auditoriaDb.js` — instancia de Prisma propia apuntando a `AUDIT_DATABASE_URL`; en desarrollo admite SQLite separado.
 
 ### 5.2 Cola asíncrona
 
-`backend/src/services/auditoria.js`:
+`backend/src/services/bitacora.js`:
 
 - Buffer en memoria (tope 1000 entradas)
 - `flush()` cada 2 segundos o cada 50 registros, lo que ocurra primero
 - Reintento con backoff exponencial
-- Si el buffer se llena: descarta las entradas más antiguas y emite alerta `CRITICO`
+- Si el buffer se llena: descarta las entradas más antiguas e informa el descarte en logs; todavía no notifica al administrador
 - El hash se calcula en el `flush`, en orden de inserción
 
-**Comportamiento ante caída de Neon:** las entradas se acumulan en el buffer. Al reconectar, se escriben. Si la caída dura más que la memoria disponible, se pierden las más antiguas y se alerta.
+**Comportamiento ante caída de Neon:** las entradas se acumulan en el buffer. Al reconectar, se reintentan. Si la caída dura más que la memoria disponible o se agotan los intentos, se pierden registros y se informa en logs.
 
 ### 5.3 Tres mecanismos de captura
 
-**a) Middleware HTTP** — automático para los 97 endpoints. Registra método, ruta, IP, user agent, duración y código de estado.
+**a) Middleware HTTP** — para endpoints autenticados que mutan datos y rutas de exportación. Registra método, ruta sin query string, IP, user agent, duración y código de estado; no guarda cuerpos de solicitud. Las lecturas ordinarias quedan fuera para evitar ruido y volumen.
 
 **b) Interceptador de Prisma** — envuelve `update` y `delete` del cliente principal. Lee el registro antes de modificar y guarda el diff. Produce el "de cuánto a cuánto" sin tocar las rutas.
 
@@ -247,8 +278,8 @@ AUDIT_DATABASE_URL="postgresql://user:pass@host/neondb_auditoria?sslmode=require
 
 ---
 
-## 12. Pendiente de decisión
+## 12. Decisión resuelta
 
-**¿Existe ya una segunda base en Neon, o se crea una nueva?**
-
-Si prefieres empezar con la tabla en la base principal (con el mismo `REVOKE`) y migrarla después a una base separada, la migración es `CREATE TABLE ... AS SELECT` y el código no cambia: ambos clientes exponen la misma interfaz.
+Se usará una base Neon exclusiva para auditoría mediante `AUDIT_DATABASE_URL`.
+En desarrollo, la misma interfaz usa un archivo SQLite separado. La migración
+operacional y la de auditoría se despliegan por separado.

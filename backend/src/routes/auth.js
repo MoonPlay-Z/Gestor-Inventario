@@ -9,10 +9,36 @@ const { loginLimiter, registerLimiter } = require('../middleware/rateLimiter');
 const { METODOS_PAGO_SAAS, enviarNotificacionPago } = require('../config/metodosPago');
 const { getRegistrationMetadata } = require('../utils/registrationMetadata');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
+const { registrar: registrarBitacora } = require('../services/bitacora');
 
 const router = express.Router();
 
 const DEV_SECRET = process.env.DEV_SECRET;
+
+function registrarEventoAcceso(req, usuario, accion, empresaRefId) {
+  const username = typeof req.body?.username === 'string'
+    ? req.body.username.slice(0, 100)
+    : null;
+  registrarBitacora({
+    contexto: {
+      empresaId: empresaRefId || usuario?.empresaRefId || usuario?.empresaId || null,
+      usuarioId: usuario?.id || null,
+      usuarioNombre: usuario?.nombre || usuario?.username || username || 'Desconocido',
+      usuarioRol: usuario?.rol || null,
+      ipAddress: req.ip || null,
+      userAgent: (req.get('user-agent') || '').slice(0, 300) || null,
+    },
+    categoria: 'ACCESO',
+    modulo: 'auth',
+    accion,
+    entidad: 'Usuario',
+    entidadId: usuario?.id || null,
+    descripcion: accion === 'INICIO_SESION'
+      ? 'Inicio de sesión exitoso'
+      : 'Intento de inicio de sesión fallido',
+    datosNuevos: { username, resultado: accion === 'INICIO_SESION' ? 'exitoso' : 'fallido' },
+  });
+}
 
 // Comparación de tiempo constante para secretos (evita timing attacks)
 function safeCompare(a, b) {
@@ -69,15 +95,18 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     });
 
     if (!usuario) {
+      registrarEventoAcceso(req, null, 'INICIO_SESION_FALLIDO');
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
     if (!usuario.activo) {
+      registrarEventoAcceso(req, usuario, 'INICIO_SESION_FALLIDO');
       return res.status(401).json({ error: 'Usuario desactivado. Contacte al administrador.' });
     }
 
     const match = await bcrypt.compare(password, usuario.passwordHash);
     if (!match) {
+      registrarEventoAcceso(req, usuario, 'INICIO_SESION_FALLIDO');
       return res.status(401).json({ error: 'Credenciales inválidas' });
     }
 
@@ -90,6 +119,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
         select: { activo: true, deletedAt: true },
       });
       if (!padre || !padre.activo || padre.deletedAt) {
+        registrarEventoAcceso(req, usuario, 'INICIO_SESION_FALLIDO');
         return res.status(401).json({ error: 'La cuenta principal de la empresa está suspendida. Contacta al administrador.' });
       }
     }
@@ -195,6 +225,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
       }
     });
 
+    registrarEventoAcceso(req, usuario, 'INICIO_SESION', resolvedEmpresaId);
+
     // Datos de la empresa para configuración en sesión (tasa, moneda)
     let empresaData = null;
     if (resolvedEmpresaId) {
@@ -204,7 +236,8 @@ router.post('/login', loginLimiter, async (req, res, next) => {
           id: true, nombre: true, rif: true, direccion: true,
           telefono: true, email: true, tasaDolar: true,
           monedaSimbolo: true, monedaCodigo: true,
-          tasaDolarModo: true, tasaDolarActualizadaEn: true
+          tasaDolarModo: true, tasaDolarActualizadaEn: true,
+          monedaBase: true, monedaExhibicion: true
         }
       });
     }

@@ -14,6 +14,7 @@
  */
 const { Decimal } = require('decimal.js');
 const {
+  MONEDAS_SISTEMA,
   MONEDAS_PAGO,
   convertirMontoMoneda,
   convertirAFactura,
@@ -23,6 +24,12 @@ const {
   sumarPagosCxcUSD,
   tasaCambioEfectiva,
   getTasaSistemaPorEmpresa,
+  monedaBasePorEmpresa,
+  monedaExhibicionPorEmpresa,
+  tasaBaseAHacia,
+  convertirAMoneda,
+  convertirMoneda,
+  convertirDesdeMoneda,
 } = require('./paymentCurrency');
 const { actualizarTasaEmpresa: actualizarTasaEmpresaBCV } = require('../services/tasaDolar');
 const { invalidarTasaEmpresa } = require('./tasaEmpresaCache');
@@ -67,7 +74,7 @@ async function estadoTasaEmpresa(empresaId) {
   if (empresaId) {
     empresa = await prisma.empresa.findUnique({
       where: { id: empresaId },
-      select: { tasaDolarModo: true, tasaDolarActualizadaEn: true },
+      select: { tasaDolarModo: true, tasaDolarActualizadaEn: true, monedaBase: true, monedaExhibicion: true },
     });
   }
 
@@ -78,6 +85,8 @@ async function estadoTasaEmpresa(empresaId) {
     fuente: modo === 'MANUAL' ? 'MANUAL' : 'BCV',
     actualizadaEn: empresa?.tasaDolarActualizadaEn || null,
     empresaId: empresaId || null,
+    monedaBase: empresa?.monedaBase || 'USD',
+    monedaExhibicion: empresa?.monedaExhibicion || 'USD',
   };
 }
 
@@ -136,6 +145,7 @@ async function setModoTasa(empresaId, modo) {
 
 module.exports = {
   MODOS,
+  MONEDAS_SISTEMA,
   MONEDAS_PAGO,
   convertirMontoMoneda,
   convertirAFactura,
@@ -151,4 +161,10 @@ module.exports = {
   actualizarTasaEmpresa,
   guardarTasaManual,
   setModoTasa,
+  monedaBasePorEmpresa,
+  monedaExhibicionPorEmpresa,
+  tasaBaseAHacia,
+  convertirAMoneda,
+  convertirMoneda,
+  convertirDesdeMoneda,
 };

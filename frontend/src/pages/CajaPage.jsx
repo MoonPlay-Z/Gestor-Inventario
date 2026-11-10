@@ -11,9 +11,11 @@ import { useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui';
 import { CashRegisterReport } from '../components/ui/CashRegisterReport';
 import { CierreTurnoModal } from '../components/ui/CierreTurnoModal';
+import { useMoneda } from '../hooks/useMoneda';
 
 export function CajaPage() {
   const { toggleSidebar } = useOutletContext();
@@ -23,13 +25,28 @@ export function CajaPage() {
   const [historial, setHistorial] = useState([]);
   const [loading, setLoading] = useState(true);
   const [config, setConfig] = useState(null);
+  const { empresa } = useAuth();
+  const { usarExhibicion, setUsarExhibicion } = useMoneda();
+  const tasaDolar = Number(empresa?.tasaDolar) || 0;
+
+  const getTasaShift = (c) => {
+    let tasaHist = 0;
+    try {
+      if (c?.arqueoDetalle) {
+        const parsed = typeof c.arqueoDetalle === 'string' ? JSON.parse(c.arqueoDetalle) : c.arqueoDetalle;
+        tasaHist = Number(parsed?.tasaCambio || 0);
+      }
+    } catch {}
+    return tasaHist > 0 ? tasaHist : (tasaDolar > 0 ? tasaDolar : 1);
+  };
 
   // Modals
   const [modalAbrir, setModalAbrir] = useState(false);
   const [modalCerrar, setModalCerrar] = useState(false);
 
-  // Cierre
-  const [montoInicial, setMontoInicial] = useState('0');
+  // Cierre y apertura
+  const [montoInicialUSD, setMontoInicialUSD] = useState('0');
+  const [montoInicialVES, setMontoInicialVES] = useState('0');
   const [montoFinal, setMontoFinal] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -66,15 +83,30 @@ export function CajaPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const monto = parseFloat(montoInicial || 0);
-      if (isNaN(monto) || monto < 0) {
-        showToast('Monto inicial inválido', 'error');
+      const valUSD = montoInicialUSD === '' ? 0 : parseFloat(montoInicialUSD);
+      const valVES = montoInicialVES === '' ? 0 : parseFloat(montoInicialVES);
+
+      if (isNaN(valUSD) || valUSD < 0) {
+        showToast('Fondo inicial USD inválido', 'error');
         return;
       }
-      await API.abrirCaja(monto, observaciones);
+      if (isNaN(valVES) || valVES < 0) {
+        showToast('Fondo inicial Bs. inválido', 'error');
+        return;
+      }
+
+      await API.abrirCaja({
+        montoInicial: valUSD,
+        montoInicialUSD: valUSD,
+        montoInicialVES: valVES,
+        observaciones: observaciones?.trim() || null,
+      });
+
       showToast('🎉 Caja abierta con éxito', 'success');
       setModalAbrir(false);
       setObservaciones('');
+      setMontoInicialUSD('0');
+      setMontoInicialVES('0');
       loadData();
     } catch (err) {
       const mensaje = err?.message || 'No se pudo abrir la caja.';
@@ -140,7 +172,7 @@ export function CajaPage() {
                 Cerrar Caja
               </Button>
             ) : (
-              <Button onClick={() => setModalAbrir(true)} variant="primary" size="sm" icon="mdi:lock-open">
+              <Button onClick={() => { setMontoInicialUSD('0'); setMontoInicialVES('0'); setObservaciones(''); setModalAbrir(true); }} variant="primary" size="sm" icon="mdi:lock-open">
                 Abrir Caja
               </Button>
             )}
@@ -163,24 +195,49 @@ export function CajaPage() {
               <div className="metric-card accent">
                 <div className="metric-icon"><Icon icon={cashIcon} className="h-6 w-6" /></div>
                 <div>
-                  <div className="metric-value">{Utils.formatMoney(cajaActual.montoInicial || 0)}</div>
-                  <div className="metric-label">Monto Inicial</div>
+                  <div className="metric-value">$ {Number(cajaActual.montoInicial || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  {Number(cajaActual.montoInicialVES || 0) > 0 && (
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#2563eb' }}>
+                      + Bs. {Number(cajaActual.montoInicialVES).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  )}
+                  <div className="metric-label">Fondo Inicial Gaveta</div>
                 </div>
               </div>
 
               <div className="metric-card success">
                 <div className="metric-icon"><Icon icon={cashMultipleIcon} className="h-6 w-6" /></div>
                 <div>
-                  <div className="metric-value">{Utils.formatMoney(cajaActual.ingresosEfectivo || 0)}</div>
-                  <div className="metric-label">Ingresos Efectivo</div>
+                  <div className="metric-value">
+                    {usarExhibicion ? (
+                      `Bs. ${(Number(cajaActual.ingresosEfectivo || 0) * (tasaDolar || 1)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    ) : (
+                      `$ ${Number(cajaActual.ingresosEfectivo || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    )}
+                  </div>
+                  {Number(cajaActual.ingresosEfectivoVES || 0) > 0 && (
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#2563eb' }}>
+                      + Bs. {Number(cajaActual.ingresosEfectivoVES).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </div>
+                  )}
+                  <div className="metric-label">Ingresos Efectivo Divisa</div>
                 </div>
               </div>
 
               <div className="metric-card info">
                 <div className="metric-icon"><Icon icon={cashIcon} className="h-6 w-6" /></div>
                 <div>
-                  <div className="metric-value">{Utils.formatMoney(cajaActual.ingresosBanco || 0)}</div>
-                  <div className="metric-label">Ingresos Banco</div>
+                  <div className="metric-value">
+                    {(() => {
+                      const bancoVES = Number(cajaActual.ingresosBancoVES || 0);
+                      const bancoUSD = Number(cajaActual.ingresosBanco || 0);
+                      const totalVES = bancoVES > 0 ? bancoVES : (tasaDolar > 0 ? bancoUSD * tasaDolar : 0);
+                      return usarExhibicion
+                        ? `Bs. ${totalVES.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : `$ ${bancoUSD.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    })()}
+                  </div>
+                  <div className="metric-label">Ingresos Banco (Punto / Móvil)</div>
                 </div>
               </div>
 
@@ -188,9 +245,14 @@ export function CajaPage() {
                 <div className="metric-icon"><Icon icon={alertIcon} className="h-6 w-6" /></div>
                 <div>
                   <div className="metric-value">
-                    {Utils.formatMoney(parseFloat(cajaActual.montoInicial || 0) + parseFloat(cajaActual.ingresosEfectivo || 0))}
+                    {(() => {
+                      const espUSD = Number(cajaActual.montoInicial || 0) + Number(cajaActual.ingresosEfectivo || 0);
+                      return usarExhibicion
+                        ? `Bs. ${(espUSD * (tasaDolar || 1)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : `$ ${espUSD.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    })()}
                   </div>
-                  <div className="metric-label">Esperado en Caja</div>
+                  <div className="metric-label">Esperado Efectivo Gaveta</div>
                 </div>
               </div>
             </div>
@@ -200,7 +262,29 @@ export function CajaPage() {
         {/* ── Historial de Cierres ── */}
         <div className="card cash-history-card">
           <div className="card-header flex flex-wrap items-center justify-between gap-4 mb-4">
-            <h3 className="card-title m-0">Historial de Cierres de Caja</h3>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <h3 className="card-title m-0">Historial de Cierres de Caja</h3>
+              <div style={{ display: 'inline-flex', gap: 4, background: 'var(--bg-secondary)', padding: '2px 4px', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <button
+                  type="button"
+                  onClick={() => setUsarExhibicion(false)}
+                  className={`btn btn-sm ${!usarExhibicion ? 'btn-primary' : 'btn-ghost'}`}
+                  style={{ padding: '2px 10px', fontSize: '0.75rem', fontWeight: 700 }}
+                  title="Ver montos en Dólares ($)"
+                >
+                  $ USD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUsarExhibicion(true)}
+                  className={`btn btn-sm ${usarExhibicion ? 'btn-primary' : 'btn-ghost'}`}
+                  style={{ padding: '2px 10px', fontSize: '0.75rem', fontWeight: 700 }}
+                  title="Ver montos en Bolívares (Bs.)"
+                >
+                  Bs. VES
+                </button>
+              </div>
+            </div>
             <Button variant="secondary" size="sm" icon="mdi:refresh" onClick={loadData}>Recargar</Button>
           </div>
           <div className="table-wrapper">
@@ -210,10 +294,10 @@ export function CajaPage() {
                   <th>Usuario</th>
                   <th>Apertura</th>
                   <th>Cierre</th>
-                  <th>Monto Inicial</th>
-                  <th>Efectivo</th>
-                  <th>Efectivo VES</th>
-                  <th>Banco</th>
+                  <th>Fondo Inicial</th>
+                  <th>Efectivo Divisa ($)</th>
+                  <th>Efectivo Bs.</th>
+                  <th>Banco (Bs.)</th>
                   <th>Monto Final</th>
                   <th>Diferencia</th>
                   <th>Estado</th>
@@ -227,24 +311,82 @@ export function CajaPage() {
                   <tr><td colSpan={10} className="empty-state">No hay registros de apertura o cierre de caja</td></tr>
                 ) : (
                   historial.map(c => {
-                    const esperado = parseFloat(c.montoInicial || 0) + parseFloat(c.ingresosEfectivo || 0);
-                    const final = parseFloat(c.montoFinal ?? 0);
-                    const diff = c.estado === 'CLOSED' ? final - esperado : null;
+                    const tasaShift = getTasaShift(c);
+                    const efUSD = Number(c.ingresosEfectivo || 0);
+                    const efVES = Number(c.ingresosEfectivoVES || 0);
+                    const bancoUSD = Number(c.ingresosBanco || 0);
+                    const bancoVES = Number(c.ingresosBancoVES || 0);
+                    const totalBancoVES = bancoVES > 0 ? bancoVES : (tasaShift > 0 ? bancoUSD * tasaShift : 0);
+                    const finalUSD = parseFloat(c.montoFinal ?? 0);
+                    const esperadoUSD = parseFloat(c.montoInicial || 0) + efUSD;
+                    const diffUSD = c.estado === 'CLOSED' ? finalUSD - esperadoUSD : null;
 
                     return (
                       <tr key={c.id}>
                         <td style={{ fontWeight: 600 }}>@{c.usuario?.username || 'N/A'}</td>
                         <td>{Utils.formatDate(c.fechaApertura)}</td>
                         <td>{c.fechaCierre ? Utils.formatDate(c.fechaCierre) : '-'}</td>
-                        <td>{Utils.formatMoney(c.montoInicial)}</td>
-                        <td>{Utils.formatMoney(c.ingresosEfectivo || 0)}</td>
-                        <td>{Utils.formatMoney(c.ingresosEfectivoVES || 0, 'Bs.')}</td>
-                        <td>{Utils.formatMoney(c.ingresosBanco || 0)}</td>
-                        <td style={{ fontWeight: 700 }}>{Utils.formatMoney(final)}</td>
                         <td>
-                          {diff !== null ? (
-                            <span style={{ fontWeight: 700, color: diff >= 0 ? 'var(--success)' : 'var(--danger)' }}>
-                              {diff >= 0 ? '+' : ''}{Utils.formatMoney(diff)}
+                          <div>$ {Number(c.montoInicial || 0).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                          {Number(c.montoInicialVES || 0) > 0 && (
+                            <div style={{ fontSize: '0.75rem', color: '#2563eb', fontWeight: 600 }}>
+                              + Bs. {Number(c.montoInicialVES).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          {usarExhibicion ? (
+                            <div>
+                              <div style={{ fontWeight: 700 }}>
+                                Bs. {(efUSD * tasaShift).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                                ($ {efUSD.toFixed(2)})
+                              </div>
+                            </div>
+                          ) : (
+                            <span style={{ fontWeight: 600 }}>
+                              $ {efUSD.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                          )}
+                        </td>
+                        <td>
+                          <span style={{ fontWeight: 600, color: efVES > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                            Bs. {efVES.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </td>
+                        <td>
+                          <div>
+                            <span style={{ fontWeight: 600 }}>
+                              Bs. {totalBancoVES.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </span>
+                            {bancoUSD > 0 && (
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                                (≈ $ {bancoUSD.toFixed(2)})
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ fontWeight: 700 }}>
+                          {usarExhibicion ? (
+                            <div>
+                              <div>Bs. {(finalUSD * tasaShift).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
+                                ($ {finalUSD.toFixed(2)})
+                              </div>
+                            </div>
+                          ) : (
+                            <span>$ {finalUSD.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                          )}
+                        </td>
+                        <td>
+                          {diffUSD !== null ? (
+                            <span style={{ fontWeight: 700, color: diffUSD >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                              {usarExhibicion ? (
+                                `${diffUSD >= 0 ? '+' : ''}Bs. ${(diffUSD * tasaShift).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                              ) : (
+                                `${diffUSD >= 0 ? '+' : ''}$ ${diffUSD.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                              )}
                             </span>
                           ) : '-'}
                         </td>
@@ -276,9 +418,15 @@ export function CajaPage() {
               <p className="caja-mobile-message">No hay registros de apertura o cierre de caja</p>
             ) : (
               historial.map((c) => {
-                const esperado = parseFloat(c.montoInicial || 0) + parseFloat(c.ingresosEfectivo || 0);
-                const final = parseFloat(c.montoFinal ?? 0);
-                const diff = c.estado === 'CLOSED' ? final - esperado : null;
+                const tasaShift = getTasaShift(c);
+                const efUSD = Number(c.ingresosEfectivo || 0);
+                const efVES = Number(c.ingresosEfectivoVES || 0);
+                const bancoUSD = Number(c.ingresosBanco || 0);
+                const bancoVES = Number(c.ingresosBancoVES || 0);
+                const totalBancoVES = bancoVES > 0 ? bancoVES : (tasaShift > 0 ? bancoUSD * tasaShift : 0);
+                const finalUSD = parseFloat(c.montoFinal ?? 0);
+                const esperadoUSD = parseFloat(c.montoInicial || 0) + efUSD;
+                const diffUSD = c.estado === 'CLOSED' ? finalUSD - esperadoUSD : null;
 
                 return (
                   <article key={c.id} className="caja-mobile-record">
@@ -293,15 +441,48 @@ export function CajaPage() {
                       <div><span>Cierre</span><strong>{c.fechaCierre ? Utils.formatDate(c.fechaCierre) : '-'}</strong></div>
                     </div>
                     <dl className="caja-mobile-record-amounts">
-                      <div><dt>Monto inicial</dt><dd>{Utils.formatMoney(c.montoInicial)}</dd></div>
-                      <div><dt>Efectivo</dt><dd>{Utils.formatMoney(c.ingresosEfectivo || 0)}</dd></div>
-                      <div><dt>Efectivo VES</dt><dd>{Utils.formatMoney(c.ingresosEfectivoVES || 0, 'Bs.')}</dd></div>
-                      <div><dt>Banco</dt><dd>{Utils.formatMoney(c.ingresosBanco || 0)}</dd></div>
-                      <div className="caja-mobile-total"><dt>Monto final</dt><dd>{Utils.formatMoney(final)}</dd></div>
+                      <div>
+                        <dt>Fondo inicial</dt>
+                        <dd>
+                          $ {Number(c.montoInicial || 0).toFixed(2)}
+                          {Number(c.montoInicialVES || 0) > 0 && ` + Bs. ${Number(c.montoInicialVES).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Efectivo Divisa ($)</dt>
+                        <dd>
+                          {usarExhibicion
+                            ? `Bs. ${(efUSD * tasaShift).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ($ ${efUSD.toFixed(2)})`
+                            : `$ ${efUSD.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Efectivo Bs.</dt>
+                        <dd>Bs. {efVES.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</dd>
+                      </div>
+                      <div>
+                        <dt>Banco (Bs.)</dt>
+                        <dd>
+                          Bs. {totalBancoVES.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          {bancoUSD > 0 && ` (≈ $ ${bancoUSD.toFixed(2)})`}
+                        </dd>
+                      </div>
+                      <div className="caja-mobile-total">
+                        <dt>Monto final</dt>
+                        <dd>
+                          {usarExhibicion
+                            ? `Bs. ${(finalUSD * tasaShift).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ($ ${finalUSD.toFixed(2)})`
+                            : `$ ${finalUSD.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                        </dd>
+                      </div>
                       <div>
                         <dt>Diferencia</dt>
-                        <dd className={diff === null ? '' : diff >= 0 ? 'caja-difference-positive' : 'caja-difference-negative'}>
-                          {diff === null ? '-' : `${diff >= 0 ? '+' : ''}${Utils.formatMoney(diff)}`}
+                        <dd className={diffUSD === null ? '' : diffUSD >= 0 ? 'caja-difference-positive' : 'caja-difference-negative'}>
+                          {diffUSD === null ? '-' : (
+                            usarExhibicion
+                              ? `${diffUSD >= 0 ? '+' : ''}Bs. ${(diffUSD * tasaShift).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                              : `${diffUSD >= 0 ? '+' : ''}$ ${diffUSD.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          )}
                         </dd>
                       </div>
                     </dl>
@@ -325,33 +506,189 @@ export function CajaPage() {
         {/* ── Modal Abrir ── */}
         {modalAbrir && (
           <div className="modal-overlay open">
-            <div className="modal modal-md">
+            <div className="modal modal-md" style={{ maxWidth: 580, width: '96%' }}>
               <div className="modal-header">
-                <h3 className="modal-title">Abrir Turno de Caja</h3>
-                <button className="modal-close" onClick={() => setModalAbrir(false)}><Icon icon={closeIcon} className="h-4 w-4" /></button>
+                <h3 className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Icon icon={lockOpenIcon} className="h-5 w-5" style={{ color: 'var(--accent)' }} />
+                  Abrir Turno de Caja
+                </h3>
+                <button className="modal-close" onClick={() => setModalAbrir(false)}>
+                  <Icon icon={closeIcon} className="h-4 w-4" />
+                </button>
               </div>
               <form onSubmit={handleAbrirSubmit}>
-                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div className="form-group">
-                    <label className="form-label">Monto Base Inicial en Caja (USD)</label>
-                    <input
-                      type="number" step="0.01" className="form-control"
-                      value={montoInicial} onChange={e => setMontoInicial(e.target.value)} required
-                    />
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                      Ingrese el dinero físico disponible en la caja al iniciar el turno.
+                <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                  {/* Info visual de métodos */}
+                  <div style={{
+                    background: 'var(--bg-secondary)',
+                    borderRadius: 10,
+                    padding: '12px 14px',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: 10,
+                    alignItems: 'center',
+                  }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, marginRight: 4 }}>
+                      Métodos habilitados:
+                    </span>
+                    {[
+                      { icon: 'mdi:currency-usd', label: 'Efectivo USD', color: '#16a34a' },
+                      { icon: 'mdi:cash', label: 'Efectivo Bs.', color: '#2563eb' },
+                      { icon: 'mdi:credit-card-outline', label: 'Punto / Tarjeta', color: '#0284c7' },
+                      { icon: 'mdi:cellphone-wireless', label: 'Pago Móvil', color: '#7c3aed' },
+                      { icon: 'mdi:bank-transfer', label: 'Transferencia / Digital', color: '#059669' },
+                    ].map(({ icon, label, color }) => (
+                      <span key={label} style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        fontSize: 11, fontWeight: 600,
+                        padding: '3px 9px', borderRadius: 999,
+                        background: `${color}16`, color,
+                        border: `1px solid ${color}30`,
+                      }}>
+                        <Icon icon={icon} style={{ fontSize: '0.95rem' }} />
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Grid de Fondos Iniciales Efectivo USD y VES */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 230px), 1fr))',
+                    gap: '12px',
+                  }}>
+                    {/* Fondo inicial USD */}
+                    <div style={{
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 10,
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}>
+                          <Icon icon="mdi:currency-usd" style={{ color: '#16a34a', fontSize: '1.2rem' }} />
+                          Efectivo Dólares (USD)
+                        </label>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                          background: 'rgba(22,163,74,0.12)', color: '#16a34a', border: '1px solid rgba(22,163,74,0.25)'
+                        }}>
+                          USD $
+                        </span>
+                      </div>
+
+                      <div style={{
+                        display: 'flex', alignItems: 'center',
+                        border: '2px solid var(--border)', borderRadius: 8,
+                        padding: '8px 12px', background: 'var(--bg-primary)',
+                        overflow: 'hidden', boxSizing: 'border-box', width: '100%',
+                      }}>
+                        <span style={{ fontWeight: 800, fontSize: 16, color: '#16a34a', marginRight: 8, flexShrink: 0 }}>$</span>
+                        <input
+                          type="number" step="0.01" min="0"
+                          value={montoInicialUSD}
+                          onChange={e => setMontoInicialUSD(e.target.value)}
+                          onFocus={e => e.target.select()}
+                          placeholder="0.00"
+                          style={{
+                            flex: 1, minWidth: 0, width: '100%', border: 'none', outline: 'none',
+                            fontWeight: 800, fontSize: 18,
+                            background: 'transparent', color: 'var(--text-primary)',
+                          }}
+                        />
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, flexShrink: 0, marginLeft: 6 }}>USD</span>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.3 }}>
+                        Billetes físicos en USD en gaveta al inicio (fondo de cambio).
+                      </div>
+                    </div>
+
+                    {/* Fondo inicial VES */}
+                    <div style={{
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 10,
+                      padding: '12px 14px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 8,
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6, margin: 0 }}>
+                          <Icon icon="mdi:cash" style={{ color: '#2563eb', fontSize: '1.2rem' }} />
+                          Efectivo Bolívares (VES)
+                        </label>
+                        <span style={{
+                          fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                          background: 'rgba(37,99,235,0.12)', color: '#2563eb', border: '1px solid rgba(37,99,235,0.25)'
+                        }}>
+                          Bs. VES
+                        </span>
+                      </div>
+
+                      <div style={{
+                        display: 'flex', alignItems: 'center',
+                        border: '2px solid var(--border)', borderRadius: 8,
+                        padding: '8px 12px', background: 'var(--bg-primary)',
+                        overflow: 'hidden', boxSizing: 'border-box', width: '100%',
+                      }}>
+                        <span style={{ fontWeight: 800, fontSize: 15, color: '#2563eb', marginRight: 8, flexShrink: 0 }}>Bs.</span>
+                        <input
+                          type="number" step="0.01" min="0"
+                          value={montoInicialVES}
+                          onChange={e => setMontoInicialVES(e.target.value)}
+                          onFocus={e => e.target.select()}
+                          placeholder="0.00"
+                          style={{
+                            flex: 1, minWidth: 0, width: '100%', border: 'none', outline: 'none',
+                            fontWeight: 800, fontSize: 18,
+                            background: 'transparent', color: 'var(--text-primary)',
+                          }}
+                        />
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, flexShrink: 0, marginLeft: 6 }}>VES</span>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.3 }}>
+                        Papel moneda en Bs. disponible en gaveta para vuelto al iniciar.
+                      </div>
                     </div>
                   </div>
-                  <div className="form-group">
+
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--text-secondary)',
+                    background: 'var(--bg-secondary)',
+                    padding: '8px 12px',
+                    borderRadius: 8,
+                    border: '1px dashed var(--border)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6
+                  }}>
+                    <Icon icon="mdi:information-outline" style={{ fontSize: '1rem', color: 'var(--accent)', flexShrink: 0 }} />
+                    <span>El sistema llevará el arqueo físico y control de vueltos independiente para cada moneda al cerrar el turno.</span>
+                  </div>
+
+                  {/* Observaciones */}
+                  <div className="form-group" style={{ margin: 0 }}>
                     <label className="form-label">Observaciones</label>
-                    <textarea className="form-control" rows={2} value={observaciones} onChange={e => setObservaciones(e.target.value)} />
+                    <textarea
+                      className="form-control"
+                      rows={2}
+                      placeholder="Notas de inicio de turno..."
+                      value={observaciones}
+                      onChange={e => setObservaciones(e.target.value)}
+                    />
                   </div>
                 </div>
                 <div className="modal-footer">
                   <button type="button" className="btn btn-ghost" onClick={() => setModalAbrir(false)}>Cancelar</button>
-                  <button type="submit" className="btn btn-primary" disabled={submitting}>
+                  <Button type="submit" variant="primary" icon="mdi:lock-open" disabled={submitting}>
                     {submitting ? 'Abriendo...' : 'Abrir Turno'}
-                  </button>
+                  </Button>
                 </div>
               </form>
             </div>

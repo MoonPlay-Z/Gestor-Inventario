@@ -7,6 +7,7 @@ export { RoleGuard, useRole, ROLES, ROLE_GROUPS } from './RoleGuard';
 export { NavItem, NavSection } from './NavItem';
 export { FieldError, FieldSuccess } from './FieldError';
 export { FormError, FormSuccess } from './FormError';
+export { CustomSelect } from './CustomSelect';
 
 // CSS Modules — usar como: import styles from '@/components/ui/Button.module.css'
 export { default as buttonStyles } from './Button.module.css';

@@ -1,7 +1,7 @@
 {
   "empresa": {
     "nombre": "Juan Arcila",
-    "rif": "v-30054284",
+    "rif": "V-30054284",
     "direccion": "",
     "telefono": "",
     "email": ""
@@ -9,8 +9,10 @@
   "moneda": {
     "simbolo": "$",
     "codigo": "USD",
-    "tasaDolar": 877.9023
+    "tasaDolar": 896.12,
+    "monedaBase": "USD",
+    "monedaExhibicion": "VES"
   },
-  "ivaDefault": 0,
+  "ivaDefault": 16,
   "tipoDocumento": "FACTURA"
 }

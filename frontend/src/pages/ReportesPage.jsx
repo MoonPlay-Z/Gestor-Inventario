@@ -6,6 +6,8 @@ import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { useRole } from '../components/ui/RoleGuard';
 import { getErrorMessage } from '../utils/validation';
+import { simboloMoneda, formatMoneda } from '../utils/numero';
+import { CustomSelect } from '../components/ui';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -151,6 +153,9 @@ export function ReportesPage() {
   const [caja, setCaja] = useState(null);
   const [impuestos, setImpuestos] = useState(null);
   const [currencySymbol, setCurrencySymbol] = useState('$');
+  // Moneda de exhibición de la empresa (USD / EUR / VES). El backend ya
+  // entrega los montos convertidos a exhibición; aquí solo resolvemos el símbolo.
+  const [monedaExhibicion, setMonedaExhibicion] = useState('USD');
   const [errors, setErrors] = useState({});
 
   // Estado de paginación
@@ -158,6 +163,8 @@ export function ReportesPage() {
   const [paginaGananciaProducto, setPaginaGananciaProducto] = useState(1);
   const [paginaProductosTop, setPaginaProductosTop] = useState(1);
   const [paginaClientesTop, setPaginaClientesTop] = useState(1);
+  const [periodoProductos, setPeriodoProductos] = useState('mensual');
+  const [periodoClientes, setPeriodoClientes] = useState('mensual');
   const POR_PAGINA = 10;
   // Productos y clientes se paginan en el backend; guardan {data, total, totalPages}
   const [topProductos, setTopProductos] = useState({ data: [], total: 0, totalPages: 1 });
@@ -171,9 +178,12 @@ export function ReportesPage() {
     setErrors({});
     try {
       const config = await API.getConfig();
-      if (config?.moneda?.simbolo) {
-        setCurrencySymbol(config.moneda.simbolo);
-      }
+      // Usar moneda de exhibición de la empresa (el backend ya convierte los
+      // montos a exhibición). Fallback al símbolo legacy si no viene.
+      const monedaCfg = config?.moneda || {};
+      const exhibicion = monedaCfg.monedaExhibicion || monedaCfg.monedaBase || 'USD';
+      setMonedaExhibicion(exhibicion);
+      setCurrencySymbol(simboloMoneda(exhibicion));
 
       const params = new URLSearchParams({ periodo, fecha, comparar: comparar.toString() });
 
@@ -234,12 +244,25 @@ export function ReportesPage() {
     }
   }, [periodo, fecha, comparar, rol, showToast]);
 
+  // Ayudante para resolver la fecha adecuada según periodicidad
+  const getFechaSegunPeriodo = (p) => {
+    const ahora = new Date();
+    const y = ahora.getFullYear();
+    const m = String(ahora.getMonth() + 1).padStart(2, '0');
+    const d = String(ahora.getDate()).padStart(2, '0');
+    if (p === 'diario' || p === 'semanal') return `${y}-${m}-${d}`;
+    if (p === 'mensual') return `${y}-${m}`;
+    return `${y}`;
+  };
+
   // Productos y clientes se cargan por separado: al cambiar de página solo se
   // recarga esa tabla, sin repetir los 5 reportes pesados.
-  const loadTopProductos = useCallback(async (pagina) => {
+  const loadTopProductos = useCallback(async (pagina, pOverride) => {
     try {
+      const p = pOverride || periodoProductos;
+      const f = (p === periodo && fecha) ? fecha : getFechaSegunPeriodo(p);
       const params = new URLSearchParams({
-        periodo, fecha, page: String(pagina), limit: String(POR_PAGINA),
+        periodo: p, fecha: f, page: String(pagina), limit: String(POR_PAGINA),
       });
       const data = await API.getReportesProductosTop(params);
       setTopProductos({
@@ -251,12 +274,14 @@ export function ReportesPage() {
       setErrors(prev => ({ ...prev, productosTop: getErrorMessage(err, 'Error cargando productos top') }));
       setTopProductos({ data: [], total: 0, totalPages: 1 });
     }
-  }, [periodo, fecha]);
+  }, [periodo, fecha, periodoProductos]);
 
-  const loadTopClientes = useCallback(async (pagina) => {
+  const loadTopClientes = useCallback(async (pagina, pOverride) => {
     try {
+      const p = pOverride || periodoClientes;
+      const f = (p === periodo && fecha) ? fecha : getFechaSegunPeriodo(p);
       const params = new URLSearchParams({
-        periodo, fecha, page: String(pagina), limit: String(POR_PAGINA),
+        periodo: p, fecha: f, page: String(pagina), limit: String(POR_PAGINA),
       });
       const data = await API.getReportesClientesTop(params);
       setTopClientes({
@@ -268,7 +293,7 @@ export function ReportesPage() {
       setErrors(prev => ({ ...prev, clientesTop: getErrorMessage(err, 'Error cargando clientes top') }));
       setTopClientes({ data: [], total: 0, totalPages: 1 });
     }
-  }, [periodo, fecha]);
+  }, [periodo, fecha, periodoClientes]);
 
   useEffect(() => {
     loadTopProductos(paginaProductosTop);
@@ -277,6 +302,14 @@ export function ReportesPage() {
   useEffect(() => {
     loadTopClientes(paginaClientesTop);
   }, [loadTopClientes, paginaClientesTop]);
+
+  // Si cambia el período global de la página, sincronizar las tarjetas si aplica
+  useEffect(() => {
+    if (periodo === 'diario' || periodo === 'semanal' || periodo === 'mensual') {
+      setPeriodoProductos(periodo);
+      setPeriodoClientes(periodo);
+    }
+  }, [periodo]);
 
   useEffect(() => {
     setPaginaPerdidas(1);
@@ -442,7 +475,7 @@ export function ReportesPage() {
       const doc = new jsPDF({ orientation: 'landscape' });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      const m = (v) => Utils.formatMoney(v, '$');
+      const m = (v) => formatMoneda(v, monedaExhibicion);
 
       // ── Encabezado ────────────────────────────────────────────────────────
       doc.setFontSize(18);
@@ -928,18 +961,18 @@ export function ReportesPage() {
         {/* Filtros */}
         <div className="card" style={{ marginBottom: '24px' }}>
           <div className="report-filters">
-            <div className="form-group report-filter-field">
+            <div className="form-group report-filter-field" style={{ minWidth: '160px' }}>
               <label className="form-label">Periodicidad</label>
-              <select
-                className="form-select"
+              <CustomSelect
                 value={periodo}
-                onChange={(e) => handlePeriodoChange(e.target.value)}
-              >
-                <option value="diario">Diario</option>
-                <option value="semanal">Semanal</option>
-                <option value="mensual">Mensual</option>
-                <option value="anual">Anual</option>
-              </select>
+                onChange={(val) => handlePeriodoChange(val)}
+                options={[
+                  { value: 'diario', label: 'Diario' },
+                  { value: 'semanal', label: 'Semanal' },
+                  { value: 'mensual', label: 'Mensual' },
+                  { value: 'anual', label: 'Anual' }
+                ]}
+              />
             </div>
 
             <div className="form-group report-filter-field">
@@ -1015,12 +1048,22 @@ export function ReportesPage() {
               <div className="metric-card accent">
                 <div className="metric-icon"><Icon icon={cashIcon} className="h-6 w-6" /></div>
                 <div>
-                  <div className="metric-value">{Utils.formatMoney(ventas?.total || 0, currencySymbol)}</div>
-                  <div className="metric-label">Ingresos {ventas?.etiqueta || ''}</div>
-                  {ventas?.comparacion && (
-                    <div style={{ fontSize: '0.75rem', marginTop: '4px', color: ventas.comparacion.tendencia === 'up' ? '#10b981' : ventas.comparacion.tendencia === 'down' ? '#ef4444' : textColor }}>
-                      <Icon icon={ventas.comparacion.tendencia === 'up' ? trendUpIcon : ventas.comparacion.tendencia === 'down' ? trendDownIcon : null} className="h-3 w-3" style={{ verticalAlign: 'middle' }} />
-                      {' '}{Utils.formatearPorcentaje(ventas.comparacion.porcentajeCambio)} vs anterior
+                  <div className="metric-value">{Utils.formatMoney(ventas?.subtotal || 0, currencySymbol)}</div>
+                  <div className="metric-label">Ingresos {ventas?.etiqueta || ''} (sin IVA)</div>
+                  {(ventas?.comparacionSubtotal || ventas?.comparacion) && (
+                    <div style={{ fontSize: '0.75rem', marginTop: '4px', color: (ventas.comparacionSubtotal || ventas.comparacion).tendencia === 'up' ? '#10b981' : (ventas.comparacionSubtotal || ventas.comparacion).tendencia === 'down' ? '#ef4444' : textColor }}>
+                      <Icon icon={(ventas.comparacionSubtotal || ventas.comparacion).tendencia === 'up' ? trendUpIcon : (ventas.comparacionSubtotal || ventas.comparacion).tendencia === 'down' ? trendDownIcon : null} className="h-3 w-3" style={{ verticalAlign: 'middle' }} />
+                      {' '}{Utils.formatearPorcentaje((ventas.comparacionSubtotal || ventas.comparacion).porcentajeCambio)} vs anterior
+                    </div>
+                  )}
+                  {Number(ventas?.impuestos) > 0 && (
+                    <div style={{ fontSize: '0.75rem', marginTop: '4px', color: textColor }}>
+                      Facturado con IVA: {Utils.formatMoney(ventas.total, currencySymbol)}
+                    </div>
+                  )}
+                  {caja && (
+                    <div style={{ fontSize: '0.75rem', marginTop: '4px', color: textColor }} title="Pagos recibidos en el período (no incluye facturas a crédito sin cobrar)">
+                      Cobrado en caja: {Utils.formatMoney(caja.totalGeneral, currencySymbol)}
                     </div>
                   )}
                 </div>
@@ -1408,11 +1451,41 @@ export function ReportesPage() {
             {/* Tablas de Top Productos y Clientes */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 400px), 1fr))', gap: '24px' }}>
               {/* Productos Top */}
-              <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title">Productos Más Vendidos</h3>
+              <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <h3 className="card-title" style={{ margin: 0 }}>Productos Más Vendidos</h3>
+                  {/* Selector de Período para Productos */}
+                  <div style={{ display: 'inline-flex', background: 'var(--bg-secondary)', borderRadius: '8px', padding: '3px', gap: '2px' }}>
+                    {[
+                      { id: 'diario', label: 'Día' },
+                      { id: 'semanal', label: 'Semana' },
+                      { id: 'mensual', label: 'Mes' },
+                    ].map(tab => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => {
+                          setPeriodoProductos(tab.id);
+                          setPaginaProductosTop(1);
+                        }}
+                        style={{
+                          padding: '3px 10px',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: periodoProductos === tab.id ? 'var(--accent)' : 'transparent',
+                          color: periodoProductos === tab.id ? '#fff' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="table-wrapper">
+                <div className="table-wrapper" style={{ flex: '1 1 auto' }}>
                   <table>
                     <thead>
                       <tr>
@@ -1425,7 +1498,7 @@ export function ReportesPage() {
                     <tbody>
                       {topProductos.data.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="empty-state">No hay datos</td>
+                          <td colSpan={4} className="empty-state">No hay datos en este período</td>
                         </tr>
                       ) : (
                         topProductos.data.map((p, i) => (
@@ -1443,21 +1516,84 @@ export function ReportesPage() {
                     </tbody>
                   </table>
                 </div>
-                {topProductos.totalPages > 1 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-                    <button className="btn btn-sm btn-secondary" disabled={paginaProductosTop === 1} onClick={() => setPaginaProductosTop(p => p - 1)}>Anterior</button>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Página {paginaProductosTop} de {topProductos.totalPages}</span>
-                    <button className="btn btn-sm btn-secondary" disabled={paginaProductosTop >= topProductos.totalPages} onClick={() => setPaginaProductosTop(p => p + 1)}>Siguiente</button>
+
+                {/* Barra de Paginación Productos */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  borderTop: '1px solid var(--border)',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    {topProductos.total > 0
+                      ? `Total: ${topProductos.total} producto${topProductos.total === 1 ? '' : 's'}`
+                      : 'Sin registros'}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary"
+                      disabled={paginaProductosTop <= 1}
+                      onClick={() => setPaginaProductosTop(p => Math.max(1, p - 1))}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px' }}
+                    >
+                      <Icon icon="mdi:chevron-left" /> Anterior
+                    </button>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      Página {paginaProductosTop} de {topProductos.totalPages || 1}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary"
+                      disabled={paginaProductosTop >= (topProductos.totalPages || 1)}
+                      onClick={() => setPaginaProductosTop(p => p + 1)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px' }}
+                    >
+                      Siguiente <Icon icon="mdi:chevron-right" />
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Clientes Top */}
-              <div className="card">
-                <div className="card-header">
-                  <h3 className="card-title">Clientes Principales</h3>
+              <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
+                <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                  <h3 className="card-title" style={{ margin: 0 }}>Clientes Principales</h3>
+                  {/* Selector de Período para Clientes */}
+                  <div style={{ display: 'inline-flex', background: 'var(--bg-secondary)', borderRadius: '8px', padding: '3px', gap: '2px' }}>
+                    {[
+                      { id: 'diario', label: 'Día' },
+                      { id: 'semanal', label: 'Semana' },
+                      { id: 'mensual', label: 'Mes' },
+                    ].map(tab => (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => {
+                          setPeriodoClientes(tab.id);
+                          setPaginaClientesTop(1);
+                        }}
+                        style={{
+                          padding: '3px 10px',
+                          fontSize: '0.75rem',
+                          fontWeight: 600,
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: periodoClientes === tab.id ? 'var(--accent)' : 'transparent',
+                          color: periodoClientes === tab.id ? '#fff' : 'var(--text-secondary)',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="table-wrapper">
+                <div className="table-wrapper" style={{ flex: '1 1 auto' }}>
                   <table>
                     <thead>
                       <tr>
@@ -1469,7 +1605,7 @@ export function ReportesPage() {
                     <tbody>
                       {topClientes.data.length === 0 ? (
                         <tr>
-                          <td colSpan={3} className="empty-state">No hay datos</td>
+                          <td colSpan={3} className="empty-state">No hay datos en este período</td>
                         </tr>
                       ) : (
                         topClientes.data.map((c, i) => (
@@ -1486,13 +1622,46 @@ export function ReportesPage() {
                     </tbody>
                   </table>
                 </div>
-                {topClientes.totalPages > 1 && (
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
-                    <button className="btn btn-sm btn-secondary" disabled={paginaClientesTop === 1} onClick={() => setPaginaClientesTop(p => p - 1)}>Anterior</button>
-                    <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Página {paginaClientesTop} de {topClientes.totalPages}</span>
-                    <button className="btn btn-sm btn-secondary" disabled={paginaClientesTop >= topClientes.totalPages} onClick={() => setPaginaClientesTop(p => p + 1)}>Siguiente</button>
+
+                {/* Barra de Paginación Clientes */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px 16px',
+                  borderTop: '1px solid var(--border)',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    {topClientes.total > 0
+                      ? `Total: ${topClientes.total} cliente${topClientes.total === 1 ? '' : 's'}`
+                      : 'Sin registros'}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary"
+                      disabled={paginaClientesTop <= 1}
+                      onClick={() => setPaginaClientesTop(p => Math.max(1, p - 1))}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px' }}
+                    >
+                      <Icon icon="mdi:chevron-left" /> Anterior
+                    </button>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      Página {paginaClientesTop} de {topClientes.totalPages || 1}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-secondary"
+                      disabled={paginaClientesTop >= (topClientes.totalPages || 1)}
+                      onClick={() => setPaginaClientesTop(p => p + 1)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 8px' }}
+                    >
+                      Siguiente <Icon icon="mdi:chevron-right" />
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </>

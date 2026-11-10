@@ -7,7 +7,7 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
-import { Button } from '../components/ui';
+import { Button, CustomSelect } from '../components/ui';
 import {
   MOTIVOS_ANULACION_PAGO,
   getMetodoPagoLabel,
@@ -133,16 +133,18 @@ export function PagosAnuladosPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
-                <select
+                <CustomSelect
                   value={filtros.motivo}
-                  onChange={(e) => setFiltros({ ...filtros, motivo: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Todos</option>
-                  {MOTIVOS_ANULACION_PAGO.map((motivo) => (
-                    <option key={motivo.value} value={motivo.value}>{motivo.label}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setFiltros({ ...filtros, motivo: val })}
+                  options={[
+                    { value: '', label: 'Todos' },
+                    ...MOTIVOS_ANULACION_PAGO.map((motivo) => ({
+                      value: motivo.value,
+                      label: motivo.label
+                    }))
+                  ]}
+                  placeholder="Todos"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Desde</label>

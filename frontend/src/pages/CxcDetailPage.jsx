@@ -11,7 +11,8 @@ import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
-import { Button, FieldError } from '../components/ui';
+import { useMoneda } from '../hooks/useMoneda';
+import { Button, FieldError, CustomSelect } from '../components/ui';
 import {
   ESTADOS_PAGO,
   MOTIVOS_ANULACION_PAGO,
@@ -25,6 +26,19 @@ import {
   requiereReferencia,
 } from '../constants/pagos';
 
+const OPCIONES_MONEDA_PAGO = [
+  { value: 'USD', label: 'Dólares ($ USD)', icon: 'mdi:currency-usd' },
+  { value: 'VES', label: 'Bolívares (Bs. VES)', icon: 'mdi:cash' },
+];
+
+const OPCIONES_ACCION_GESTION = [
+  { value: 'LLAMADA', label: 'Llamada telefónica', icon: 'mdi:phone' },
+  { value: 'WHATSAPP', label: 'WhatsApp', icon: 'mdi:whatsapp' },
+  { value: 'CORREO', label: 'Correo electrónico', icon: 'mdi:email' },
+  { value: 'VISITA', label: 'Visita presencial', icon: 'mdi:account-arrow-right' },
+  { value: 'OTRO', label: 'Otro medio', icon: 'mdi:dots-horizontal' },
+];
+
 const ESTADOS = {
   PENDING: { label: 'Pendiente', color: '#f59e0b' },
   PARTIALLY_PAID: { label: 'Parcial', color: '#3b82f6' },
@@ -35,7 +49,8 @@ export function CxcDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const { user, empresa } = useAuth();
+  const { usarExhibicion, setUsarExhibicion } = useMoneda();
   const [cuenta, setCuenta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPago, setShowPago] = useState(false);
@@ -53,6 +68,7 @@ export function CxcDetailPage() {
   const [pagoForm, setPagoForm] = useState({ monto: '', metodoPago: METODOS_PAGO.EFECTIVO_USD, monedaPago: 'USD', referenciaTransaccion: '', notas: '' });
   const [gestionForm, setGestionForm] = useState({ accion: 'LLAMADA', notas: '' });
   const [errors, setErrors] = useState({});
+  const [monedaExhibicion, setMonedaExhibicion] = useState(empresa?.monedaExhibicion || 'USD');
   // La conversión la hace el backend. Solo se guarda lo que devuelve para
   // mostrarlo; el frontend NUNCA calcula el equivalente ni valida el sobrepago,
   // porque su tasa puede diferir de la que aplica el servidor.
@@ -115,7 +131,7 @@ export function CxcDetailPage() {
         monto: pagoForm.monto,
         metodoPago: pagoForm.metodoPago,
         monedaPago: pagoForm.monedaPago,
-        referenciaTransaccion: requiereReferencia(pagoForm.metodoPago) ? pagoForm.referenciaTransaccion.trim() : null,
+        referenciaTransaccion: pagoForm.referenciaTransaccion?.trim() || null,
         notas: pagoForm.notas
       };
       await API.request(`/cxc/${id}/pago`, { method: 'POST', body });
@@ -208,6 +224,8 @@ export function CxcDetailPage() {
   if (!cuenta) return null;
 
   const estado = ESTADOS[cuenta.estado] || { label: cuenta.estado, color: '#6b7280' };
+  const tasa = Number(cuenta.tasaConversion?.tasa || empresa?.tasaDolar || 0);
+  const monedaFactura = cuenta.factura?.moneda || 'USD';
 
   return (
     <>
@@ -246,8 +264,26 @@ export function CxcDetailPage() {
                     <tr key={i} className="border-b border-gray-50">
                       <td data-label="Producto" className="py-2">{item.descripcionHistorica}</td>
                       <td data-label="Cantidad" className="text-center py-2">{item.cantidad}</td>
-                      <td data-label="Precio unitario" className="text-right py-2">{Utils.formatMoney(item.precioUnitarioHistorico)}</td>
-                      <td data-label="Total" className="text-right py-2 font-medium">{Utils.formatMoney(item.totalLinea)}</td>
+                      <td data-label="Precio unitario" className="text-right py-2">
+                        <div className="font-semibold text-gray-900">
+                          {tasa > 0
+                            ? `Bs. ${(Number(item.precioUnitarioHistorico) * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            : Utils.formatMoney(item.precioUnitarioHistorico, 'USD')}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          ({Utils.formatMoney(item.precioUnitarioHistorico, 'USD')})
+                        </div>
+                      </td>
+                      <td data-label="Total" className="text-right py-2 font-medium">
+                        <div className="font-semibold text-gray-900">
+                          {tasa > 0
+                            ? `Bs. ${(Number(item.totalLinea) * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            : Utils.formatMoney(item.totalLinea, 'USD')}
+                        </div>
+                        <div className="text-xs text-gray-400 font-normal">
+                          ({Utils.formatMoney(item.totalLinea, 'USD')})
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -270,15 +306,37 @@ export function CxcDetailPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className={`text-sm font-medium ${anulado ? 'line-through text-gray-500' : ''}`}>
-                              {Utils.formatMoney(pago.monto)} <span className="text-gray-500">({pago.monedaPago})</span>
+                              {Utils.formatMoney(pago.monto, pago.monedaPago)} <span className="text-gray-500">({pago.monedaPago})</span>
+                              {pago.monedaPago === 'VES' && pago.tasaBCV && Number(pago.tasaBCV) > 0 && (
+                                <span className="text-xs text-gray-500 ml-2 font-normal">
+                                  (≈ {Utils.formatMoney(Number(pago.monto) / Number(pago.tasaBCV), 'USD')})
+                                </span>
+                              )}
+                              {pago.monedaPago === 'USD' && tasa > 0 && (
+                                <span className="text-xs text-gray-500 ml-2 font-normal">
+                                  (≈ Bs. {(Number(pago.monto) * (Number(pago.tasaBCV) || tasa)).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                </span>
+                              )}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 mt-0.5">
                               {getMetodoPagoLabel(pago.metodoPago)} · {Utils.formatDate(pago.fechaPago)}
                             </p>
-                            {pago.tasaBCV && (
-                              <p className="text-xs text-blue-600 mt-0.5">
-                                Tasa BCV: {Number(pago.tasaBCV).toFixed(2)} Bs/USD
-                              </p>
+                            <div className="flex flex-wrap items-center gap-2 mt-1">
+                              {pago.referenciaTransaccion ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                  Ref: {pago.referenciaTransaccion}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-400">Ref: N/A</span>
+                              )}
+                              {pago.tasaBCV && (
+                                <span className="text-xs text-blue-600">
+                                  Tasa BCV: {Number(pago.tasaBCV).toFixed(2)} Bs/USD
+                                </span>
+                              )}
+                            </div>
+                            {pago.notas && (
+                              <p className="text-xs text-gray-500 italic mt-1">Nota: {pago.notas}</p>
                             )}
                           </div>
                           <div className="flex flex-col items-end gap-1 shrink-0">
@@ -293,9 +351,6 @@ export function CxcDetailPage() {
                                 Anular pago
                               </button>
                             ) : null}
-                            {pago.referenciaTransaccion && (
-                              <p className="text-xs text-gray-400 break-all text-right">{pago.referenciaTransaccion}</p>
-                            )}
                           </div>
                         </div>
                         {anulado && (
@@ -344,9 +399,50 @@ export function CxcDetailPage() {
                 </span>
               </div>
               <div className="space-y-3 text-sm cxc-saldo-datos">
-                <div className="flex justify-between"><span className="text-gray-500">Monto Original</span><span className="font-medium">{Utils.formatMoney(cuenta.montoOriginal)}</span></div>
-                <div className="flex justify-between"><span className="text-gray-500">Monto Cobrado</span><span className="font-medium text-green-600">{Utils.formatMoney(cuenta.montoCobrado)}</span></div>
-                <div className="border-t pt-3 flex justify-between"><span className="text-gray-500 font-semibold">Pendiente</span><span className="font-bold text-lg">{Utils.formatMoney(cuenta.montoPendiente)}</span></div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-gray-500">Monto Original</span>
+                  <div className="text-right">
+                    <span className="font-semibold text-gray-900">
+                      {tasa > 0
+                        ? `Bs. ${(Number(cuenta.montoOriginal) * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : Utils.formatMoney(cuenta.montoOriginal, 'USD')}
+                    </span>
+                    <div className="text-xs text-gray-500">
+                      ≈ {Utils.formatMoney(cuenta.montoOriginal, 'USD')}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-gray-500">Monto Cobrado</span>
+                  <div className="text-right">
+                    <span className="font-semibold text-green-600">
+                      {tasa > 0
+                        ? `Bs. ${(Number(cuenta.montoCobrado) * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : Utils.formatMoney(cuenta.montoCobrado, 'USD')}
+                    </span>
+                    <div className="text-xs text-gray-500">
+                      ≈ {Utils.formatMoney(cuenta.montoCobrado, 'USD')}
+                    </div>
+                  </div>
+                </div>
+                <div className="border-t pt-3 flex justify-between items-baseline">
+                  <span className="text-gray-500 font-semibold">Pendiente</span>
+                  <div className="text-right">
+                    <span className="font-bold text-lg text-gray-900">
+                      {tasa > 0
+                        ? `Bs. ${(Number(cuenta.montoPendiente) * tasa).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : Utils.formatMoney(cuenta.montoPendiente, 'USD')}
+                    </span>
+                    <div className="text-xs font-semibold text-green-700">
+                      ≈ {Utils.formatMoney(cuenta.montoPendiente, 'USD')}
+                    </div>
+                  </div>
+                </div>
+                {tasa > 0 && (
+                  <div className="pt-1 text-right text-xs text-gray-400">
+                    Tasa referencia: {tasa.toFixed(2)} Bs/USD
+                  </div>
+                )}
               </div>
               {cuenta.estado !== 'PAID' && (
                 <div className="mt-4 space-y-2">
@@ -369,22 +465,20 @@ export function CxcDetailPage() {
                     <input type="number" step="0.01" value={pagoForm.monto} onChange={(e) => setPagoForm({ ...pagoForm, monto: e.target.value })} className="w-full px-3 py-2 border rounded-lg" />
                     {conversion?.montoUsd !== undefined && (
                       <p className="mt-1 text-xs text-gray-500">
-                        Equivale a {Utils.formatMoney(conversion.montoUsd)} USD · tasa {conversion.tasaUsada} Bs/USD
-                      </p>
+                        Equivale a {Utils.formatMoney(conversion.montoUsd)} USD · tasa {conversion.tasaUsada} Bs/USD                      </p>
                     )}
                     {conversion?.excedePendiente && (
                       <p className="mt-1 text-xs text-red-600">
-                        Excede el pendiente ({Utils.formatMoney(cuenta.montoPendiente)}). Se aplicara solo {Utils.formatMoney(conversion.usdAplicable)}.
+                        Excede el pendiente ({Utils.formatMoney(cuenta.montoPendiente, 'USD')}). Se aplicara solo {Utils.formatMoney(conversion.usdAplicable, 'USD')}.
                       </p>
                     )}
                     {errors.monto && <FieldError message={errors.monto} />}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Método de Pago</label>
-                    <select
+                    <CustomSelect
                       value={pagoForm.metodoPago}
-                      onChange={(e) => {
-                        const val = e.target.value;
+                      onChange={(val) => {
                         const metodoInfo = METODOS_PAGO_CXC.find(m => m.value === val);
                         setPagoForm({
                           ...pagoForm,
@@ -392,51 +486,52 @@ export function CxcDetailPage() {
                           monedaPago: metodoInfo?.moneda || pagoForm.monedaPago
                         });
                       }}
-                      className="w-full px-3 py-2 border rounded-lg"
-                    >
-                      {METODOS_PAGO_CXC.map(m => (
-                        <option key={m.value} value={m.value}>{m.label}</option>
-                      ))}
-                    </select>
+                      options={METODOS_PAGO_CXC}
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Moneda</label>
-                    <select value={pagoForm.monedaPago} onChange={async (e) => {
-                      const moneda = e.target.value;
-                      const montoActual = Number(pagoForm.monto);
-                      setPagoForm(p => ({ ...p, monedaPago: moneda }));
-                      // Conserva el valor real del abono al cambiar de moneda,
-                      // preguntando al backend la tasa que EL aplicaría.
-                      if (montoActual > 0) {
-                        const convActual = await consultarConversion(montoActual, pagoForm.monedaPago);
-                        if (convActual?.montoUsd !== undefined) {
-                          const enNueva = await consultarConversion(convActual.montoUsd, moneda);
-                          if (enNueva?.maximoAceptable !== undefined) {
-                            const equivalente = moneda === 'VES'
-                              ? Number(convActual.montoUsd) * Number(enNueva.tasaUsada)
-                              : Number(convActual.montoUsd);
-                            setPagoForm(p => ({ ...p, monto: equivalente.toFixed(2) }));
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Moneda de Pago</label>
+                    <CustomSelect
+                      value={pagoForm.monedaPago}
+                      onChange={async (moneda) => {
+                        const montoActual = Number(pagoForm.monto);
+                        setPagoForm(p => ({ ...p, monedaPago: moneda }));
+                        // Conserva el valor real del abono al cambiar de moneda,
+                        // preguntando al backend la tasa que EL aplicaría.
+                        if (montoActual > 0) {
+                          const convActual = await consultarConversion(montoActual, pagoForm.monedaPago);
+                          if (convActual?.montoUsd !== undefined) {
+                            const enNueva = await consultarConversion(convActual.montoUsd, moneda);
+                            if (enNueva?.maximoAceptable !== undefined) {
+                              const equivalente = moneda === 'VES'
+                                ? Number(convActual.montoUsd) * Number(enNueva.tasaUsada)
+                                : Number(convActual.montoUsd);
+                              setPagoForm(p => ({ ...p, monto: equivalente.toFixed(2) }));
+                            }
                           }
                         }
-                      }
-                    }} className="w-full px-3 py-2 border rounded-lg">
-                      <option value="USD">USD</option>
-                      <option value="VES">VES (Bs.)</option>
-                    </select>
+                      }}
+                      options={OPCIONES_MONEDA_PAGO}
+                    />
                   </div>
-                  {requiereReferencia(pagoForm.metodoPago) && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Referencia</label>
-                      <input
-                        type="text"
-                        placeholder="Ej: 987654 / Nro. Operación"
-                        value={pagoForm.referenciaTransaccion}
-                        onChange={(e) => setPagoForm({ ...pagoForm, referenciaTransaccion: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-lg"
-                      />
-                      {errors.referencia && <FieldError message={errors.referencia} />}
-                    </div>
-                  )}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Número de Referencia{' '}
+                      {requiereReferencia(pagoForm.metodoPago) ? (
+                        <span className="text-red-600 font-semibold">* (Obligatorio)</span>
+                      ) : (
+                        <span className="text-gray-400 font-normal">(Opcional / Recibo)</span>
+                      )}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={requiereReferencia(pagoForm.metodoPago) ? "Ej: 987654 / Nro. Operación / Lote" : "Ej: Recibo #0012, Comprobante (opcional)"}
+                      value={pagoForm.referenciaTransaccion}
+                      onChange={(e) => setPagoForm({ ...pagoForm, referenciaTransaccion: e.target.value })}
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                    {errors.referencia && <FieldError message={errors.referencia} />}
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
                     <textarea value={pagoForm.notas} onChange={(e) => setPagoForm({ ...pagoForm, notas: e.target.value })} className="w-full px-3 py-2 border rounded-lg" rows={2} />
@@ -454,14 +549,12 @@ export function CxcDetailPage() {
                 <h3 className="font-semibold text-gray-900 mb-4">Registrar Gestion</h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Gestion</label>
-                    <select value={gestionForm.accion} onChange={(e) => setGestionForm({ ...gestionForm, accion: e.target.value })} className="w-full px-3 py-2 border rounded-lg">
-                      <option value="LLAMADA">Llamada</option>
-                      <option value="CORREO">Correo</option>
-                      <option value="WHATSAPP">WhatsApp</option>
-                      <option value="VISITA">Visita</option>
-                      <option value="OTRO">Otro</option>
-                    </select>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Gestión</label>
+                    <CustomSelect
+                      value={gestionForm.accion}
+                      onChange={(val) => setGestionForm({ ...gestionForm, accion: val })}
+                      options={OPCIONES_ACCION_GESTION}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Notas</label>
@@ -486,16 +579,12 @@ export function CxcDetailPage() {
                 </p>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo</label>
-                    <select
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Motivo de Anulación</label>
+                    <CustomSelect
                       value={anulacionForm.motivo}
-                      onChange={(e) => setAnulacionForm({ ...anulacionForm, motivo: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-lg"
-                    >
-                      {MOTIVOS_ANULACION_PAGO.map((motivo) => (
-                        <option key={motivo.value} value={motivo.value}>{motivo.label}</option>
-                      ))}
-                    </select>
+                      onChange={(val) => setAnulacionForm({ ...anulacionForm, motivo: val })}
+                      options={MOTIVOS_ANULACION_PAGO}
+                    />
                     {errors.motivoAnulacion && <FieldError message={errors.motivoAnulacion} />}
                   </div>
                   <div>

@@ -6,7 +6,7 @@ const { requireRole } = require('../middleware/auth');
 const { paginate, paginatedResponse } = require('../utils/pagination');
 const { obtenerSiguienteNumeroFactura } = require('../utils/numeracionFacturas');
 const { obtenerSiguienteNumeroCotizacion } = require('../utils/numeracionCotizaciones');
-const { convertirMontoMoneda, tasaParaEmpresa } = require('../utils/tasaAPI');
+const { convertirMontoMoneda, convertirMoneda, tasaParaEmpresa, monedaBasePorEmpresa, monedaExhibicionPorEmpresa, MONEDAS_PAGO } = require('../utils/tasaAPI');
 const { tasaBCVPorFecha } = require('../utils/bcvHistorico');
 const { resolverEmpresaRefId } = require('../utils/empresaContext');
 const {
@@ -71,7 +71,21 @@ router.get('/', async (req, res, next) => {
       prisma.cotizacion.count({ where }),
     ]);
 
-    res.json(paginatedResponse(cotizaciones, total, page, limit));
+    // Multimoneda: las cotizaciones se entregan en la moneda de exhibición de
+    // la empresa (el backend es la fuente de verdad del switch).
+    const empresaRefIdCot = await getEmpresaRefId(req);
+    const monedaBaseCot = await monedaBasePorEmpresa(empresaRefIdCot);
+    const exhibicionCot = await monedaExhibicionPorEmpresa(empresaRefIdCot);
+    const convertirCot = (monto, monedaOrigen) => convertirMoneda(monto, monedaOrigen, exhibicionCot, empresaRefIdCot);
+
+    const cotizacionesConv = await Promise.all(cotizaciones.map(async (c) => ({
+      ...c,
+      subtotal: (await convertirCot(c.subtotal, c.moneda)).toFixed(2),
+      impuestoTotal: (await convertirCot(c.impuestoTotal, c.moneda)).toFixed(2),
+      total: (await convertirCot(c.total, c.moneda)).toFixed(2),
+    })));
+
+    res.json(paginatedResponse(cotizacionesConv, total, page, limit));
   } catch (err) {
     next(err);
   }
@@ -120,7 +134,19 @@ router.get('/:id', async (req, res, next) => {
     if (!cotizacion) {
       return res.status(404).json({ error: 'Cotización no encontrada' });
     }
-    res.json(cotizacion);
+
+    // Multimoneda: el detalle se entrega en la moneda de exhibición de la empresa.
+    const empresaRefIdCotDetalle = await getEmpresaRefId(req);
+    const monedaBaseCotDetalle = await monedaBasePorEmpresa(empresaRefIdCotDetalle);
+    const exhibicionCotDetalle = await monedaExhibicionPorEmpresa(empresaRefIdCotDetalle);
+    const convertirCotDetalle = (monto, monedaOrigen) => convertirMoneda(monto, monedaOrigen, exhibicionCotDetalle, empresaRefIdCotDetalle);
+
+    res.json({
+      ...cotizacion,
+      subtotal: (await convertirCotDetalle(cotizacion.subtotal, cotizacion.moneda)).toFixed(2),
+      impuestoTotal: (await convertirCotDetalle(cotizacion.impuestoTotal, cotizacion.moneda)).toFixed(2),
+      total: (await convertirCotDetalle(cotizacion.total, cotizacion.moneda)).toFixed(2),
+    });
   } catch (err) {
     next(err);
   }
@@ -137,8 +163,8 @@ router.post('/', async (req, res, next) => {
     if (!Array.isArray(items) || items.length === 0) {
       throw createValidationError('Debe agregar al menos un producto');
     }
-    if (!['USD', 'VES'].includes(moneda)) {
-      throw createValidationError('La moneda de la cotización debe ser USD o VES');
+    if (!MONEDAS_PAGO.includes(moneda)) {
+      throw createValidationError(`La moneda de la cotización debe ser ${MONEDAS_PAGO.join(' / ')}`);
     }
 
     const diasValidez = Number(validezDias);
@@ -233,7 +259,12 @@ router.post('/', async (req, res, next) => {
       });
     });
 
-    res.status(201).json(cotizacion);
+    res.status(201).json({
+      ...cotizacion,
+      subtotal: (await convertirCot(cotizacion.subtotal, cotizacion.moneda)).toFixed(2),
+      impuestoTotal: (await convertirCot(cotizacion.impuestoTotal, cotizacion.moneda)).toFixed(2),
+      total: (await convertirCot(cotizacion.total, cotizacion.moneda)).toFixed(2),
+    });
   } catch (err) {
     next(err);
   }

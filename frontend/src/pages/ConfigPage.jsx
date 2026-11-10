@@ -4,11 +4,64 @@ import { Header } from '../components/layout/Header';
 import { API } from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
+import { CustomSelect } from '../components/ui';
+
+const OPCIONES_EXHIBICION = [
+  { value: 'USD', label: 'USD (Dólar)', icon: 'mdi:currency-usd' },
+  { value: 'VES', label: 'VES (Bolívar)', icon: 'mdi:cash' },
+];
+
+const OPCIONES_SIMBOLO = [
+  { value: '$', label: '$ (Dólar)', icon: 'mdi:currency-usd' },
+  { value: 'Bs.', label: 'Bs. (Bolívar)', icon: 'mdi:cash' },
+  { value: '€', label: '€ (Euro)', icon: 'mdi:currency-eur' },
+  { value: 'COP$', label: 'COP$ (Peso colombiano)', icon: 'mdi:cash-multiple' },
+];
+
+const OPCIONES_CODIGO = [
+  { value: 'USD', label: 'USD — Dólar estadounidense', icon: 'mdi:currency-usd' },
+  { value: 'VES', label: 'VES — Bolívar venezolano', icon: 'mdi:cash' },
+  { value: 'EUR', label: 'EUR — Euro', icon: 'mdi:currency-eur' },
+  { value: 'COP', label: 'COP — Peso colombiano', icon: 'mdi:cash-multiple' },
+];
+
+const MAPA_CODIGO_A_SIMBOLO = {
+  USD: '$',
+  VES: 'Bs.',
+  EUR: '€',
+  COP: 'COP$',
+};
+
+const MAPA_SIMBOLO_A_CODIGO = {
+  '$': 'USD',
+  'Bs.': 'VES',
+  'Bs': 'VES',
+  '€': 'EUR',
+  'COP$': 'COP',
+};
+
+const OPCIONES_TIPO_DOC = [
+  { value: 'FACTURA', label: 'Factura Fiscal', icon: 'mdi:file-document-outline' },
+  { value: 'NOTA_ENTREGA', label: 'Nota de Entrega', icon: 'mdi:receipt-text-outline' },
+];
+
+const OPCIONES_BAUD_RATE = [
+  { value: '9600', label: '9600 bps' },
+  { value: '19200', label: '19200 bps' },
+  { value: '4800', label: '4800 bps' },
+  { value: '2400', label: '2400 bps' },
+];
+
+const OPCIONES_MARCA_FISCAL = [
+  { value: 'EPSON', label: 'EPSON (TM-T900FA / FP-81II / FP-90)', icon: 'mdi:printer' },
+  { value: 'BIXOLON', label: 'Bixolon (SRP-F310II)', icon: 'mdi:printer' },
+  { value: 'ACLAS', label: 'Aclas (CG5-BF)', icon: 'mdi:printer' },
+];
 
 export function ConfigPage() {
   const { toggleSidebar, setBrandName } = useOutletContext();
   const { showToast } = useToast();
-  const { user } = useAuth();
+  const { user, empresa, updateEmpresa } = useAuth();
   
   const [loading, setLoading] = useState(true);
   
@@ -22,7 +75,13 @@ export function ConfigPage() {
       telefono: '',
       email: user?.username && user.username.includes('@') ? user.username : ''
     },
-    moneda: { simbolo: '$', codigo: 'USD', tasaDolar: 1.0 },
+    moneda: {
+      simbolo: '$',
+      codigo: 'USD',
+      tasaDolar: empresa?.tasaDolar ?? 1.0,
+      monedaBase: 'USD',
+      monedaExhibicion: empresa?.monedaExhibicion === 'VES' ? 'VES' : 'USD',
+    },
     ivaDefault: 16.0,
     tipoDocumento: 'FACTURA'
   });
@@ -65,7 +124,9 @@ export function ConfigPage() {
           moneda: {
             simbolo: data.moneda?.simbolo || '$',
             codigo: data.moneda?.codigo || 'USD',
-            tasaDolar: data.moneda?.tasaDolar ?? 1.0
+            tasaDolar: data.moneda?.tasaDolar ?? 1.0,
+            monedaBase: 'USD',
+            monedaExhibicion: data.moneda?.monedaExhibicion === 'VES' ? 'VES' : 'USD',
           },
           ivaDefault: data.ivaDefault ?? 16.0,
           tipoDocumento: data.tipoDocumento || 'FACTURA'
@@ -100,12 +161,63 @@ export function ConfigPage() {
     }));
   };
 
+  const handleSimboloChange = (simboloVal) => {
+    const codigoSugerido = MAPA_SIMBOLO_A_CODIGO[simboloVal] || config.moneda.codigo;
+    setConfig(prev => ({
+      ...prev,
+      moneda: {
+        ...prev.moneda,
+        simbolo: simboloVal,
+        codigo: codigoSugerido,
+      }
+    }));
+  };
+
+  const handleCodigoChange = (codigoVal) => {
+    const simboloSugerido = MAPA_CODIGO_A_SIMBOLO[codigoVal] || config.moneda.simbolo;
+    setConfig(prev => ({
+      ...prev,
+      moneda: {
+        ...prev.moneda,
+        codigo: codigoVal,
+        simbolo: simboloSugerido,
+      }
+    }));
+  };
+
+  const opcionesSimbolo = React.useMemo(() => {
+    const actual = config.moneda.simbolo;
+    if (actual && !OPCIONES_SIMBOLO.some(o => o.value === actual)) {
+      return [{ value: actual, label: actual, icon: 'mdi:currency-usd' }, ...OPCIONES_SIMBOLO];
+    }
+    return OPCIONES_SIMBOLO;
+  }, [config.moneda.simbolo]);
+
+  const opcionesCodigo = React.useMemo(() => {
+    const actual = config.moneda.codigo;
+    if (actual && !OPCIONES_CODIGO.some(o => o.value === actual)) {
+      return [{ value: actual, label: actual, icon: 'mdi:currency-usd' }, ...OPCIONES_CODIGO];
+    }
+    return OPCIONES_CODIGO;
+  }, [config.moneda.codigo]);
+
   const handleSubmitConfig = async (event) => {
     event.preventDefault();
     setSavingConfig(true);
     try {
-      await API.saveConfig(config);
+      const saved = await API.saveConfig(config);
       setBrandName(config.empresa.nombre || 'Sistema POS');
+      if (saved?.moneda) {
+        updateEmpresa({
+          ...(empresa || {}),
+          ...(saved.empresa || {}),
+          monedaBase: saved.moneda.monedaBase || 'USD',
+          monedaExhibicion: saved.moneda.monedaExhibicion || 'USD',
+          tasaDolar: saved.moneda.tasaDolar,
+          monedaSimbolo: saved.moneda.simbolo,
+          monedaCodigo: saved.moneda.codigo,
+        });
+      }
       showToast('Configuración guardada correctamente', 'success');
     } catch (err) {
       showToast(err.message || 'Error guardando la configuración', 'error');
@@ -375,22 +487,18 @@ export function ConfigPage() {
                     <div className="form-grid form-grid-2" style={{ marginTop: '16px' }}>
                       <div className="form-group">
                         <label className="form-label">Símbolo</label>
-                        <input
-                          type="text"
-                          className="form-control"
+                        <CustomSelect
                           value={config.moneda.simbolo}
-                          onChange={e => handleChangeConfig('moneda', 'simbolo', e.target.value)}
-                          required
+                          onChange={handleSimboloChange}
+                          options={opcionesSimbolo}
                         />
                       </div>
                       <div className="form-group">
                         <label className="form-label">Código</label>
-                        <input
-                          type="text"
-                          className="form-control"
+                        <CustomSelect
                           value={config.moneda.codigo}
-                          onChange={e => handleChangeConfig('moneda', 'codigo', e.target.value)}
-                          required
+                          onChange={handleCodigoChange}
+                          options={opcionesCodigo}
                         />
                       </div>
                       <div className="form-group">
@@ -406,15 +514,24 @@ export function ConfigPage() {
                         />
                       </div>
                       <div className="form-group">
+                        <label className="form-label">Moneda Base (inventario / precios)</label>
+                        <input className="form-control" value="USD (Dólar)" readOnly />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Moneda de Exhibición (ventas / reportes)</label>
+                        <CustomSelect
+                          value={config.moneda.monedaExhibicion || 'USD'}
+                          onChange={val => handleChangeConfig('moneda', 'monedaExhibicion', val)}
+                          options={OPCIONES_EXHIBICION}
+                        />
+                      </div>
+                      <div className="form-group">
                         <label className="form-label">Tipo de Documento</label>
-                        <select
-                          className="form-control"
+                        <CustomSelect
                           value={config.tipoDocumento}
-                          onChange={e => setConfig(prev => ({ ...prev, tipoDocumento: e.target.value }))}
-                        >
-                          <option value="FACTURA">Factura</option>
-                          <option value="NOTA_ENTREGA">Nota de Entrega</option>
-                        </select>
+                          onChange={val => setConfig(prev => ({ ...prev, tipoDocumento: val }))}
+                          options={OPCIONES_TIPO_DOC}
+                        />
                       </div>
                       <div className="form-group">
                         <label className="form-label">Impuesto Predeterminado (%)</label>
@@ -509,29 +626,20 @@ export function ConfigPage() {
 
                   <div className="form-group">
                     <label className="form-label">Velocidad (Baud Rate)</label>
-                    <select
-                      className="form-control"
+                    <CustomSelect
                       value={fiscal.baudRate}
-                      onChange={e => setFiscal(prev => ({ ...prev, baudRate: e.target.value }))}
-                    >
-                      <option value="9600">9600 bps</option>
-                      <option value="19200">19200 bps</option>
-                      <option value="4800">4800 bps</option>
-                      <option value="2400">2400 bps</option>
-                    </select>
+                      onChange={val => setFiscal(prev => ({ ...prev, baudRate: val }))}
+                      options={OPCIONES_BAUD_RATE}
+                    />
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">Marca / Protocolo</label>
-                    <select
-                      className="form-control"
+                    <CustomSelect
                       value={fiscal.marca}
-                      onChange={e => setFiscal(prev => ({ ...prev, marca: e.target.value }))}
-                    >
-                      <option value="EPSON">EPSON (TM-T900FA / FP-81II / FP-90)</option>
-                      <option value="BIXOLON">Bixolon (SRP-F310II)</option>
-                      <option value="ACLAS">Aclas (CG5-BF)</option>
-                    </select>
+                      onChange={val => setFiscal(prev => ({ ...prev, marca: val }))}
+                      options={OPCIONES_MARCA_FISCAL}
+                    />
                   </div>
                 </div>
 

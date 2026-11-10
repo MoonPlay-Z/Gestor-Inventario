@@ -50,6 +50,15 @@ function errorHandler(err, req, res, next) {
     });
   }
 
+  // Tabla inexistente: el esquema no se migró (p. ej. la base de auditoría sin
+  // `bitacora`). Antes caía en el 500 genérico y ocultaba la causa real.
+  if (err.code === 'P2021' || /does not exist in the current database/i.test(err.message || '')) {
+    return res.status(503).json({
+      error: 'Esquema no inicializado',
+      message: 'Falta una tabla en la base de datos. Aplica las migraciones pendientes antes de usar este módulo.',
+    });
+  }
+
   // Base de datos inalcanzable o sin inicializar
   if (err.code === 'P1001' || err.code === 'P1003' || /Can't reach database server/i.test(err.message || '')) {
     return res.status(503).json({

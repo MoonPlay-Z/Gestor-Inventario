@@ -9,19 +9,32 @@ import { useNavigate, useOutletContext } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { API, Utils } from '../services/api';
 import { useToast } from '../context/ToastContext';
-import { Button } from '../components/ui';
+import { Button, CustomSelect } from '../components/ui';
 import { ReceiptModal } from '../components/ui/ReceiptModal';
 import { useBarcodeScanner } from '../hooks/useBarcodeScanner';
 import { escanerNativoDisponible } from '../utils/lectorCodigos';
 import { EscanerMLKit } from '../components/scanner/EscanerMLKit';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { initOutbox, encolarVenta, obtenerPendientes, obtenerTodos, syncOutbox, onOutboxChange } from '../services/outbox';
+import { useMoneda } from '../hooks/useMoneda';
 import {
   METODOS_PAGO,
   METODOS_PAGO_POS,
   requiereReferencia,
   esFinanciamiento,
 } from '../constants/metodosPago';
+
+const OPCIONES_TIPO_DOC = [
+  { value: 'factura', label: 'Factura Fiscal', icon: 'mdi:file-document-outline', desc: 'Comprobante formal para control fiscal' },
+  { value: 'nota-entrega', label: 'Nota de Entrega', icon: 'mdi:receipt-text-outline', desc: 'Comprobante interno sin validez fiscal' },
+];
+
+const OPCIONES_CUOTAS = [
+  { value: 1, label: '1 (Pago Pendiente Único)', icon: 'mdi:numeric-1-circle-outline' },
+  { value: 2, label: '2 Cuotas', icon: 'mdi:numeric-2-circle-outline' },
+  { value: 3, label: '3 Cuotas', icon: 'mdi:numeric-3-circle-outline' },
+  { value: 4, label: '4 Cuotas', icon: 'mdi:numeric-4-circle-outline' },
+];
 
 const EMPTY_CLIENT = { razonSocial: '', rifCedula: '', direccion: '', telefono: '', correo: '' };
 
@@ -32,6 +45,10 @@ export function PosPage() {
 
   const [cajaStatus, setCajaStatus] = useState(null);
   const [cajaLoading, setCajaLoading] = useState(true);
+
+  // ── Multimoneda visual ──────────────────────────────────────────────
+  const { usarExhibicion,
+    setUsarExhibicion, formatear, simbolo, tasaBaseAHacia } = useMoneda();
 
   const [config, setConfig] = useState(null);
   const [clientes, setClientes] = useState([]);
@@ -66,8 +83,6 @@ export function PosPage() {
   // Clave de idempotencia: sobrevive a recarga y reintentos del proxy, donde
   // el guard de ref se pierde. El backend la usa para no crear dos facturas.
   const requestIdRef = useRef(null);
-  const [monedaVisualizacion, setMonedaVisualizacion] = useState('USD'); // 'USD' o 'VES'
-
   const [showClienteModal, setShowClienteModal] = useState(false);
   const [newCliente, setNewCliente] = useState(EMPTY_CLIENT);
   const [savingCliente, setSavingCliente] = useState(false);
@@ -103,6 +118,7 @@ export function PosPage() {
       // No cargar todos los clientes al inicio; se buscan bajo demanda
       setClientes([]);
       setCajaStatus(cajaRes?.estado === 'OPEN' ? 'OPEN' : 'CLOSED');
+
     } catch (err) {
       showToast('Error cargando datos del POS: ' + err.message, 'error');
       setCajaStatus('CLOSED');
@@ -422,6 +438,46 @@ export function PosPage() {
       if (item.productoId === productoId) return { ...item, cantidad: cantidadFinal };
       return item;
     }));
+  };
+
+  // ── CantidadInput ──────────────────────────────────────────────────────────
+  // Permite borrar el campo y escribir un nuevo número sin que React restaure
+  // el valor previo en cada keystroke. La cantidad real del carrito se actualiza
+  // solo al confirmar (onBlur o Enter); mientras tanto el texto local es libre.
+  const CantidadInput = ({ item }) => {
+    const [localVal, setLocalVal] = React.useState(String(item.cantidad));
+
+    // Sincroniza si la cantidad cambia desde fuera (p.ej. botones +/-)
+    React.useEffect(() => {
+      setLocalVal(String(item.cantidad));
+    }, [item.cantidad]);
+
+    const confirmar = () => {
+      const v = localVal.trim();
+      if (v === '' || isNaN(parseFloat(v))) {
+        // Campo vacío o inválido: restaurar al valor actual del carrito
+        setLocalVal(String(item.cantidad));
+        return;
+      }
+      updateQuantity(item.productoId, v);
+    };
+
+    return (
+      <input
+        type="number"
+        step={item.esVentaPorPeso ? (item.unidadPeso === 'g' ? '1' : '0.001') : '1'}
+        className="form-control"
+        style={{ width: item.esVentaPorPeso ? '80px' : '70px', padding: '4px 8px' }}
+        min={item.esVentaPorPeso ? (item.unidadPeso === 'g' ? '1' : '0.001') : 1}
+        max={item.esVentaPorPeso
+          ? (item.unidadPeso === 'g' ? item.stockMax * 1000 : item.stockMax)
+          : item.stockMax}
+        value={localVal}
+        onChange={e => setLocalVal(e.target.value)}
+        onBlur={confirmar}
+        onKeyDown={e => { if (e.key === 'Enter') { e.target.blur(); } }}
+      />
+    );
   };
 
   const cambiarUnidadPeso = (productoId, nuevaUnidad) => {
@@ -1050,16 +1106,7 @@ export function PosPage() {
                             {item.esVentaPorPeso ? (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <input
-                                    type="number"
-                                    step={item.unidadPeso === 'g' ? '1' : '0.001'}
-                                    className="form-control"
-                                    style={{ width: '80px', padding: '4px 8px' }}
-                                    value={item.cantidad}
-                                    min={item.unidadPeso === 'g' ? '1' : '0.001'}
-                                    max={item.unidadPeso === 'g' ? item.stockMax * 1000 : item.stockMax}
-                                    onChange={e => updateQuantity(item.productoId, e.target.value)}
-                                  />
+                                  <CantidadInput item={item} />
                                   <select
                                     value={item.unidadPeso || 'kg'}
                                     onChange={e => cambiarUnidadPeso(item.productoId, e.target.value)}
@@ -1081,16 +1128,7 @@ export function PosPage() {
                               </div>
                             ) : (
                               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <input
-                                  type="number"
-                                  step="1"
-                                  className="form-control"
-                                  style={{ width: '70px', padding: '4px 8px' }}
-                                  value={item.cantidad}
-                                  min={1}
-                                  max={item.stockMax}
-                                  onChange={e => updateQuantity(item.productoId, e.target.value)}
-                                />
+                                <CantidadInput item={item} />
                                 <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                                   {item.unidadMedida === 'UNIDAD' ? 'ud' : item.unidadMedida.toLowerCase()}
                                 </span>
@@ -1137,127 +1175,145 @@ export function PosPage() {
             >
               <Icon icon={closeIcon} className="h-4 w-4" />
             </button>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 className="card-title" style={{ margin: 0 }}>Resumen de Cobro</h3>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button 
-                  onClick={() => setMonedaVisualizacion('USD')}
-                  className={`btn btn-sm ${monedaVisualizacion === 'USD' ? 'btn-primary' : 'btn-secondary'}`}
-                >
-                  $
-                </button>
-                <button 
-                  onClick={() => setMonedaVisualizacion('VES')}
-                  className={`btn btn-sm ${monedaVisualizacion === 'VES' ? 'btn-primary' : 'btn-secondary'}`}
-                >
-                  Bs.
-                </button>
+            <form onSubmit={handleEmitirFactura}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 className="card-title" style={{ margin: 0 }}>Resumen de Cobro</h3>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => setUsarExhibicion(false)}
+                    className={`btn btn-sm ${!usarExhibicion ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ fontWeight: 600, padding: '4px 10px', fontSize: '0.8rem' }}
+                    title="Ver cobro en Dólares ($ USD)"
+                  >
+                    $ USD
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setUsarExhibicion(true)}
+                    className={`btn btn-sm ${usarExhibicion ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ fontWeight: 600, padding: '4px 10px', fontSize: '0.8rem' }}
+                    title="Ver cobro en Bolívares (Bs. VES)"
+                  >
+                    Bs. VES
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', marginBottom: '20px', border: '1px solid var(--border)' }}>
-              {monedaVisualizacion === 'USD' ? (
-                <>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Total a Pagar (USD)</div>
-                  <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--accent)' }}>
-                    {Utils.formatMoney(totalUsd, '$')}
-                  </div>
-                  <div style={{ borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tasa: {tasaDolar.toFixed(2)}</span>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--success)' }}>
-                      {totalVes.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Total a Pagar (VES)</div>
-                  <div style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--success)' }}>
-                    {totalVes.toLocaleString('es-VE', { minimumFractionDigits: 2 })} Bs.
-                  </div>
-                  <div style={{ borderTop: '1px solid var(--border)', marginTop: '8px', paddingTop: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tasa: {tasaDolar.toFixed(2)}</span>
-                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent)' }}>
-                      {Utils.formatMoney(totalUsd, '$')}
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
+              {/* ── Bloque de totales ───────────────────────────────────────── */}
+              <div style={{ background: 'var(--bg-secondary)', padding: '16px', borderRadius: 'var(--radius-md)', marginBottom: '16px', border: '1px solid var(--border)' }}>
+                {usarExhibicion ? (
+                  <>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                      Total a Pagar (Bs. VES)
+                    </div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--accent)', lineHeight: 1.1 }}>
+                      {Utils.formatMoney(totalVes, 'VES')}
+                    </div>
+                    {tasaDolar > 1 && (
+                      <div style={{ borderTop: '1px solid var(--border)', marginTop: '10px', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          Tasa&nbsp;<strong>{tasaDolar.toFixed(2)}</strong>&nbsp;Bs/$
+                        </span>
+                        <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--success)' }}>
+                          {Utils.formatMoney(totalUsd, 'USD')}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                      Total a Pagar ($ USD)
+                    </div>
+                    <div style={{ fontSize: '2.2rem', fontWeight: 800, color: 'var(--accent)', lineHeight: 1.1 }}>
+                      {Utils.formatMoney(totalUsd, 'USD')}
+                    </div>
+                    {tasaDolar > 1 && (
+                      <div style={{ borderTop: '1px solid var(--border)', marginTop: '10px', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                          Tasa&nbsp;<strong>{tasaDolar.toFixed(2)}</strong>&nbsp;Bs/$
+                        </span>
+                        <span style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--success)' }}>
+                          {Utils.formatMoney(totalVes, 'VES')}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
 
-            <form onSubmit={handleEmitirFactura} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div className="form-group">
-                <label className="form-label" htmlFor="tipo-documento-venta">Documento para el cliente</label>
-                <select
+              {/* ── Tipo de documento ───────────────────────────────────────── */}
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label className="form-label" htmlFor="tipo-documento-venta">Tipo de Documento</label>
+                <CustomSelect
                   id="tipo-documento-venta"
-                  className="form-control"
                   value={tipoDocumento}
-                  onChange={e => setTipoDocumento(e.target.value)}
-                >
-                  <option value="factura">Factura</option>
-                  <option value="nota-entrega">Nota de entrega</option>
-                </select>
+                  onChange={setTipoDocumento}
+                  options={OPCIONES_TIPO_DOC}
+                />
                 {tipoDocumento === 'nota-entrega' && (
-                  <small style={{ display: 'block', marginTop: '6px', color: 'var(--text-secondary)' }}>
+                  <small style={{ display: 'block', marginTop: '6px', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>
                     La venta y el pago se guardarán; el comprobante impreso no será una factura fiscal.
                   </small>
                 )}
               </div>
 
-              <div className="form-group">
+              {/* ── Método de pago ──────────────────────────────────────────── */}
+              <div className="form-group" style={{ marginBottom: '16px' }}>
                 <label className="form-label">Método de Pago</label>
-                <select
-                  className="form-control"
+                <CustomSelect
                   value={metodoPago}
-                  onChange={e => {
-                    const val = e.target.value;
+                  onChange={(val) => {
                     setMetodoPago(val);
                     if (!esFinanciamiento(val)) setCuotas(1);
                   }}
-                >
-                  {METODOS_PAGO_POS.map(m => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
+                  options={METODOS_PAGO_POS}
+                />
               </div>
 
+              {/* ── Cuotas (si aplica financiamiento) ───────────────────────── */}
               {esFinanciamiento(metodoPago) && (
-                <div className="form-group">
+                <div className="form-group" style={{ marginBottom: '16px' }}>
                   <label className="form-label">Número de Cuotas</label>
-                  <select
-                    className="form-control"
-                    value={cuotas}
-                    onChange={e => setCuotas(e.target.value)}
-                  >
-                    <option value={1}>1 (Pago Pendiente Único)</option>
-                    <option value={2}>2 Cuotas</option>
-                    <option value={3}>3 Cuotas</option>
-                    <option value={4}>4 Cuotas</option>
-                  </select>
-                </div>
-              )}
-
-              {requiereReferencia(metodoPago) && (
-                <div className="form-group">
-                  <label className="form-label">Número de Referencia</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Ej: 987654 / Nro. Operación / Lote"
-                    value={referencia}
-                    onChange={e => setReferencia(e.target.value)}
-                    required
+                  <CustomSelect
+                    value={Number(cuotas)}
+                    onChange={(val) => setCuotas(Number(val))}
+                    options={OPCIONES_CUOTAS}
                   />
                 </div>
               )}
 
+              {/* ── Referencia de transacción ──────────────────────────────── */}
+              <div className="form-group" style={{ marginBottom: '20px' }}>
+                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>Número de Referencia</span>
+                  {requiereReferencia(metodoPago) ? (
+                    <span style={{ color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 600 }}>Obligatorio</span>
+                  ) : (
+                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Opcional</span>
+                  )}
+                </label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder={
+                    requiereReferencia(metodoPago)
+                      ? 'Ej: 987654 / Nro. Operación / Lote (Requerido)'
+                      : 'Ej: Comprobante / Recibo (Opcional)'
+                  }
+                  value={referencia}
+                  onChange={(e) => setReferencia(e.target.value)}
+                  required={requiereReferencia(metodoPago)}
+                />
+              </div>
+
               <button
                 type="submit"
+                onClick={handleEmitirFactura}
                 className="btn btn-primary btn-lg"
                 disabled={loadingEmitir || cart.length === 0}
-                style={{ marginTop: '10px' }}
+                style={{ width: '100%', marginTop: '6px' }}
               >
                 {loadingEmitir ? 'Procesando Venta...' : <><Icon icon={flashIcon} className="h-4 w-4" /> Completar Venta</>}
               </button>

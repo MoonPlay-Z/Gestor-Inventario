@@ -1,3 +1,5 @@
+import { formatMoneda } from '../utils/numero';
+
 export const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Tiempo máximo de espera para una petición antes de abortarla (ms).
@@ -250,11 +252,30 @@ export const API = {
     const qs = new URLSearchParams(params).toString();
     return request(`/pagos/anulados${qs ? `?${qs}` : ''}`);
   },
+  // Bitácora de actividad (EMPRESA / SUPER_ADMIN)
+  getBitacora: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return request(`/bitacora${qs ? `?${qs}` : ''}`);
+  },
+  getBitacoraIntegridad: () => request('/bitacora/integridad'),
   backfillTasaBcv: () => request('/pagos/backfill-tasa-bcv', { method: 'POST' }),
 
   // Caja
   getCajaActual: () => request('/caja/status'),
-  abrirCaja: (montoInicial, observaciones) => request('/caja/open', { method: 'POST', body: { montoInicial, observaciones } }),
+  abrirCaja: (montoInicialUSD, montoInicialVES, observaciones) => {
+    let body;
+    if (typeof montoInicialUSD === 'object' && montoInicialUSD !== null) {
+      body = montoInicialUSD;
+    } else {
+      body = {
+        montoInicial: montoInicialUSD,
+        montoInicialUSD,
+        montoInicialVES: montoInicialVES ?? 0,
+        observaciones,
+      };
+    }
+    return request('/caja/open', { method: 'POST', body });
+  },
   cerrarCaja: (montoFinal, observaciones, arqueoDetalle) => request('/caja/close', { method: 'POST', body: { montoFinal, observaciones, arqueoDetalle } }),
   getHistorialCaja: (params = {}) => {
     const qs = new URLSearchParams(params).toString();
@@ -404,12 +425,7 @@ export const Utils = {
       .replace(/'/g, '&#39;');
   },
 
-  formatMoney: (amount, symbol = '$') => {
-    // Use string conversion to avoid floating-point precision loss
-    const num = Number(amount || 0);
-    if (!isFinite(num)) return `${symbol} 0.00`;
-    return `${symbol} ${num.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  },
+  formatMoney: (amount, moneda = 'USD') => formatMoneda(amount, moneda),
 
   // Tasa aplicable a una factura. `tasaCambio` solo es una tasa real cuando la
   // factura se emitió en VES; en USD vale 1 (no lleva tasa), así que se usa la

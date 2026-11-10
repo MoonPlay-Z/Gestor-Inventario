@@ -1,8 +1,14 @@
 const express = require('express');
 const router  = express.Router();
 const prisma = require('../db/prisma');
+const { requireRole } = require('../middleware/auth');
 const fs      = require('fs');
 const path    = require('path');
+
+// Exportar/importar reemplaza datos de toda la empresa: solo el dueño o el
+// super admin. Sin esta barrera, cualquier rol autenticado (CAJA, INVENTARIO,
+// VISOR) podía descargar el respaldo completo del tenant.
+router.use(requireRole('EMPRESA', 'SUPER_ADMIN'));
 const dataDir = process.env.DATA_DIR || path.join(__dirname, '../../data');
 const configPath = path.join(dataDir, 'config.json');
 

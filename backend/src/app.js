@@ -5,7 +5,7 @@ const path    = require('path');
 const prisma  = require('./db/prisma');
 const { tsFrag, periodTrunc } = require('./utils/sql');
 const { resolverEmpresaRefId } = require('./utils/empresaContext');
-const { tasaParaEmpresa } = require('./utils/tasaAPI');
+const { tasaParaEmpresa, convertirMoneda, monedaBasePorEmpresa, monedaExhibicionPorEmpresa } = require('./utils/tasaAPI');
 const { ESTADOS_PAGO } = require('./config/pagos');
 
 const clientesRouter   = require('./routes/clientes');
@@ -24,9 +24,11 @@ const b2bRouter        = require('./routes/b2b');
 const fiscalRouter     = require('./routes/fiscal');
 const reportesRouter   = require('./routes/reportes');
 const cxcRouter        = require('./routes/cxc');
+const bitacoraRouter   = require('./routes/bitacora');
 const tasaRouter        = require('./routes/tasa');
 const { authMiddleware, requireRole } = require('./middleware/auth');
 const { subscriptionGuard } = require('./middleware/subscriptionGuard');
+const { auditoriaHttp } = require('./middleware/bitacoraHttp');
 const { errorHandler } = require('./middleware/errorHandler');
 const { iniciarActualizacionDiaria } = require('./services/tasaDolar');
 const { iniciarPurgaArchivados } = require('./services/archivado');
@@ -186,6 +188,7 @@ app.use('/api/v1/b2b', b2bRouter);  // Protegida por API Key (no JWT)
 // ─── Rutas Protegidas (JWT + Suscripción) ─────────────────────────────────────
 app.use('/api', authMiddleware);      // Verifica JWT
 app.use('/api', subscriptionGuard);  // Verifica suscripción activa/trial
+app.use('/api', auditoriaHttp);      // Registra mutaciones y descargas no auditadas explícitamente
 
 app.use('/api/clientes',     clientesRouter);
 app.use('/api/productos',    productosRouter);
@@ -203,6 +206,7 @@ app.use('/api/roles',        rolesRouter);
 app.use('/api/fiscal',       fiscalRouter);
 app.use('/api/reportes',     reportesRouter);
 app.use('/api/cxc',          cxcRouter);
+app.use('/api/bitacora',     bitacoraRouter);
 
 // ─── Dashboard stats ──────────────────────────────────────────────────────────
 
@@ -276,6 +280,13 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
     // en Bs cuando la factura fue emitida en USD (tasaCambio=1, no es una tasa
     // real). Sin esto, 1000 Bs se contarían como 1000 USD.
     const tasaSistema = await tasaParaEmpresa(await resolverEmpresaRefId(req));
+
+    // Multimoneda: el dashboard entrega los montos en la moneda de exhibición
+    // de la empresa (el backend es la fuente de verdad del switch).
+    const empresaRefIdDashboard = await resolverEmpresaRefId(req);
+    const monedaBaseDashboard = await monedaBasePorEmpresa(empresaRefIdDashboard);
+    const exhibicionDashboard = await monedaExhibicionPorEmpresa(empresaRefIdDashboard);
+    const convertirDashboard = (monto) => convertirMoneda(monto, monedaBaseDashboard, exhibicionDashboard, empresaRefIdDashboard);
 
     // Ejecutar todas las consultas independientes en paralelo
     const [
@@ -374,22 +385,23 @@ app.get('/api/dashboard', requireRole('EMPRESA', 'CAJA', 'INVENTARIO', 'VISOR'),
     ]);
 
     // Procesar resultados
-    const ingresosDelMes = new (require('decimal.js').Decimal)(pagosDelMes[0]?.total_usd || 0);
+    const ingresosDelMesBase = new (require('decimal.js').Decimal)(pagosDelMes[0]?.total_usd || 0);
+    const ingresosDelMes = await convertirDashboard(ingresosDelMesBase);
 
     const productosStockBajoCount = Number(productosStockBajo[0]?.count || 0);
 
-    const totalesPorEstado = totalesPorEstadoRaw.map(row => ({
+    const totalesPorEstado = (await Promise.all(totalesPorEstadoRaw.map(async (row) => ({
       estado: row.estado,
-      _sum: { total: new (require('decimal.js').Decimal)(row.total_usd || 0).toFixed(2) },
+      _sum: { total: (await convertirDashboard(row.total_usd || 0)).toFixed(2) },
       _count: { id: Number(row.count) },
-    }));
+    }))));
 
     // La agrupación devuelve una fecha (Date en PostgreSQL, texto ISO en
     // SQLite) y aquí se etiqueta según el período elegido.
-    const ingresosHistorico = ingresosHistoricoRaw.map(row => ({
+    const ingresosHistorico = (await Promise.all(ingresosHistoricoRaw.map(async (row) => ({
       mes: etiquetaPeriodoDashboard(row.mes, configPeriodo.formato),
-      total: new (require('decimal.js').Decimal)(row.total_usd || 0).toFixed(2),
-    }));
+      total: (await convertirDashboard(row.total_usd || 0)).toFixed(2),
+    }))));
 
     res.json({
       ingresosDelMes: ingresosDelMes.toFixed(2),
